@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
 type Dispenser = {
@@ -50,7 +51,13 @@ export default function DispensadoresPage() {
   }, []);
 
   return (
-    <PageTransition className="space-y-4">
+    <>
+      <DashboardHeader
+        title="Dosificadores"
+        description="Inventario de dosificadores por modelo y ubicación."
+        searchPlaceholder="Buscar dosificadores..."
+      />
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           Dosificadores
@@ -117,6 +124,7 @@ export default function DispensadoresPage() {
           </tbody>
         </table>
       </div>
-    </PageTransition>
+      </PageTransition>
+    </>
   );
 }

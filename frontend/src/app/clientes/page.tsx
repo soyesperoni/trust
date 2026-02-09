@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../components/DashboardHeader";
-import DashboardSidebar from "../components/DashboardSidebar";
 import PageTransition from "../components/PageTransition";
 
 type UserRecord = {
@@ -82,18 +81,15 @@ export default function ClientesPage() {
   }, [error, isLoading, searchTerm, selectedRole, selectedStatus, users]);
 
   return (
-    <div className="bg-background-light dark:bg-background-dark font-display min-h-screen text-slate-800 dark:text-slate-200">
-      <div className="flex h-screen overflow-hidden">
-        <DashboardSidebar activePath="/clientes" />
-        <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
-          <DashboardHeader
-            title="Gestión de Usuarios"
-            description="Solo el Administrador General puede ver, crear o editar usuarios."
-            searchValue={searchTerm}
-            onSearchChange={setSearchTerm}
-          />
-          <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-            <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col h-full">
+    <>
+      <DashboardHeader
+        title="Gestión de Usuarios"
+        description="Solo el Administrador General puede ver, crear o editar usuarios."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col h-full">
               <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -270,9 +266,7 @@ export default function ClientesPage() {
                 </div>
               </div>
             </div>
-          </PageTransition>
-        </main>
-      </div>
-    </div>
+      </PageTransition>
+    </>
   );
 }

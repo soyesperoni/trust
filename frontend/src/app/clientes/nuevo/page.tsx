@@ -1,22 +1,18 @@
 import Link from "next/link";
 
 import DashboardHeader from "../../components/DashboardHeader";
-import DashboardSidebar from "../../components/DashboardSidebar";
 import PageTransition from "../../components/PageTransition";
 
 export default function NuevoClientePage() {
   return (
-    <div className="bg-background-light dark:bg-background-dark font-display min-h-screen text-slate-800 dark:text-slate-200">
-      <div className="flex h-screen overflow-hidden">
-        <DashboardSidebar activePath="/clientes/data" />
-        <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
-          <DashboardHeader
-            title="Nuevo Cliente"
-            description="Complete la información para registrar una nueva empresa cliente en la plataforma."
-          />
-          <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden">
+    <>
+      <DashboardHeader
+        title="Nuevo Cliente"
+        description="Complete la información para registrar una nueva empresa cliente en la plataforma."
+      />
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden">
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white font-logo">
                     Nuevo Cliente
@@ -182,9 +178,7 @@ export default function NuevoClientePage() {
                 </form>
               </div>
             </div>
-          </PageTransition>
-        </main>
-      </div>
-    </div>
+      </PageTransition>
+    </>
   );
 }

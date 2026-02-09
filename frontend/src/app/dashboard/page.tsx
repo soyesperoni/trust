@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../components/DashboardHeader";
-import DashboardSidebar from "../components/DashboardSidebar";
 import PageTransition from "../components/PageTransition";
 
 type DashboardStats = {
@@ -160,17 +159,13 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="bg-background-light dark:bg-background-dark font-display min-h-screen text-slate-800 dark:text-slate-200">
-      <div className="flex h-screen overflow-hidden">
-        <DashboardSidebar activePath="/dashboard" />
+    <>
+      <DashboardHeader
+        title="Panel General"
+        description="Mostrando información según los accesos asignados al usuario."
+      />
 
-        <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
-          <DashboardHeader
-            title="Panel General"
-            description="Mostrando información según los accesos asignados al usuario."
-          />
-
-          <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {statsCards.map((item) => (
                 <div
@@ -334,9 +329,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
             </section>
-          </PageTransition>
-        </main>
-      </div>
-    </div>
+      </PageTransition>
+    </>
   );
 }

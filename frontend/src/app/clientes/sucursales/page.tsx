@@ -1,5 +1,4 @@
 import DashboardHeader from "../../components/DashboardHeader";
-import DashboardSidebar from "../../components/DashboardSidebar";
 import PageTransition from "../../components/PageTransition";
 
 type Branch = {
@@ -60,12 +59,9 @@ const statusStyles: Record<Branch["status"], string> = {
 
 export default function SucursalesPage() {
   return (
-    <div className="bg-background-light dark:bg-background-dark font-display min-h-screen text-slate-800 dark:text-slate-200">
-      <div className="flex h-screen overflow-hidden">
-        <DashboardSidebar activePath="/clientes/sucursales" />
-        <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
-          <DashboardHeader title="Sucursales" searchPlaceholder="Buscar sucursal..." />
-          <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
+    <>
+      <DashboardHeader title="Sucursales" searchPlaceholder="Buscar sucursal..." />
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <span className="material-symbols-outlined text-[18px]">home</span>
@@ -206,9 +202,7 @@ export default function SucursalesPage() {
                 </div>
               </div>
             </div>
-          </PageTransition>
-        </main>
-      </div>
-    </div>
+      </PageTransition>
+    </>
   );
 }

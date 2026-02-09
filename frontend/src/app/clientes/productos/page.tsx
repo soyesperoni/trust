@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
 type Product = {
@@ -49,7 +50,13 @@ export default function ProductosPage() {
   }, []);
 
   return (
-    <PageTransition className="space-y-4">
+    <>
+      <DashboardHeader
+        title="Productos"
+        description="Catálogo de productos asignados por dosificador."
+        searchPlaceholder="Buscar productos..."
+      />
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           Productos
@@ -112,6 +119,7 @@ export default function ProductosPage() {
           </tbody>
         </table>
       </div>
-    </PageTransition>
+      </PageTransition>
+    </>
   );
 }
