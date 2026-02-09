@@ -1,5 +1,5 @@
 import DashboardHeader from "../../components/DashboardHeader";
-import SidebarUserCard from "../../components/SidebarUserCard";
+import DashboardSidebar from "../../components/DashboardSidebar";
 
 const clients = [
   {
@@ -83,59 +83,7 @@ export default function ClientesListadoPage() {
   return (
     <div className="bg-background-light dark:bg-background-dark font-display min-h-screen text-slate-800 dark:text-slate-200">
       <div className="flex h-screen overflow-hidden">
-        <aside className="w-64 bg-white dark:bg-[#161e27] border-r border-slate-200 dark:border-slate-800 flex flex-col hidden md:flex shrink-0">
-          <div className="h-20 flex items-center gap-3 px-6 border-b border-slate-100 dark:border-slate-800">
-            <div className="bg-black dark:bg-zinc-800 p-1.5 rounded-md flex items-center justify-center shadow-sm">
-              <span className="material-symbols-outlined text-primary text-[24px] font-variation-fill">
-                shield
-              </span>
-            </div>
-            <h1 className="font-logo text-3xl font-bold text-slate-900 dark:text-white tracking-tight leading-none lowercase">
-              trust
-            </h1>
-          </div>
-          <nav className="flex-1 overflow-y-auto py-6 flex flex-col gap-1">
-            <a className="sidebar-link" href="/dashboard">
-              <span className="material-symbols-outlined">dashboard</span>
-              Dashboard
-            </a>
-            <a className="sidebar-link" href="/clientes">
-              <span className="material-symbols-outlined">group</span>
-              Usuarios
-            </a>
-            <a className="sidebar-link active" href="/clientes/data">
-              <span className="material-symbols-outlined">apartment</span>
-              Clientes
-            </a>
-            <a className="sidebar-link" href="/clientes/sucursales">
-              <span className="material-symbols-outlined">storefront</span>
-              Sucursales
-            </a>
-            <a className="sidebar-link" href="/clientes/areas">
-              <span className="material-symbols-outlined">map</span>
-              Áreas
-            </a>
-            <a className="sidebar-link" href="/clientes/dispensadores">
-              <span className="material-symbols-outlined">water_drop</span>
-              Dosificadores
-            </a>
-            <a className="sidebar-link" href="/clientes/productos">
-              <span className="material-symbols-outlined">inventory_2</span>
-              Productos
-            </a>
-            <a className="sidebar-link" href="/clientes/visitas">
-              <span className="material-symbols-outlined">history</span>
-              Historial de Visitas
-            </a>
-            <a className="sidebar-link" href="/clientes/incidencias">
-              <span className="material-symbols-outlined">report_problem</span>
-              Incidencias
-            </a>
-          </nav>
-          <div className="p-6 border-t border-slate-100 dark:border-slate-800">
-            <SidebarUserCard />
-          </div>
-        </aside>
+        <DashboardSidebar activePath="/clientes/data" />
         <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
           <DashboardHeader
             title="Gestión de Clientes"
