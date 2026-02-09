@@ -7,6 +7,9 @@ type DashboardStats = {
   branches: number;
   areas: number;
   dispensers: number;
+  products: number;
+  visits: number;
+  incidents: number;
 };
 
 type ActivityItem = {
@@ -46,6 +49,21 @@ export default function DashboardPage() {
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const isDark = document.documentElement.classList.contains("dark");
+    setTheme(isDark ? "dark" : "light");
+  }, []);
+
+  const toggleTheme = () => {
+    if (typeof document === "undefined") return;
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(nextTheme);
+    setTheme(nextTheme);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -120,6 +138,33 @@ export default function DashboardPage() {
         iconStyle:
           "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400",
       },
+      {
+        label: "Productos",
+        value: stats?.products ?? 0,
+        trend: "Total",
+        trendStyle: "text-slate-500 bg-slate-100",
+        icon: "inventory_2",
+        iconStyle:
+          "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400",
+      },
+      {
+        label: "Visitas",
+        value: stats?.visits ?? 0,
+        trend: "Total",
+        trendStyle: "text-slate-500 bg-slate-100",
+        icon: "history",
+        iconStyle:
+          "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400",
+      },
+      {
+        label: "Incidencias",
+        value: stats?.incidents ?? 0,
+        trend: "Total",
+        trendStyle: "text-slate-500 bg-slate-100",
+        icon: "report_problem",
+        iconStyle:
+          "bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400",
+      },
     ],
     [stats],
   );
@@ -147,13 +192,33 @@ export default function DashboardPage() {
                 href: "/dashboard",
               },
               { icon: "group", label: "Usuarios", href: "/clientes" },
-              { icon: "apartment", label: "Clientes" },
-              { icon: "storefront", label: "Sucursales" },
-              { icon: "map", label: "Áreas" },
-              { icon: "water_drop", label: "Dosificadores" },
-              { icon: "inventory_2", label: "Productos" },
-              { icon: "history", label: "Historial de Visitas" },
-              { icon: "report_problem", label: "Incidencias" },
+              { icon: "apartment", label: "Clientes", href: "/clientes/data" },
+              {
+                icon: "storefront",
+                label: "Sucursales",
+                href: "/clientes/sucursales",
+              },
+              { icon: "map", label: "Áreas", href: "/clientes/areas" },
+              {
+                icon: "water_drop",
+                label: "Dosificadores",
+                href: "/clientes/dispensadores",
+              },
+              {
+                icon: "inventory_2",
+                label: "Productos",
+                href: "/clientes/productos",
+              },
+              {
+                icon: "history",
+                label: "Historial de Visitas",
+                href: "/clientes/visitas",
+              },
+              {
+                icon: "report_problem",
+                label: "Incidencias",
+                href: "/clientes/incidencias",
+              },
             ].map((item) => (
               <a
                 key={item.label}
@@ -221,6 +286,21 @@ export default function DashboardPage() {
                   type="text"
                 />
               </div>
+              <button
+                className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                onClick={toggleTheme}
+                type="button"
+              >
+                <span className="material-symbols-outlined">
+                  {theme === "dark" ? "light_mode" : "dark_mode"}
+                </span>
+              </button>
+              <button
+                className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                type="button"
+              >
+                <span className="material-symbols-outlined">logout</span>
+              </button>
               <button className="p-2 relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                 <span className="material-symbols-outlined">notifications</span>
                 <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
@@ -229,7 +309,7 @@ export default function DashboardPage() {
           </header>
 
           <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {statsCards.map((item) => (
                 <div
                   key={item.label}
@@ -267,12 +347,15 @@ export default function DashboardPage() {
                     Últimas visitas y mantenimientos realizados en tus cuentas.
                   </p>
                 </div>
-                <button className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                <a
+                  className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  href="/clientes/incidencias"
+                >
                   <span className="material-symbols-outlined text-[18px]">
                     add
                   </span>
                   Nueva Incidencia
-                </button>
+                </a>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
@@ -381,9 +464,12 @@ export default function DashboardPage() {
                 </table>
               </div>
               <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-center">
-                <button className="text-sm font-medium text-professional-green hover:text-green-800 transition-colors">
+                <a
+                  className="text-sm font-medium text-professional-green hover:text-green-800 transition-colors"
+                  href="/clientes/visitas"
+                >
                   Ver toda la actividad
-                </button>
+                </a>
               </div>
             </section>
           </div>

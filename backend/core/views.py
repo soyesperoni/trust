@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
-from .models import Area, Branch, Client, Dispenser, User, Visit
+from .models import Area, Branch, Client, Dispenser, Incident, Product, User, Visit
 
 
 def _serialize_user(user: User) -> dict:
@@ -16,6 +16,106 @@ def _serialize_user(user: User) -> dict:
         "role": user.role,
         "role_label": user.get_role_display(),
         "is_active": user.is_active,
+        "client_ids": list(user.clients.values_list("id", flat=True)),
+        "branch_ids": list(user.branches.values_list("id", flat=True)),
+        "area_ids": list(user.areas.values_list("id", flat=True)),
+    }
+
+
+def _serialize_client(client: Client) -> dict:
+    return {
+        "id": client.id,
+        "name": client.name,
+        "code": client.code,
+        "notes": client.notes,
+    }
+
+
+def _serialize_branch(branch: Branch) -> dict:
+    return {
+        "id": branch.id,
+        "name": branch.name,
+        "address": branch.address,
+        "city": branch.city,
+        "client": {
+            "id": branch.client_id,
+            "name": branch.client.name,
+        },
+    }
+
+
+def _serialize_area(area: Area) -> dict:
+    return {
+        "id": area.id,
+        "name": area.name,
+        "description": area.description,
+        "branch": {
+            "id": area.branch_id,
+            "name": area.branch.name,
+            "client": area.branch.client.name,
+        },
+    }
+
+
+def _serialize_dispenser(dispenser: Dispenser) -> dict:
+    return {
+        "id": dispenser.id,
+        "identifier": dispenser.identifier,
+        "installed_at": dispenser.installed_at.isoformat()
+        if dispenser.installed_at
+        else None,
+        "model": {
+            "id": dispenser.model_id,
+            "name": dispenser.model.name,
+        },
+        "area": {
+            "id": dispenser.area_id,
+            "name": dispenser.area.name,
+            "branch": dispenser.area.branch.name,
+        }
+        if dispenser.area
+        else None,
+    }
+
+
+def _serialize_product(product: Product) -> dict:
+    return {
+        "id": product.id,
+        "name": product.name,
+        "description": product.description,
+        "dispenser": {
+            "id": product.dispenser_id,
+            "identifier": product.dispenser.identifier,
+            "model": product.dispenser.model.name,
+        },
+    }
+
+
+def _serialize_visit(visit: Visit) -> dict:
+    inspector = "Sin asignar"
+    if visit.inspector:
+        inspector = visit.inspector.get_full_name() or visit.inspector.username
+    return {
+        "id": visit.id,
+        "client": visit.area.branch.client.name,
+        "branch": visit.area.branch.name,
+        "area": visit.area.name,
+        "dispenser": visit.dispenser.identifier if visit.dispenser else None,
+        "inspector": inspector,
+        "visited_at": visit.visited_at.isoformat(),
+        "notes": visit.notes,
+    }
+
+
+def _serialize_incident(incident: Incident) -> dict:
+    return {
+        "id": incident.id,
+        "client": incident.client.name,
+        "branch": incident.branch.name,
+        "area": incident.area.name,
+        "dispenser": incident.dispenser.identifier,
+        "description": incident.description,
+        "created_at": incident.created_at.isoformat(),
     }
 
 
@@ -31,6 +131,9 @@ def dashboard(request):
         "branches": Branch.objects.count(),
         "areas": Area.objects.count(),
         "dispensers": Dispenser.objects.count(),
+        "products": Product.objects.count(),
+        "visits": Visit.objects.count(),
+        "incidents": Incident.objects.count(),
     }
     recent_visits = (
         Visit.objects.select_related("area__branch__client", "inspector")
@@ -53,6 +156,74 @@ def dashboard(request):
             }
         )
     return JsonResponse({"stats": stats, "activity": activity})
+
+
+@require_GET
+def clients(request):
+    payload = [_serialize_client(client) for client in Client.objects.all()]
+    return JsonResponse({"results": payload})
+
+
+@require_GET
+def branches(request):
+    payload = [
+        _serialize_branch(branch)
+        for branch in Branch.objects.select_related("client").all()
+    ]
+    return JsonResponse({"results": payload})
+
+
+@require_GET
+def areas(request):
+    payload = [
+        _serialize_area(area)
+        for area in Area.objects.select_related("branch__client").all()
+    ]
+    return JsonResponse({"results": payload})
+
+
+@require_GET
+def dispensers(request):
+    payload = [
+        _serialize_dispenser(dispenser)
+        for dispenser in Dispenser.objects.select_related(
+            "model", "area__branch__client"
+        ).all()
+    ]
+    return JsonResponse({"results": payload})
+
+
+@require_GET
+def products(request):
+    payload = [
+        _serialize_product(product)
+        for product in Product.objects.select_related(
+            "dispenser__model"
+        ).all()
+    ]
+    return JsonResponse({"results": payload})
+
+
+@require_GET
+def visits(request):
+    payload = [
+        _serialize_visit(visit)
+        for visit in Visit.objects.select_related(
+            "area__branch__client", "inspector", "dispenser"
+        ).all()
+    ]
+    return JsonResponse({"results": payload})
+
+
+@require_GET
+def incidents(request):
+    payload = [
+        _serialize_incident(incident)
+        for incident in Incident.objects.select_related(
+            "client", "branch", "area", "dispenser"
+        ).all()
+    ]
+    return JsonResponse({"results": payload})
 
 
 @csrf_exempt
@@ -91,6 +262,15 @@ def users(request):
         role=role,
         is_active=bool(data.get("is_active", True)),
     )
+    client_ids = data.get("client_ids")
+    branch_ids = data.get("branch_ids")
+    area_ids = data.get("area_ids")
+    if client_ids is not None:
+        user.clients.set(Client.objects.filter(id__in=client_ids))
+    if branch_ids is not None:
+        user.branches.set(Branch.objects.filter(id__in=branch_ids))
+    if area_ids is not None:
+        user.areas.set(Area.objects.filter(id__in=area_ids))
     return JsonResponse(_serialize_user(user), status=201)
 
 
@@ -124,6 +304,13 @@ def user_detail(request, user_id: int):
         user.is_active = bool(data.get("is_active"))
     if data.get("password"):
         user.set_password(str(data.get("password")))
+
+    if "client_ids" in data:
+        user.clients.set(Client.objects.filter(id__in=data.get("client_ids") or []))
+    if "branch_ids" in data:
+        user.branches.set(Branch.objects.filter(id__in=data.get("branch_ids") or []))
+    if "area_ids" in data:
+        user.areas.set(Area.objects.filter(id__in=data.get("area_ids") or []))
 
     user.save()
     return JsonResponse(_serialize_user(user))

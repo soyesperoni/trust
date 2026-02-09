@@ -1,6 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+type Client = {
+  id: number;
+  name: string;
+  code: string;
+};
+
+type Branch = {
+  id: number;
+  name: string;
+  client: { id: number; name: string };
+};
+
+type Area = {
+  id: number;
+  name: string;
+  branch: { id: number; name: string; client: string };
+};
 
 export default function NuevoClientePage() {
   const [formState, setFormState] = useState({
@@ -8,17 +26,95 @@ export default function NuevoClientePage() {
     email: "",
     password: "",
     role: "",
+    selectedClientId: "",
+    selectedBranchId: "",
+    selectedAreaId: "",
+    readOnlyAccess: false,
   });
+  const [clients, setClients] = useState<Client[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadReferenceData = async () => {
+      try {
+        const [clientsRes, branchesRes, areasRes] = await Promise.all([
+          fetch("/api/clients", { cache: "no-store" }),
+          fetch("/api/branches", { cache: "no-store" }),
+          fetch("/api/areas", { cache: "no-store" }),
+        ]);
+
+        if (!clientsRes.ok || !branchesRes.ok || !areasRes.ok) {
+          throw new Error("No se pudo cargar la información de permisos.");
+        }
+
+        const [clientsData, branchesData, areasData] = await Promise.all([
+          clientsRes.json(),
+          branchesRes.json(),
+          areasRes.json(),
+        ]);
+
+        if (!isMounted) return;
+        setClients(clientsData.results ?? []);
+        setBranches(branchesData.results ?? []);
+        setAreas(areasData.results ?? []);
+        setLoadError(null);
+      } catch (fetchError) {
+        if (!isMounted) return;
+        setLoadError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "No se pudo cargar la información de permisos.",
+        );
+      } finally {
+        if (!isMounted) return;
+        setIsLoadingData(false);
+      }
+    };
+
+    loadReferenceData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
-    const { name, value } = event.target;
-    setFormState((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = event.target as HTMLInputElement;
+    setFormState((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
+
+  const filteredClients = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    if (!normalizedSearch) return clients;
+    return clients.filter((client) =>
+      `${client.name} ${client.code}`.toLowerCase().includes(normalizedSearch),
+    );
+  }, [clients, searchTerm]);
+
+  const availableBranches = useMemo(() => {
+    if (!formState.selectedClientId) return branches;
+    const selectedId = Number(formState.selectedClientId);
+    return branches.filter((branch) => branch.client.id === selectedId);
+  }, [branches, formState.selectedClientId]);
+
+  const availableAreas = useMemo(() => {
+    if (!formState.selectedBranchId) return areas;
+    const selectedId = Number(formState.selectedBranchId);
+    return areas.filter((area) => area.branch.id === selectedId);
+  }, [areas, formState.selectedBranchId]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -35,6 +131,16 @@ export default function NuevoClientePage() {
           email: formState.email,
           password: formState.password,
           role: formState.role || "inspector",
+          client_ids: formState.selectedClientId
+            ? [Number(formState.selectedClientId)]
+            : [],
+          branch_ids: formState.selectedBranchId
+            ? [Number(formState.selectedBranchId)]
+            : [],
+          area_ids: formState.selectedAreaId
+            ? [Number(formState.selectedAreaId)]
+            : [],
+          notes: formState.readOnlyAccess ? "Acceso solo lectura" : "",
         }),
       });
 
@@ -49,6 +155,10 @@ export default function NuevoClientePage() {
         email: "",
         password: "",
         role: "",
+        selectedClientId: "",
+        selectedBranchId: "",
+        selectedAreaId: "",
+        readOnlyAccess: false,
       });
     } catch (submitError) {
       setError(
@@ -84,31 +194,31 @@ export default function NuevoClientePage() {
               <span className="material-symbols-outlined">group</span>
               Usuarios
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/data">
               <span className="material-symbols-outlined">apartment</span>
               Clientes
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/sucursales">
               <span className="material-symbols-outlined">storefront</span>
               Sucursales
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/areas">
               <span className="material-symbols-outlined">map</span>
               Áreas
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/dispensadores">
               <span className="material-symbols-outlined">water_drop</span>
               Dosificadores
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/productos">
               <span className="material-symbols-outlined">inventory_2</span>
               Productos
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/visitas">
               <span className="material-symbols-outlined">history</span>
               Historial de Visitas
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/incidencias">
               <span className="material-symbols-outlined">report_problem</span>
               Incidencias
             </a>
@@ -294,50 +404,55 @@ export default function NuevoClientePage() {
                           className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md focus:ring-1 focus:ring-primary outline-none"
                           placeholder="Buscar cliente..."
                           type="text"
+                          value={searchTerm}
+                          onChange={(event) => setSearchTerm(event.target.value)}
                         />
                       </div>
                       <div className="mt-2 max-h-40 overflow-y-auto custom-scrollbar border border-slate-100 dark:border-slate-800 rounded-md">
-                        <label className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
-                          <input
-                            className="text-primary focus:ring-primary border-slate-300 rounded-full"
-                            name="client_perm"
-                            type="radio"
-                          />
-                          <span className="text-sm text-slate-700 dark:text-slate-300">
-                            Metro
-                          </span>
-                        </label>
-                        <label className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer bg-slate-50 dark:bg-slate-800/50">
-                          <input
-                            className="text-primary focus:ring-primary border-slate-300 rounded-full"
-                            defaultChecked
-                            name="client_perm"
-                            type="radio"
-                          />
-                          <span className="text-sm text-slate-900 font-medium dark:text-white">
-                            Primax
-                          </span>
-                        </label>
-                        <label className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
-                          <input
-                            className="text-primary focus:ring-primary border-slate-300 rounded-full"
-                            name="client_perm"
-                            type="radio"
-                          />
-                          <span className="text-sm text-slate-700 dark:text-slate-300">
-                            Repsol
-                          </span>
-                        </label>
-                        <label className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
-                          <input
-                            className="text-primary focus:ring-primary border-slate-300 rounded-full"
-                            name="client_perm"
-                            type="radio"
-                          />
-                          <span className="text-sm text-slate-700 dark:text-slate-300">
-                            Shell
-                          </span>
-                        </label>
+                        {isLoadingData ? (
+                          <div className="p-3 text-sm text-slate-500">
+                            Cargando clientes...
+                          </div>
+                        ) : loadError ? (
+                          <div className="p-3 text-sm text-red-500">
+                            {loadError}
+                          </div>
+                        ) : filteredClients.length === 0 ? (
+                          <div className="p-3 text-sm text-slate-500">
+                            No hay clientes disponibles.
+                          </div>
+                        ) : (
+                          filteredClients.map((client) => (
+                            <label
+                              className={`flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer ${
+                                formState.selectedClientId === String(client.id)
+                                  ? "bg-slate-50 dark:bg-slate-800/50"
+                                  : ""
+                              }`}
+                              key={client.id}
+                            >
+                              <input
+                                className="text-primary focus:ring-primary border-slate-300 rounded-full"
+                                name="selectedClientId"
+                                type="radio"
+                                value={client.id}
+                                checked={
+                                  formState.selectedClientId === String(client.id)
+                                }
+                                onChange={handleChange}
+                              />
+                              <span
+                                className={`text-sm ${
+                                  formState.selectedClientId === String(client.id)
+                                    ? "text-slate-900 font-medium dark:text-white"
+                                    : "text-slate-700 dark:text-slate-300"
+                                }`}
+                              >
+                                {client.name}
+                              </span>
+                            </label>
+                          ))
+                        )}
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -347,12 +462,17 @@ export default function NuevoClientePage() {
                       <div className="relative">
                         <select
                           className="w-full appearance-none pl-3 pr-8 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md focus:ring-1 focus:ring-primary outline-none cursor-pointer"
-                          defaultValue="Estación Javier Prado"
+                          name="selectedBranchId"
+                          value={formState.selectedBranchId}
+                          onChange={handleChange}
+                          disabled={isLoadingData || !!loadError}
                         >
-                          <option>Todas las sucursales</option>
-                          <option>Estación Javier Prado</option>
-                          <option>Estación La Marina</option>
-                          <option>Estación Benavides</option>
+                          <option value="">Todas las sucursales</option>
+                          {availableBranches.map((branch) => (
+                            <option key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </option>
+                          ))}
                         </select>
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined text-[18px]">
                           expand_more
@@ -364,8 +484,9 @@ export default function NuevoClientePage() {
                             info
                           </span>
                           <p className="text-xs text-slate-500 leading-relaxed">
-                            Seleccionando "Estación Javier Prado". El usuario
-                            tendrá acceso limitado a esta ubicación.
+                            {formState.selectedBranchId
+                              ? "La sucursal seleccionada limitará el alcance del usuario."
+                              : "Selecciona una sucursal para restringir el alcance del usuario."}
                           </p>
                         </div>
                       </div>
@@ -377,12 +498,17 @@ export default function NuevoClientePage() {
                       <div className="relative">
                         <select
                           className="w-full appearance-none pl-3 pr-8 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md focus:ring-1 focus:ring-primary outline-none cursor-pointer"
-                          defaultValue="Todas las áreas"
+                          name="selectedAreaId"
+                          value={formState.selectedAreaId}
+                          onChange={handleChange}
+                          disabled={isLoadingData || !!loadError}
                         >
-                          <option>Todas las áreas</option>
-                          <option>Zona de Combustible</option>
-                          <option>Tienda de Conveniencia</option>
-                          <option>Baños</option>
+                          <option value="">Todas las áreas</option>
+                          {availableAreas.map((area) => (
+                            <option key={area.id} value={area.id}>
+                              {area.name}
+                            </option>
+                          ))}
                         </select>
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined text-[18px]">
                           expand_more
@@ -392,6 +518,9 @@ export default function NuevoClientePage() {
                         <label className="inline-flex items-center">
                           <input
                             className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
+                            name="readOnlyAccess"
+                            checked={formState.readOnlyAccess}
+                            onChange={handleChange}
                             type="checkbox"
                           />
                           <span className="ml-2 text-xs text-slate-600 dark:text-slate-400">

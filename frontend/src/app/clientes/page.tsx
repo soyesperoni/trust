@@ -21,6 +21,9 @@ export default function ClientesPage() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -56,8 +59,22 @@ export default function ClientesPage() {
 
   const rows = useMemo(() => {
     if (isLoading || error) return [];
-    return users;
-  }, [error, isLoading, users]);
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    return users.filter((user) => {
+      if (selectedRole && user.role !== selectedRole) return false;
+      if (selectedStatus) {
+        const statusValue = user.is_active ? "activo" : "inactivo";
+        if (statusValue !== selectedStatus) return false;
+      }
+      if (normalizedSearch) {
+        const haystack = `${user.full_name} ${user.email} ${user.role_label}`
+          .toLowerCase()
+          .trim();
+        return haystack.includes(normalizedSearch);
+      }
+      return true;
+    });
+  }, [error, isLoading, searchTerm, selectedRole, selectedStatus, users]);
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display min-h-screen text-slate-800 dark:text-slate-200">
@@ -82,31 +99,31 @@ export default function ClientesPage() {
               <span className="material-symbols-outlined">group</span>
               Usuarios
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/data">
               <span className="material-symbols-outlined">apartment</span>
               Clientes
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/sucursales">
               <span className="material-symbols-outlined">storefront</span>
               Sucursales
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/areas">
               <span className="material-symbols-outlined">map</span>
               Áreas
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/dispensadores">
               <span className="material-symbols-outlined">water_drop</span>
               Dosificadores
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/productos">
               <span className="material-symbols-outlined">inventory_2</span>
               Productos
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/visitas">
               <span className="material-symbols-outlined">history</span>
               Historial de Visitas
             </a>
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/clientes/incidencias">
               <span className="material-symbols-outlined">report_problem</span>
               Incidencias
             </a>
@@ -161,6 +178,8 @@ export default function ClientesPage() {
                   className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm w-64 focus:ring-2 focus:ring-primary"
                   placeholder="Buscar..."
                   type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </div>
               <button className="p-2 relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
@@ -195,11 +214,15 @@ export default function ClientesPage() {
                   </span>
                 </div>
                 <div className="relative">
-                  <select className="appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 py-2 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer">
+                  <select
+                    className="appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 py-2 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
+                    value={selectedRole}
+                    onChange={(event) => setSelectedRole(event.target.value)}
+                  >
                     <option value="">Todos los Roles</option>
-                    <option value="admin_global">Admin Global</option>
-                    <option value="admin_cuentas">Admin de Cuentas</option>
-                    <option value="admin_sucursal">Admin de Sucursal</option>
+                    <option value="general_admin">Admin Global</option>
+                    <option value="account_admin">Admin de Cuentas</option>
+                    <option value="branch_admin">Admin de Sucursal</option>
                     <option value="inspector">Inspector</option>
                   </select>
                   <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined text-[18px]">
@@ -207,7 +230,11 @@ export default function ClientesPage() {
                   </span>
                 </div>
                 <div className="relative">
-                  <select className="appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 py-2 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer">
+                  <select
+                    className="appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 py-2 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
+                    value={selectedStatus}
+                    onChange={(event) => setSelectedStatus(event.target.value)}
+                  >
                     <option value="">Todos los Estados</option>
                     <option value="activo">Activo</option>
                     <option value="inactivo">Inactivo</option>
