@@ -1,8 +1,49 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
+type BranchApi = {
+  id: number;
+  name: string;
+  address: string;
+  city: string;
+  client: {
+    id: number;
+    name: string;
+  };
+};
+
+type AreaApi = {
+  id: number;
+  name: string;
+  description: string;
+  branch: {
+    id: number;
+    name: string;
+    client: string;
+  };
+};
+
+type DispenserApi = {
+  id: number;
+  identifier: string;
+  installed_at: string | null;
+  model: {
+    id: number;
+    name: string;
+  };
+  area: {
+    id: number;
+    name: string;
+    branch: string;
+  } | null;
+};
+
 type Branch = {
-  id: string;
+  id: number;
   name: string;
   client: string;
   city: string;
@@ -10,45 +51,6 @@ type Branch = {
   dispensers: number;
   status: "Activa" | "Inactiva";
 };
-
-const branches: Branch[] = [
-  {
-    id: "SUC-0045",
-    name: "Sucursal Norte #45",
-    client: "Supermercados Metro",
-    city: "Madrid",
-    areas: 12,
-    dispensers: 48,
-    status: "Activa",
-  },
-  {
-    id: "SUC-0012",
-    name: "Estación Central",
-    client: "Gasolineras Primax",
-    city: "Barcelona",
-    areas: 4,
-    dispensers: 16,
-    status: "Activa",
-  },
-  {
-    id: "SUC-0089",
-    name: "Área Cocina Principal",
-    client: "Hotel Fiesta",
-    city: "Valencia",
-    areas: 8,
-    dispensers: 22,
-    status: "Inactiva",
-  },
-  {
-    id: "SUC-0104",
-    name: "Plaza Piso 2",
-    client: "Centro Comercial Plaza",
-    city: "Sevilla",
-    areas: 15,
-    dispensers: 64,
-    status: "Activa",
-  },
-];
 
 const statusStyles: Record<Branch["status"], string> = {
   Activa:
@@ -58,6 +60,96 @@ const statusStyles: Record<Branch["status"], string> = {
 };
 
 export default function SucursalesPage() {
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadBranches = async () => {
+      try {
+        const [branchesResponse, areasResponse, dispensersResponse] =
+          await Promise.all([
+            fetch("/api/branches", { cache: "no-store" }),
+            fetch("/api/areas", { cache: "no-store" }),
+            fetch("/api/dispensers", { cache: "no-store" }),
+          ]);
+        if (
+          !branchesResponse.ok ||
+          !areasResponse.ok ||
+          !dispensersResponse.ok
+        ) {
+          throw new Error("No se pudieron cargar las sucursales.");
+        }
+        const [branchesData, areasData, dispensersData] = await Promise.all([
+          branchesResponse.json(),
+          areasResponse.json(),
+          dispensersResponse.json(),
+        ]);
+        if (!isMounted) return;
+        const areas = (areasData.results ?? []) as AreaApi[];
+        const areaCount = areas.reduce<Record<number, number>>((acc, area) => {
+          acc[area.branch.id] = (acc[area.branch.id] ?? 0) + 1;
+          return acc;
+        }, {});
+        const areaById = areas.reduce<Record<number, number>>((acc, area) => {
+          acc[area.id] = area.branch.id;
+          return acc;
+        }, {});
+        const dispensers = (dispensersData.results ?? []) as DispenserApi[];
+        const dispenserCount = dispensers.reduce<Record<number, number>>(
+          (acc, dispenser) => {
+            if (dispenser.area?.id) {
+              const branchId = areaById[dispenser.area.id];
+              if (branchId) {
+                acc[branchId] = (acc[branchId] ?? 0) + 1;
+              }
+            }
+            return acc;
+          },
+          {},
+        );
+        const rows = (branchesData.results ?? []).map((branch: BranchApi) => {
+          const areasTotal = areaCount[branch.id] ?? 0;
+          const dispensersTotal = dispenserCount[branch.id] ?? 0;
+          return {
+            id: branch.id,
+            name: branch.name,
+            client: branch.client.name,
+            city: branch.city || "Sin ciudad",
+            areas: areasTotal,
+            dispensers: dispensersTotal,
+            status: areasTotal > 0 || dispensersTotal > 0 ? "Activa" : "Inactiva",
+          };
+        });
+        setBranches(rows);
+        setError(null);
+      } catch (fetchError) {
+        if (!isMounted) return;
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "No se pudieron cargar las sucursales.",
+        );
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
+      }
+    };
+
+    loadBranches();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const emptyMessage = useMemo(() => {
+    if (isLoading) return "Cargando sucursales...";
+    if (error) return error;
+    return "No hay sucursales registradas.";
+  }, [error, isLoading]);
+
   return (
     <>
       <DashboardHeader title="Sucursales" searchPlaceholder="Buscar sucursal..." />
@@ -199,12 +291,22 @@ export default function SucursalesPage() {
                     </td>
                   </tr>
                 ))}
+                {branches.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-6 py-8 text-center text-slate-500"
+                    >
+                      {emptyMessage}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
           <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
             <span className="text-sm text-slate-500 dark:text-slate-400">
-              Mostrando 4 de 156 sucursales
+              Mostrando {branches.length} de {branches.length} sucursales
             </span>
             <div className="flex items-center gap-2">
               <button

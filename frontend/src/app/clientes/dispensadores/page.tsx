@@ -1,11 +1,38 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
 type DispenserStatus = "Operativo" | "Mantenimiento" | "Inactivo";
+
+type DispenserApi = {
+  id: number;
+  identifier: string;
+  installed_at: string | null;
+  model: {
+    id: number;
+    name: string;
+  };
+  area: {
+    id: number;
+    name: string;
+    branch: string;
+  } | null;
+};
+
+type ProductApi = {
+  id: number;
+  name: string;
+  description: string;
+  dispenser: {
+    id: number;
+    identifier: string;
+    model: string;
+  };
+};
 
 type DispenserRow = {
   id: number;
@@ -18,64 +45,6 @@ type DispenserRow = {
   products: number;
   status: DispenserStatus;
 };
-
-const DISPENSERS: DispenserRow[] = [
-  {
-    id: 1,
-    code: "DS-2023-001",
-    serial: "#8492",
-    model: "Ecolab 4-Station",
-    area: "Cocina Principal",
-    branch: "Metro Norte #45",
-    branchInitials: "SM",
-    products: 4,
-    status: "Operativo",
-  },
-  {
-    id: 2,
-    code: "DS-2023-042",
-    serial: "#8510",
-    model: "Seko ProMax",
-    area: "Lavandería",
-    branch: "Hotel Fiesta",
-    branchInitials: "HF",
-    products: 2,
-    status: "Mantenimiento",
-  },
-  {
-    id: 3,
-    code: "DS-2023-088",
-    serial: "#9001",
-    model: "Diversey Quattro",
-    area: "Baños Piso 2",
-    branch: "CC Plaza",
-    branchInitials: "CC",
-    products: 3,
-    status: "Inactivo",
-  },
-  {
-    id: 4,
-    code: "DS-2023-104",
-    serial: "#9120",
-    model: "Ecolab 4-Station",
-    area: "Área de Servicio",
-    branch: "Primax Central",
-    branchInitials: "GP",
-    products: 1,
-    status: "Operativo",
-  },
-  {
-    id: 5,
-    code: "DS-2023-112",
-    serial: "#9334",
-    model: "Seko ProMax",
-    area: "Barra Principal",
-    branch: "Hotel Fiesta",
-    branchInitials: "HF",
-    products: 4,
-    status: "Operativo",
-  },
-];
 
 const statusStyles: Record<DispenserStatus, { badge: string; dot: string }> = {
   Operativo: {
@@ -95,6 +64,91 @@ const statusStyles: Record<DispenserStatus, { badge: string; dot: string }> = {
 };
 
 export default function DispensadoresPage() {
+  const [dispensers, setDispensers] = useState<DispenserRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDispensers = async () => {
+      try {
+        const [dispensersResponse, productsResponse] = await Promise.all([
+          fetch("/api/dispensers", { cache: "no-store" }),
+          fetch("/api/products", { cache: "no-store" }),
+        ]);
+        if (!dispensersResponse.ok || !productsResponse.ok) {
+          throw new Error("No se pudieron cargar los dosificadores.");
+        }
+        const [dispensersData, productsData] = await Promise.all([
+          dispensersResponse.json(),
+          productsResponse.json(),
+        ]);
+        if (!isMounted) return;
+        const products = (productsData.results ?? []) as ProductApi[];
+        const productCount = products.reduce<Record<number, number>>(
+          (acc, product) => {
+            acc[product.dispenser.id] =
+              (acc[product.dispenser.id] ?? 0) + 1;
+            return acc;
+          },
+          {},
+        );
+        const rows = (dispensersData.results ?? []).map(
+          (dispenser: DispenserApi) => {
+            const branchName = dispenser.area?.branch ?? "Sin sucursal";
+            const branchInitials = branchName
+              .split(" ")
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0]?.toUpperCase())
+              .join("");
+            const status: DispenserStatus = dispenser.installed_at
+              ? "Operativo"
+              : "Inactivo";
+            return {
+              id: dispenser.id,
+              code: dispenser.identifier,
+              serial: `#${dispenser.id}`,
+              model: dispenser.model.name,
+              area: dispenser.area?.name ?? "Sin área",
+              branch: branchName,
+              branchInitials: branchInitials || "NA",
+              products: productCount[dispenser.id] ?? 0,
+              status,
+            };
+          },
+        );
+        setDispensers(rows);
+        setError(null);
+      } catch (fetchError) {
+        if (!isMounted) return;
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "No se pudieron cargar los dosificadores.",
+        );
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
+      }
+    };
+
+    loadDispensers();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const totalResults = dispensers.length;
+  const displayedResults = dispensers.length;
+
+  const emptyMessage = useMemo(() => {
+    if (isLoading) return "Cargando dosificadores...";
+    if (error) return error;
+    return "No hay dosificadores registrados.";
+  }, [error, isLoading]);
+
   return (
     <>
       <DashboardHeader
@@ -134,7 +188,7 @@ export default function DispensadoresPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {DISPENSERS.map((dispenser) => {
+                {dispensers.map((dispenser) => {
                   const statusStyle = statusStyles[dispenser.status];
 
                   return (
@@ -200,13 +254,23 @@ export default function DispensadoresPage() {
                     </tr>
                   );
                 })}
+                {dispensers.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-6 py-8 text-center text-slate-500"
+                    >
+                      {emptyMessage}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
           <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-[#161e27]">
             <div className="text-sm text-slate-500">
-              Mostrando <span className="font-medium">1-5</span> de{" "}
-              <span className="font-medium">842</span> resultados
+              Mostrando <span className="font-medium">{displayedResults}</span>{" "}
+              de <span className="font-medium">{totalResults}</span> resultados
             </div>
             <div className="flex gap-2">
               <button

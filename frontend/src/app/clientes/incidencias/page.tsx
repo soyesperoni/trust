@@ -1,100 +1,185 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
-const incidents = [
-  {
-    id: "INC-2024-001",
-    client: "Supermercados Metro",
-    initials: "SM",
-    initialsClass:
-      "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300",
-    branch: "Sucursal Norte #45",
-    dispenser: "EcoMix 500",
-    priority: {
+type IncidentApi = {
+  id: number;
+  client: string;
+  branch: string;
+  area: string;
+  dispenser: string;
+  description: string;
+  created_at: string;
+};
+
+type IncidentRow = {
+  id: number;
+  client: string;
+  initials: string;
+  initialsClass: string;
+  branch: string;
+  dispenser: string;
+  priority: {
+    label: string;
+    className: string;
+  };
+  status: {
+    label: string;
+    className: string;
+    pulse: boolean;
+  };
+  reportedAt: string;
+  action: "schedule" | "view";
+};
+
+const initialsClassPool = [
+  "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300",
+  "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300",
+  "bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-300",
+  "bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-300",
+  "bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300",
+];
+
+const formatRelativeTime = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  const diffMs = date.getTime() - Date.now();
+  const diffMinutes = Math.round(diffMs / 60000);
+  const diffHours = Math.round(diffMs / 3600000);
+  const diffDays = Math.round(diffMs / 86400000);
+  const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+  if (Math.abs(diffMinutes) < 60) {
+    return rtf.format(diffMinutes, "minute");
+  }
+  if (Math.abs(diffHours) < 24) {
+    return rtf.format(diffHours, "hour");
+  }
+  return rtf.format(diffDays, "day");
+};
+
+const getPriorityFromDescription = (description: string) => {
+  const normalized = description.toLowerCase();
+  if (normalized.includes("crítico") || normalized.includes("urgente")) {
+    return {
       label: "Alta",
       className:
         "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-100 dark:border-red-900/50",
-    },
-    status: {
-      label: "Abierta",
-      className:
-        "bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
-      pulse: true,
-    },
-    reportedAt: "Hace 2 horas",
-    action: "schedule",
-  },
-  {
-    id: "INC-2024-002",
-    client: "Gasolineras Primax",
-    initials: "GP",
-    initialsClass:
-      "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300",
-    branch: "Estación Central",
-    dispenser: "ProClean 200",
-    priority: {
+    };
+  }
+  if (normalized.includes("revisar") || normalized.includes("fuga")) {
+    return {
       label: "Media",
       className:
         "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border border-yellow-100 dark:border-yellow-900/50",
-    },
-    status: {
-      label: "En Proceso",
-      className:
-        "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-      pulse: false,
-    },
-    reportedAt: "Ayer, 14:30",
-    action: "view",
-  },
-  {
-    id: "INC-2024-003",
-    client: "Hotel Fiesta",
-    initials: "HF",
-    initialsClass:
-      "bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-300",
-    branch: "Área Cocina",
-    dispenser: "HydroDose X1",
-    priority: {
-      label: "Baja",
-      className:
-        "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-100 dark:border-green-900/50",
-    },
-    status: {
-      label: "Cerrada",
+    };
+  }
+  return {
+    label: "Baja",
+    className:
+      "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-100 dark:border-green-900/50",
+  };
+};
+
+const getStatusFromDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return {
+      label: "Registrada",
       className:
         "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
       pulse: false,
-    },
-    reportedAt: "23 Oct 2023",
-    action: "view",
-  },
-  {
-    id: "INC-2024-004",
-    client: "Centro Comercial Plaza",
-    initials: "CC",
-    initialsClass:
-      "bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-300",
-    branch: "Baños Piso 2",
-    dispenser: "SoapDisp M3",
-    priority: {
-      label: "Alta",
-      className:
-        "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-100 dark:border-red-900/50",
-    },
-    status: {
+    };
+  }
+  const diffHours = Math.abs(Date.now() - date.getTime()) / 3600000;
+  if (diffHours <= 48) {
+    return {
       label: "Abierta",
       className:
         "bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
       pulse: true,
-    },
-    reportedAt: "Hace 5 horas",
-    action: "schedule",
-  },
-];
+    };
+  }
+  return {
+    label: "Registrada",
+    className:
+      "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    pulse: false,
+  };
+};
 
 export default function IncidenciasPage() {
+  const [incidents, setIncidents] = useState<IncidentRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadIncidents = async () => {
+      try {
+        const response = await fetch("/api/incidents", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("No se pudieron cargar las incidencias.");
+        }
+        const data = await response.json();
+        if (!isMounted) return;
+        const rows = (data.results ?? []).map(
+          (incident: IncidentApi, index: number) => {
+            const initials = incident.client
+              .split(" ")
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0]?.toUpperCase())
+              .join("");
+            const status = getStatusFromDate(incident.created_at);
+            return {
+              id: incident.id,
+              client: incident.client,
+              initials: initials || "NA",
+              initialsClass:
+                initialsClassPool[index % initialsClassPool.length],
+              branch: incident.branch,
+              dispenser: incident.dispenser,
+              priority: getPriorityFromDescription(incident.description),
+              status,
+              reportedAt: formatRelativeTime(incident.created_at),
+              action: status.label === "Abierta" ? "schedule" : "view",
+            };
+          },
+        );
+        setIncidents(rows);
+        setError(null);
+      } catch (fetchError) {
+        if (!isMounted) return;
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "No se pudieron cargar las incidencias.",
+        );
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
+      }
+    };
+
+    loadIncidents();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const emptyMessage = useMemo(() => {
+    if (isLoading) return "Cargando incidencias...";
+    if (error) return error;
+    return "No hay incidencias registradas.";
+  }, [error, isLoading]);
+
   return (
     <>
       <DashboardHeader
@@ -214,12 +299,22 @@ export default function IncidenciasPage() {
                     </td>
                   </tr>
                 ))}
+                {incidents.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-6 py-8 text-center text-slate-500"
+                    >
+                      {emptyMessage}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
           <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <span className="text-sm text-slate-500">
-              Mostrando 4 de 128 incidencias
+              Mostrando {incidents.length} de {incidents.length} incidencias
             </span>
             <div className="flex gap-2">
               <button className="px-3 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500">
