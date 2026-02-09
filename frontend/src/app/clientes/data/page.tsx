@@ -126,6 +126,7 @@ export default function ClientesListadoPage() {
           usersResponse.json(),
         ]);
         if (!isMounted) return;
+        const clients = (clientsData.results ?? []) as ClientApi[];
         const branches = (branchesData.results ?? []) as BranchApi[];
         const areas = (areasData.results ?? []) as AreaApi[];
         const dispensers = (dispensersData.results ?? []) as DispenserApi[];
@@ -145,12 +146,13 @@ export default function ClientesListadoPage() {
           },
           {},
         );
-        const clientByName = (clientsData.results ?? []).reduce<
-          Record<string, number>
-        >((acc, client: ClientApi) => {
-          acc[client.name] = client.id;
-          return acc;
-        }, {});
+        const clientByName = clients.reduce<Record<string, number>>(
+          (acc, client) => {
+            acc[client.name] = client.id;
+            return acc;
+          },
+          {},
+        );
         const dispenserCount = dispensers.reduce<Record<number, number>>(
           (acc, dispenser) => {
             if (dispenser.area?.id) {
@@ -176,17 +178,16 @@ export default function ClientesListadoPage() {
           {},
         );
 
-        const rows = (clientsData.results ?? []).map(
-          (client: ClientApi, index: number) => {
-            const initials = client.name
-              .split(" ")
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((part) => part[0]?.toUpperCase())
-              .join("");
-            const branchesTotal = branchCount[client.id] ?? 0;
-            const dispensersTotal = dispenserCount[client.id] ?? 0;
-            const contact = contactByClient[client.id];
+        const rows = clients.map((client: ClientApi, index: number) => {
+          const initials = client.name
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase())
+            .join("");
+          const branchesTotal = branchCount[client.id] ?? 0;
+          const dispensersTotal = dispenserCount[client.id] ?? 0;
+          const contact = contactByClient[client.id];
             const status =
               branchesTotal > 0 || dispensersTotal > 0 ? "Activo" : "Inactivo";
             const badgeClasses =
