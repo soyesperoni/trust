@@ -42,6 +42,14 @@ body {
   @apply bg-yellow-50 text-slate-900 border-r-4 border-primary font-semibold;
 }
 
+.form-label {
+  @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5;
+}
+
+.form-input {
+  @apply w-full rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary disabled:bg-slate-50 disabled:text-slate-500 transition-colors;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
