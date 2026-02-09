@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import SidebarUserCard from "../../components/SidebarUserCard";
+
 type UserRecord = {
   id: number;
   full_name: string;
@@ -257,17 +259,7 @@ export default function EditarUsuarioPage({
             </a>
           </nav>
           <div className="p-6 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 font-semibold">
-                AR
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  Alicia Rivera
-                </span>
-                <span className="text-xs text-slate-500">alicia@trust.com</span>
-              </div>
-            </div>
+            <SidebarUserCard />
           </div>
         </aside>
         <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
