@@ -33,3 +33,24 @@ body {
   color: var(--foreground);
   font-family: "Manrope", sans-serif;
 }
+
+.sidebar-link {
+  @apply flex items-center gap-3 px-6 py-3.5 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer;
+}
+
+.sidebar-link.active {
+  @apply bg-yellow-50 text-slate-900 border-r-4 border-primary font-semibold;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
