@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import DashboardHeader from "../components/DashboardHeader";
 import SidebarUserCard from "../components/SidebarUserCard";
 
 type UserRecord = {
@@ -135,49 +136,12 @@ export default function ClientesPage() {
           </div>
         </aside>
         <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
-          <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
-            <div className="flex items-center gap-2">
-              <div className="bg-primary p-1 rounded flex items-center justify-center">
-                <span className="material-symbols-outlined text-slate-900 text-[20px] font-variation-fill">
-                  shield
-                </span>
-              </div>
-              <span className="font-logo text-xl font-bold text-primary lowercase">
-                trust
-              </span>
-            </div>
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-          </header>
-          <header className="h-20 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 hidden md:flex items-center justify-between px-8">
-            <div>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-                Gestión de Usuarios
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Solo el Administrador General puede ver, crear o editar usuarios.
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
-                  search
-                </span>
-                <input
-                  className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm w-64 focus:ring-2 focus:ring-primary"
-                  placeholder="Buscar..."
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                />
-              </div>
-              <button className="p-2 relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                <span className="material-symbols-outlined">notifications</span>
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-              </button>
-            </div>
-          </header>
+          <DashboardHeader
+            title="Gestión de Usuarios"
+            description="Solo el Administrador General puede ver, crear o editar usuarios."
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+          />
           <div className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col h-full">
               <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
