@@ -1,6 +1,6 @@
 "use client";
 
-type BrandLogoSize = "md" | "lg" | "xl";
+type BrandLogoSize = "md" | "lg" | "xl" | "xxl";
 
 type BrandLogoProps = {
   size?: BrandLogoSize;
@@ -21,6 +21,11 @@ const sizeStyles: Record<BrandLogoSize, { icon: string; text: string; gap: strin
     icon: "text-[32px]",
     text: "text-3xl",
     gap: "gap-4",
+  },
+  xxl: {
+    icon: "text-[40px]",
+    text: "text-4xl",
+    gap: "gap-5",
   },
 };
 
