@@ -1,3 +1,4 @@
+import Link from "next/link";
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
