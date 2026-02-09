@@ -34,7 +34,7 @@ export default function DashboardHeader({
   return (
     <>
       <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
-        <BrandLogo size="sm" />
+        <BrandLogo />
         <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
           <span className="material-symbols-outlined">menu</span>
         </button>
