@@ -1,36 +1,15 @@
 import Link from "next/link";
 
-import BrandLogo from "../../../components/BrandLogo";
+import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
 export default function NuevoProductoPage() {
   return (
     <>
-      <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
-        <BrandLogo size="lg" />
-        <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
-          <span className="material-symbols-outlined">menu</span>
-        </button>
-      </header>
-      <header className="h-20 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 hidden md:flex items-center justify-between px-8">
-        <div className="flex items-center gap-4">
-          <Link
-            className="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-            href="/clientes/productos"
-          >
-            <span className="material-symbols-outlined">arrow_back</span>
-          </Link>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-            Nuevo Producto
-          </h2>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="p-2 relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-            <span className="material-symbols-outlined">notifications</span>
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-          </button>
-        </div>
-      </header>
+      <DashboardHeader
+        title="Nuevo Producto"
+        description="Completa la información para agregar un nuevo producto."
+      />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-5xl mx-auto">
           <form className="space-y-8">

@@ -1,39 +1,13 @@
-import Link from "next/link";
-
-import BrandLogo from "../../../components/BrandLogo";
+import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
 export default function NuevoDosificadorPage() {
   return (
     <>
-      <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
-        <BrandLogo size="lg" />
-        <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
-          <span className="material-symbols-outlined">menu</span>
-        </button>
-      </header>
-      <header className="h-20 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 hidden md:flex items-center justify-between px-8">
-        <div className="flex items-center gap-4">
-          <Link
-            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500"
-            href="/clientes/dispensadores"
-          >
-            <span className="material-symbols-outlined">arrow_back</span>
-          </Link>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-            Nuevo Dosificador
-          </h2>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span>Dosificadores</span>
-          <span className="material-symbols-outlined text-[16px]">
-            chevron_right
-          </span>
-          <span className="font-medium text-slate-900 dark:text-slate-200">
-            Nuevo
-          </span>
-        </div>
-      </header>
+      <DashboardHeader
+        title="Nuevo Dosificador"
+        description="Registra un nuevo equipo en la plataforma."
+      />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden">

@@ -2,6 +2,8 @@
 
 import type { ChangeEvent } from "react";
 
+import Link from "next/link";
+
 import BrandLogo from "./BrandLogo";
 import ThemeToggleButton from "./ThemeToggleButton";
 
@@ -63,10 +65,14 @@ export default function DashboardHeader({
             />
           </div>
           <ThemeToggleButton />
-          <button className="p-2 relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+          <Link
+            href="/dashboard/notificaciones"
+            className="p-2 relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+            aria-label="Ver notificaciones"
+          >
             <span className="material-symbols-outlined">notifications</span>
             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-          </button>
+          </Link>
         </div>
       </header>
     </>
