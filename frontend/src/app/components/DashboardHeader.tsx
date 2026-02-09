@@ -2,6 +2,7 @@
 
 import type { ChangeEvent } from "react";
 
+import BrandLogo from "./BrandLogo";
 import ThemeToggleButton from "./ThemeToggleButton";
 
 type DashboardHeaderProps = {
@@ -33,16 +34,7 @@ export default function DashboardHeader({
   return (
     <>
       <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
-        <div className="flex items-center gap-2">
-          <div className="bg-primary p-1 rounded flex items-center justify-center">
-            <span className="material-symbols-outlined text-slate-900 text-[20px] font-variation-fill">
-              shield
-            </span>
-          </div>
-          <span className="font-logo text-xl font-bold text-primary lowercase">
-            trust
-          </span>
-        </div>
+        <BrandLogo />
         <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
           <span className="material-symbols-outlined">menu</span>
         </button>
