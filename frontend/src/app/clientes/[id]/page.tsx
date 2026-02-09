@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import DashboardSidebar from "../../components/DashboardSidebar";
+import PageTransition from "../../components/PageTransition";
 
 type UserRecord = {
   id: number;
@@ -216,7 +218,7 @@ export default function EditarUsuarioPage({
             title="Editar Usuario"
             description="Actualiza los datos de acceso y permisos."
           />
-          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="max-w-4xl mx-auto">
               <form
                 className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden"
@@ -469,12 +471,12 @@ export default function EditarUsuarioPage({
                   </div>
                 </div>
                 <div className="px-6 md:px-8 py-5 bg-slate-50 dark:bg-[#131b23] border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
-                  <a
+                  <Link
                     className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all shadow-sm"
                     href="/clientes"
                   >
                     Cancelar
-                  </a>
+                  </Link>
                   <button
                     className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-professional-green hover:bg-green-700 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                     disabled={isSaving || isLoading}
@@ -500,7 +502,7 @@ export default function EditarUsuarioPage({
                 )}
               </form>
             </div>
-          </div>
+          </PageTransition>
         </main>
       </div>
     </div>

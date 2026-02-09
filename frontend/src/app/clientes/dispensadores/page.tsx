@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import PageTransition from "../../components/PageTransition";
+
 type Dispenser = {
   id: number;
   identifier: string;
@@ -48,7 +50,7 @@ export default function DispensadoresPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <PageTransition className="space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           Dosificadores
@@ -115,6 +117,6 @@ export default function DispensadoresPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageTransition>
   );
 }

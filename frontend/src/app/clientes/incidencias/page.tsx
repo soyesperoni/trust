@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import PageTransition from "../../components/PageTransition";
+
 type Incident = {
   id: number;
   client: string;
@@ -50,7 +52,7 @@ export default function IncidenciasPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <PageTransition className="space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           Incidencias
@@ -117,6 +119,6 @@ export default function IncidenciasPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageTransition>
   );
 }

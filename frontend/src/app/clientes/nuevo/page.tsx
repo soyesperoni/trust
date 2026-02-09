@@ -1,5 +1,8 @@
+import Link from "next/link";
+
 import DashboardHeader from "../../components/DashboardHeader";
 import DashboardSidebar from "../../components/DashboardSidebar";
+import PageTransition from "../../components/PageTransition";
 
 export default function NuevoClientePage() {
   return (
@@ -11,7 +14,7 @@ export default function NuevoClientePage() {
             title="Nuevo Cliente"
             description="Complete la información para registrar una nueva empresa cliente en la plataforma."
           />
-          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="max-w-4xl mx-auto">
               <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden">
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
@@ -160,12 +163,12 @@ export default function NuevoClientePage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <a
+                    <Link
                       className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                       href="/clientes/data"
                     >
                       Cancelar
-                    </a>
+                    </Link>
                     <button
                       className="px-5 py-2.5 rounded-lg bg-professional-green text-white font-medium hover:bg-green-700 shadow-sm transition-colors flex items-center gap-2"
                       type="submit"
@@ -179,7 +182,7 @@ export default function NuevoClientePage() {
                 </form>
               </div>
             </div>
-          </div>
+          </PageTransition>
         </main>
       </div>
     </div>

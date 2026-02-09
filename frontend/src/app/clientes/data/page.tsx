@@ -1,5 +1,8 @@
+import Link from "next/link";
+
 import DashboardHeader from "../../components/DashboardHeader";
 import DashboardSidebar from "../../components/DashboardSidebar";
+import PageTransition from "../../components/PageTransition";
 
 const clients = [
   {
@@ -89,7 +92,7 @@ export default function ClientesListadoPage() {
             title="Gestión de Clientes"
             description="Administra la lista de clientes corporativos y su estado."
           />
-          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-logo">
@@ -99,13 +102,13 @@ export default function ClientesListadoPage() {
                   Administra la lista de clientes corporativos y su estado.
                 </p>
               </div>
-              <a
+              <Link
                 className="bg-professional-green text-white hover:bg-green-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
                 href="/clientes/nuevo"
               >
                 <span className="material-symbols-outlined text-[20px]">add</span>
                 Nuevo Cliente
-              </a>
+              </Link>
             </div>
             <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden">
               <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -250,7 +253,7 @@ export default function ClientesListadoPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </PageTransition>
         </main>
       </div>
     </div>

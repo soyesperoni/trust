@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import PageTransition from "../../components/PageTransition";
+
 type Branch = {
   id: number;
   name: string;
@@ -48,7 +50,7 @@ export default function SucursalesPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <PageTransition className="space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           Sucursales
@@ -111,6 +113,6 @@ export default function SucursalesPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageTransition>
   );
 }

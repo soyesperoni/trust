@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import PageTransition from "../../components/PageTransition";
+
 type Product = {
   id: number;
   name: string;
@@ -47,7 +49,7 @@ export default function ProductosPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <PageTransition className="space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           Productos
@@ -110,6 +112,6 @@ export default function ProductosPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageTransition>
   );
 }
