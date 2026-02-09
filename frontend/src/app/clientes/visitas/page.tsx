@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
 type Visit = {
@@ -98,99 +99,96 @@ export default function VisitasPage() {
   };
 
   return (
-    <PageTransition className="flex-1 overflow-y-auto">
-      <div className="px-4 md:px-8 py-6 pb-2">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-              Historial de Visitas
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Registros recientes de inspecciones y mantenimientos.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            <span className="material-symbols-outlined text-[20px]">map</span>
-            <span>Ver Mapa</span>
-          </button>
-        </div>
-        <div className="mt-6 bg-white dark:bg-[#161e27] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row gap-4 items-center justify-between">
-          <div className="flex flex-col lg:flex-row gap-4 w-full">
-            <div className="relative w-full lg:w-64">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
-                search
-              </span>
-              <input
-                className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Cliente o Sucursal..."
-                type="text"
-              />
-            </div>
-            <div className="relative w-full lg:w-48">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
-                calendar_today
-              </span>
-              <input
-                className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent text-slate-500"
-                placeholder="Rango de Fechas"
-                type="text"
-              />
-            </div>
-            <div className="relative w-full lg:w-48">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
-                person_search
-              </span>
-              <select className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent appearance-none text-slate-500">
-                <option value="">Todos los Inspectores</option>
-                <option value="1">Carlos Ruiz</option>
-                <option value="2">Ana Gómez</option>
-                <option value="3">Luis Torres</option>
-              </select>
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px] pointer-events-none">
-                expand_more
-              </span>
-            </div>
-            <div className="relative w-full lg:w-48">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
-                category
-              </span>
-              <select className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent appearance-none text-slate-500">
-                <option value="">Todos los Tipos</option>
-                <option value="mantenimiento">Mantenimiento</option>
-                <option value="emergencia">Emergencia</option>
-                <option value="inspeccion">Inspección</option>
-              </select>
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px] pointer-events-none">
-                expand_more
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-2 w-full lg:w-auto">
+    <>
+      <DashboardHeader
+        title="Historial de Visitas"
+        description="Registros recientes de inspecciones y mantenimientos."
+      />
+      <PageTransition className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-8 py-6 pb-2">
+          <div className="flex items-center justify-end">
             <button
               type="button"
-              className="w-full lg:w-auto px-4 py-2 bg-professional-green hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
-              <span className="material-symbols-outlined text-[18px]">
-                filter_list
-              </span>
-              Filtrar
-            </button>
-            <button
-              type="button"
-              className="w-full lg:w-auto px-4 py-2 bg-white dark:bg-transparent border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                download
-              </span>
-              Exportar
+              <span className="material-symbols-outlined text-[20px]">map</span>
+              <span>Ver Mapa</span>
             </button>
           </div>
+          <div className="mt-6 bg-white dark:bg-[#161e27] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-col lg:flex-row gap-4 w-full">
+              <div className="relative w-full lg:w-64">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
+                  search
+                </span>
+                <input
+                  className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Cliente o Sucursal..."
+                  type="text"
+                />
+              </div>
+              <div className="relative w-full lg:w-48">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
+                  calendar_today
+                </span>
+                <input
+                  className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent text-slate-500"
+                  placeholder="Rango de Fechas"
+                  type="text"
+                />
+              </div>
+              <div className="relative w-full lg:w-48">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
+                  person_search
+                </span>
+                <select className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent appearance-none text-slate-500">
+                  <option value="">Todos los Inspectores</option>
+                  <option value="1">Carlos Ruiz</option>
+                  <option value="2">Ana Gómez</option>
+                  <option value="3">Luis Torres</option>
+                </select>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px] pointer-events-none">
+                  expand_more
+                </span>
+              </div>
+              <div className="relative w-full lg:w-48">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
+                  category
+                </span>
+                <select className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent appearance-none text-slate-500">
+                  <option value="">Todos los Tipos</option>
+                  <option value="mantenimiento">Mantenimiento</option>
+                  <option value="emergencia">Emergencia</option>
+                  <option value="inspeccion">Inspección</option>
+                </select>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px] pointer-events-none">
+                  expand_more
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-2 w-full lg:w-auto">
+              <button
+                type="button"
+                className="w-full lg:w-auto px-4 py-2 bg-professional-green hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  filter_list
+                </span>
+                Filtrar
+              </button>
+              <button
+                type="button"
+                className="w-full lg:w-auto px-4 py-2 bg-white dark:bg-transparent border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  download
+                </span>
+                Exportar
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 pt-4">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 pt-4">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -342,6 +340,7 @@ export default function VisitasPage() {
           </div>
         </div>
       </div>
-    </PageTransition>
+      </PageTransition>
+    </>
   );
 }
