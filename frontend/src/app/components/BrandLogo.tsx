@@ -38,7 +38,7 @@ export default function BrandLogo({ size = "md" }: BrandLogoProps) {
         <span
           className={`material-symbols-outlined text-slate-900 font-variation-fill ${styles.icon}`}
         >
-          shield
+          water_drop
         </span>
       </div>
       <span className={`font-logo ${styles.text} font-bold text-primary lowercase`}>
