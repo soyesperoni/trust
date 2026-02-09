@@ -134,6 +134,35 @@ class VisitMedia(models.Model):
         return f"{self.get_media_type_display()} - {self.visit}"
 
 
+class Incident(models.Model):
+    client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="incidents")
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="incidents")
+    area = models.ForeignKey(Area, on_delete=models.PROTECT, related_name="incidents")
+    dispenser = models.ForeignKey(Dispenser, on_delete=models.PROTECT, related_name="incidents")
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"Incidencia {self.client.name} - {self.created_at:%Y-%m-%d}"
+
+
+class IncidentMedia(models.Model):
+    class MediaType(models.TextChoices):
+        PHOTO = "photo", _("Foto")
+        VIDEO = "video", _("Video")
+
+    incident = models.ForeignKey(Incident, on_delete=models.CASCADE, related_name="media")
+    media_type = models.CharField(max_length=20, choices=MediaType.choices, default=MediaType.PHOTO)
+    file = models.FileField(upload_to="incidents/media/")
+    description = models.CharField(max_length=255, blank=True)
+
+    def __str__(self) -> str:
+        return f"{self.get_media_type_display()} - {self.incident}"
+
+
 class User(AbstractUser):
     class Role(models.TextChoices):
         GENERAL_ADMIN = "general_admin", _("Administrador general")
