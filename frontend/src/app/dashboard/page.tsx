@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import DashboardHeader from "../components/DashboardHeader";
-import SidebarUserCard from "../components/SidebarUserCard";
+import DashboardSidebar from "../components/DashboardSidebar";
 
 type DashboardStats = {
   clients: number;
@@ -162,72 +162,7 @@ export default function DashboardPage() {
   return (
     <div className="bg-background-light dark:bg-background-dark font-display min-h-screen text-slate-800 dark:text-slate-200">
       <div className="flex h-screen overflow-hidden">
-        <aside className="w-64 bg-white dark:bg-[#161e27] border-r border-slate-200 dark:border-slate-800 flex flex-col hidden md:flex shrink-0">
-          <div className="h-20 flex items-center gap-3 px-6 border-b border-slate-100 dark:border-slate-800">
-            <div className="bg-primary p-1.5 rounded-md flex items-center justify-center shadow-sm">
-              <span className="material-symbols-outlined text-slate-900 text-[24px] font-variation-fill">
-                shield
-              </span>
-            </div>
-            <h1 className="font-logo text-3xl font-bold text-primary tracking-tight leading-none lowercase">
-              trust
-            </h1>
-          </div>
-          <nav className="flex-1 overflow-y-auto py-6 flex flex-col gap-1">
-            {[
-              {
-                icon: "dashboard",
-                label: "Dashboard",
-                active: true,
-                href: "/dashboard",
-              },
-              { icon: "group", label: "Usuarios", href: "/clientes" },
-              { icon: "apartment", label: "Clientes", href: "/clientes/data" },
-              {
-                icon: "storefront",
-                label: "Sucursales",
-                href: "/clientes/sucursales",
-              },
-              { icon: "map", label: "Áreas", href: "/clientes/areas" },
-              {
-                icon: "water_drop",
-                label: "Dosificadores",
-                href: "/clientes/dispensadores",
-              },
-              {
-                icon: "inventory_2",
-                label: "Productos",
-                href: "/clientes/productos",
-              },
-              {
-                icon: "history",
-                label: "Historial de Visitas",
-                href: "/clientes/visitas",
-              },
-              {
-                icon: "report_problem",
-                label: "Incidencias",
-                href: "/clientes/incidencias",
-              },
-            ].map((item) => (
-              <a
-                key={item.label}
-                className={`flex items-center gap-3 px-6 py-3.5 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer ${
-                  item.active
-                    ? "bg-yellow-50 text-slate-900 border-r-4 border-primary font-semibold"
-                    : ""
-                }`}
-                href={item.href ?? "#"}
-              >
-                <span className="material-symbols-outlined">{item.icon}</span>
-                {item.label}
-              </a>
-            ))}
-          </nav>
-          <div className="p-6 border-t border-slate-100 dark:border-slate-800">
-            <SidebarUserCard />
-          </div>
-        </aside>
+        <DashboardSidebar activePath="/dashboard" />
 
         <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
           <DashboardHeader
