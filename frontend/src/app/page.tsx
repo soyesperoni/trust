@@ -1,65 +1,127 @@
-import Image from "next/image";
+"use client";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col items-center justify-center p-4 antialiased transition-colors duration-300">
+      <div className="w-full max-w-[420px] flex flex-col items-center gap-10">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary p-2 rounded-lg flex items-center justify-center shadow-sm">
+            <span className="material-symbols-outlined text-slate-900 text-[32px] font-variation-fill">
+              shield
+            </span>
+          </div>
+          <h1 className="font-logo text-5xl font-bold text-primary tracking-tight leading-none lowercase">
+            trust
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <div className="w-full bg-white dark:bg-[#161e27] rounded-2xl shadow-card dark:shadow-black/60 border border-slate-100 dark:border-slate-800 p-8 sm:p-10 flex flex-col gap-6">
+          <div className="space-y-2 text-center">
+            <h2 className="text-slate-900 dark:text-white text-2xl font-bold leading-tight">
+              Bienvenido de nuevo
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-normal">
+              Inicia sesión para gestionar tus mantenimientos
+            </p>
+          </div>
+          <form
+            className="flex flex-col gap-5 mt-2"
+            onSubmit={(event) => event.preventDefault()}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+            <div className="space-y-2">
+              <label
+                className="block text-slate-800 dark:text-slate-200 text-sm font-bold"
+                htmlFor="email"
+              >
+                Correo electrónico
+              </label>
+              <div className="relative group">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <span className="material-symbols-outlined text-[20px]">
+                    mail
+                  </span>
+                </span>
+                <input
+                  className="form-input block w-full pl-10 pr-4 h-14 rounded-xl text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 placeholder:text-slate-400 focus:border-professional-green focus:ring-professional-green shadow-input transition-all duration-200 ease-in-out"
+                  id="email"
+                  placeholder="usuario@empresa.com"
+                  required
+                  type="email"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label
+                  className="block text-slate-800 dark:text-slate-200 text-sm font-bold"
+                  htmlFor="password"
+                >
+                  Contraseña
+                </label>
+                <a
+                  className="text-xs font-semibold text-professional-green hover:underline transition-all"
+                  href="#"
+                >
+                  ¿Olvidaste tu contraseña?
+                </a>
+              </div>
+              <div className="relative group">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <span className="material-symbols-outlined text-[20px]">
+                    lock
+                  </span>
+                </span>
+                <input
+                  className="form-input block w-full pl-10 pr-4 h-14 rounded-xl text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 placeholder:text-slate-400 focus:border-professional-green focus:ring-professional-green shadow-input transition-all duration-200 ease-in-out"
+                  id="password"
+                  placeholder="••••••••"
+                  required
+                  type="password"
+                />
+              </div>
+            </div>
+            <button
+              className="mt-2 flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 bg-primary hover:bg-yellow-500 text-slate-900 text-sm font-bold leading-normal tracking-wide shadow-lg shadow-yellow-500/10 transition-all duration-200 active:scale-[0.98]"
+              type="submit"
+            >
+              Iniciar Sesión
+            </button>
+          </form>
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
+          </div>
+          <div className="text-center">
+            <span className="text-slate-500 dark:text-slate-400 text-sm">
+              ¿No tienes cuenta?{" "}
+            </span>
+            <a
+              className="text-professional-green dark:text-primary text-sm font-bold hover:underline transition-all"
+              href="#"
+            >
+              Contacta al Administrador
+            </a>
+          </div>
+        </div>
+        <div className="flex flex-wrap justify-center gap-6 text-xs text-slate-400 dark:text-slate-600 font-medium">
+          <a
+            className="hover:text-professional-green dark:hover:text-primary transition-colors"
+            href="#"
+          >
+            Política de Privacidad
           </a>
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            className="hover:text-professional-green dark:hover:text-primary transition-colors"
+            href="#"
           >
-            Documentation
+            Términos de Servicio
+          </a>
+          <a
+            className="hover:text-professional-green dark:hover:text-primary transition-colors"
+            href="#"
+          >
+            Centro de Ayuda
           </a>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
