@@ -1,28 +1,84 @@
-export const metadata = {
-  title: "Trust - Gestión de Usuarios",
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type UserRecord = {
+  id: number;
+  full_name: string;
+  email: string;
+  role: string;
+  role_label: string;
+  is_active: boolean;
+};
+
+const statusStyles: Record<string, string> = {
+  active: "text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20",
+  inactive:
+    "text-slate-500 bg-slate-100 dark:text-slate-400 dark:bg-slate-800",
 };
 
 export default function ClientesPage() {
+  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUsers = async () => {
+      try {
+        const response = await fetch("/api/users", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("No se pudieron cargar los usuarios.");
+        }
+        const data = await response.json();
+        if (!isMounted) return;
+        setUsers(data.results ?? []);
+        setError(null);
+      } catch (fetchError) {
+        if (!isMounted) return;
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "No se pudieron cargar los usuarios.",
+        );
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
+      }
+    };
+
+    loadUsers();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const rows = useMemo(() => {
+    if (isLoading || error) return [];
+    return users;
+  }, [error, isLoading, users]);
+
   return (
     <div className="bg-background-light dark:bg-background-dark font-display min-h-screen text-slate-800 dark:text-slate-200">
       <div className="flex h-screen overflow-hidden">
         <aside className="w-64 bg-white dark:bg-[#161e27] border-r border-slate-200 dark:border-slate-800 flex flex-col hidden md:flex shrink-0">
           <div className="h-20 flex items-center gap-3 px-6 border-b border-slate-100 dark:border-slate-800">
-            <div className="bg-black dark:bg-zinc-800 p-1.5 rounded-md flex items-center justify-center shadow-sm">
-              <span className="material-symbols-outlined text-primary text-[24px] font-variation-fill">
+            <div className="bg-primary p-1.5 rounded-md flex items-center justify-center shadow-sm">
+              <span className="material-symbols-outlined text-slate-900 text-[24px] font-variation-fill">
                 shield
               </span>
             </div>
-            <h1 className="font-logo text-3xl font-bold text-slate-900 dark:text-white tracking-tight leading-none lowercase">
+            <h1 className="font-logo text-3xl font-bold text-primary tracking-tight leading-none lowercase">
               trust
             </h1>
           </div>
           <nav className="flex-1 overflow-y-auto py-6 flex flex-col gap-1">
-            <a className="sidebar-link" href="#">
+            <a className="sidebar-link" href="/dashboard">
               <span className="material-symbols-outlined">dashboard</span>
               Dashboard
             </a>
-            <a className="sidebar-link active" href="#">
+            <a className="sidebar-link active" href="/clientes">
               <span className="material-symbols-outlined">group</span>
               Usuarios
             </a>
@@ -74,12 +130,12 @@ export default function ClientesPage() {
         <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
           <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
             <div className="flex items-center gap-2">
-              <div className="bg-black dark:bg-zinc-800 p-1 rounded flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-[20px] font-variation-fill">
+              <div className="bg-primary p-1 rounded flex items-center justify-center">
+                <span className="material-symbols-outlined text-slate-900 text-[20px] font-variation-fill">
                   shield
                 </span>
               </div>
-              <span className="font-logo text-xl font-bold text-slate-900 dark:text-white lowercase">
+              <span className="font-logo text-xl font-bold text-primary lowercase">
                 trust
               </span>
             </div>
@@ -124,10 +180,13 @@ export default function ClientesPage() {
                     Administra los accesos y roles de la plataforma.
                   </p>
                 </div>
-                <button className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+                <a
+                  className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+                  href="/clientes/nuevo"
+                >
                   <span className="material-symbols-outlined text-[18px]">add</span>
                   Nuevo Usuario
-                </button>
+                </a>
               </div>
               <div className="p-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-100 dark:border-slate-800 flex flex-wrap gap-4 items-center">
                 <div className="flex items-center gap-2">
@@ -170,334 +229,102 @@ export default function ClientesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs uppercase">
-                            AG
+                    {rows.map((user) => (
+                      <tr
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
+                        key={user.id}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs uppercase">
+                              {user.full_name
+                                .split(" ")
+                                .map((word) => word[0])
+                                .join("")
+                                .slice(0, 2)}
+                            </div>
+                            <div className="font-semibold text-slate-900 dark:text-white">
+                              {user.full_name}
+                            </div>
                           </div>
-                          <div className="font-semibold text-slate-900 dark:text-white">
-                            Admin Global
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
+                          {user.email || "-"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            {user.role_label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
+                              user.is_active
+                                ? statusStyles.active
+                                : statusStyles.inactive
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                user.is_active
+                                  ? "bg-green-600 dark:bg-green-400"
+                                  : "bg-slate-400"
+                              }`}
+                            ></span>
+                            {user.is_active ? "Activo" : "Inactivo"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <a
+                              className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
+                              href={`/clientes/${user.id}`}
+                              title="Editar"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                edit
+                              </span>
+                            </a>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                        admin@trust.com
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          Admin Global
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-600 dark:bg-green-400"></span>
-                          Activo
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
-                            title="Editar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              edit
-                            </span>
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              delete
-                            </span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase">
-                            JP
-                          </div>
-                          <div className="font-semibold text-slate-900 dark:text-white">
-                            Juan Pérez
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                        juan.perez@metro.com
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                          Admin de Cuentas
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-600 dark:bg-green-400"></span>
-                          Activo
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
-                            title="Editar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              edit
-                            </span>
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              delete
-                            </span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs uppercase">
-                            MR
-                          </div>
-                          <div className="font-semibold text-slate-900 dark:text-white">
-                            María Rodríguez
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                        maria.rodriguez@primax.com
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                          Admin de Sucursal
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-slate-500 bg-slate-100 dark:text-slate-400 dark:bg-slate-800">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                          Inactivo
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
-                            title="Editar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              edit
-                            </span>
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              delete
-                            </span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-xs uppercase">
-                            CR
-                          </div>
-                          <div className="font-semibold text-slate-900 dark:text-white">
-                            Carlos Ruiz
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                        carlos.ruiz@trust.com
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                          Inspector
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-600 dark:bg-green-400"></span>
-                          Activo
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
-                            title="Editar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              edit
-                            </span>
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              delete
-                            </span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-xs uppercase">
-                            AG
-                          </div>
-                          <div className="font-semibold text-slate-900 dark:text-white">
-                            Ana Gómez
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                        ana.gomez@trust.com
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                          Inspector
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-600 dark:bg-green-400"></span>
-                          Activo
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
-                            title="Editar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              edit
-                            </span>
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              delete
-                            </span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-xs uppercase">
-                            LT
-                          </div>
-                          <div className="font-semibold text-slate-900 dark:text-white">
-                            Luis Torres
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                        luis.torres@trust.com
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                          Inspector
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-slate-500 bg-slate-100 dark:text-slate-400 dark:bg-slate-800">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                          Inactivo
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
-                            title="Editar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              edit
-                            </span>
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              delete
-                            </span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-xs uppercase">
-                            JM
-                          </div>
-                          <div className="font-semibold text-slate-900 dark:text-white">
-                            Jorge Martínez
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                        jorge.martinez@trust.com
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                          Inspector
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-600 dark:bg-green-400"></span>
-                          Activo
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
-                            title="Editar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              edit
-                            </span>
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              delete
-                            </span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                    ))}
+                    {error && !isLoading && (
+                      <tr>
+                        <td
+                          className="px-6 py-8 text-center text-red-500"
+                          colSpan={5}
+                        >
+                          {error}
+                        </td>
+                      </tr>
+                    )}
+                    {isLoading && (
+                      <tr>
+                        <td
+                          className="px-6 py-8 text-center text-slate-500"
+                          colSpan={5}
+                        >
+                          Cargando usuarios...
+                        </td>
+                      </tr>
+                    )}
+                    {!error && !isLoading && rows.length === 0 && (
+                      <tr>
+                        <td
+                          className="px-6 py-8 text-center text-slate-500"
+                          colSpan={5}
+                        >
+                          No hay usuarios registrados.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
               <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <span className="text-xs text-slate-500">
-                  Mostrando 7 de 45 usuarios
+                  Mostrando {rows.length} usuarios
                 </span>
                 <div className="flex items-center gap-2">
                   <button
