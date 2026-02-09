@@ -16,8 +16,14 @@ type Visit = {
   notes: string;
 };
 
+type User = {
+  id: number;
+  full_name: string;
+};
+
 export default function VisitasPage() {
   const [visits, setVisits] = useState<Visit[]>([]);
+  const [inspectors, setInspectors] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,13 +32,20 @@ export default function VisitasPage() {
 
     const loadVisits = async () => {
       try {
-        const response = await fetch("/api/visits", { cache: "no-store" });
-        if (!response.ok) {
+        const [visitsResponse, usersResponse] = await Promise.all([
+          fetch("/api/visits", { cache: "no-store" }),
+          fetch("/api/users", { cache: "no-store" }),
+        ]);
+        if (!visitsResponse.ok || !usersResponse.ok) {
           throw new Error("No se pudieron cargar las visitas.");
         }
-        const data = await response.json();
+        const [visitsData, usersData] = await Promise.all([
+          visitsResponse.json(),
+          usersResponse.json(),
+        ]);
         if (!isMounted) return;
-        setVisits(data.results ?? []);
+        setVisits(visitsData.results ?? []);
+        setInspectors(usersData.results ?? []);
         setError(null);
       } catch (fetchError) {
         if (!isMounted) return;
@@ -143,9 +156,11 @@ export default function VisitasPage() {
                 </span>
                 <select className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent appearance-none text-slate-500">
                   <option value="">Todos los Inspectores</option>
-                  <option value="1">Carlos Ruiz</option>
-                  <option value="2">Ana Gómez</option>
-                  <option value="3">Luis Torres</option>
+                  {inspectors.map((inspector) => (
+                    <option key={inspector.id} value={inspector.id}>
+                      {inspector.full_name}
+                    </option>
+                  ))}
                 </select>
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px] pointer-events-none">
                   expand_more

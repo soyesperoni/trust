@@ -1,87 +1,244 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
-const clients = [
-  {
-    id: "CLI-001",
-    name: "Supermercados Metro",
-    initials: "SM",
-    branches: 12,
-    dispensers: 48,
-    contactName: "Carlos Ruiz",
-    contactEmail: "cruiz@metro.com",
-    status: "Activo",
-    badgeClasses:
-      "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800",
-    indicatorClasses: "bg-green-600",
-    avatarClasses:
-      "bg-red-50 dark:bg-red-900/20 text-red-600 border-red-100 dark:border-red-900/30",
-  },
-  {
-    id: "CLI-002",
-    name: "Gasolineras Primax",
-    initials: "GP",
-    branches: 24,
-    dispensers: 96,
-    contactName: "Ana Gómez",
-    contactEmail: "ana.gomez@primax.pe",
-    status: "Activo",
-    badgeClasses:
-      "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800",
-    indicatorClasses: "bg-green-600",
-    avatarClasses:
-      "bg-orange-50 dark:bg-orange-900/20 text-orange-600 border-orange-100 dark:border-orange-900/30",
-  },
-  {
-    id: "CLI-003",
-    name: "Hotel Fiesta",
-    initials: "HF",
-    branches: 1,
-    dispensers: 15,
-    contactName: "Luis Torres",
-    contactEmail: "ltorres@fiesta.com",
-    status: "Inactivo",
-    badgeClasses:
-      "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700",
-    indicatorClasses: "bg-slate-500",
-    avatarClasses:
-      "bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-100 dark:border-blue-900/30",
-  },
-  {
-    id: "CLI-004",
-    name: "Centro Comercial Plaza",
-    initials: "CC",
-    branches: 1,
-    dispensers: 32,
-    contactName: "Jorge Martínez",
-    contactEmail: "jmartinez@ccplaza.com",
-    status: "Activo",
-    badgeClasses:
-      "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800",
-    indicatorClasses: "bg-green-600",
-    avatarClasses:
-      "bg-purple-50 dark:bg-purple-900/20 text-purple-600 border-purple-100 dark:border-purple-900/30",
-  },
-  {
-    id: "CLI-005",
-    name: "Restaurantes Azul",
-    initials: "RA",
-    branches: 5,
-    dispensers: 18,
-    contactName: "Maria Fernandes",
-    contactEmail: "m.fernandes@azul.com",
-    status: "Activo",
-    badgeClasses:
-      "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800",
-    indicatorClasses: "bg-green-600",
-    avatarClasses:
-      "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 border-cyan-100 dark:border-cyan-900/30",
-  },
+type ClientApi = {
+  id: number;
+  name: string;
+  code: string;
+  notes: string;
+};
+
+type BranchApi = {
+  id: number;
+  name: string;
+  address: string;
+  city: string;
+  client: {
+    id: number;
+    name: string;
+  };
+};
+
+type AreaApi = {
+  id: number;
+  name: string;
+  description: string;
+  branch: {
+    id: number;
+    name: string;
+    client: string;
+  };
+};
+
+type DispenserApi = {
+  id: number;
+  identifier: string;
+  installed_at: string | null;
+  model: {
+    id: number;
+    name: string;
+  };
+  area: {
+    id: number;
+    name: string;
+    branch: string;
+  } | null;
+};
+
+type UserApi = {
+  id: number;
+  full_name: string;
+  email: string;
+  client_ids: number[];
+};
+
+type ClientRow = {
+  id: number;
+  name: string;
+  initials: string;
+  branches: number;
+  dispensers: number;
+  contactName: string;
+  contactEmail: string;
+  status: "Activo" | "Inactivo";
+  badgeClasses: string;
+  indicatorClasses: string;
+  avatarClasses: string;
+};
+
+const avatarClassPool = [
+  "bg-red-50 dark:bg-red-900/20 text-red-600 border-red-100 dark:border-red-900/30",
+  "bg-orange-50 dark:bg-orange-900/20 text-orange-600 border-orange-100 dark:border-orange-900/30",
+  "bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-100 dark:border-blue-900/30",
+  "bg-purple-50 dark:bg-purple-900/20 text-purple-600 border-purple-100 dark:border-purple-900/30",
+  "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 border-cyan-100 dark:border-cyan-900/30",
+  "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border-emerald-100 dark:border-emerald-900/30",
 ];
 
 export default function ClientesListadoPage() {
+  const [clients, setClients] = useState<ClientRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadClients = async () => {
+      try {
+        const [
+          clientsResponse,
+          branchesResponse,
+          areasResponse,
+          dispensersResponse,
+          usersResponse,
+        ] = await Promise.all([
+          fetch("/api/clients", { cache: "no-store" }),
+          fetch("/api/branches", { cache: "no-store" }),
+          fetch("/api/areas", { cache: "no-store" }),
+          fetch("/api/dispensers", { cache: "no-store" }),
+          fetch("/api/users", { cache: "no-store" }),
+        ]);
+        if (
+          !clientsResponse.ok ||
+          !branchesResponse.ok ||
+          !areasResponse.ok ||
+          !dispensersResponse.ok ||
+          !usersResponse.ok
+        ) {
+          throw new Error("No se pudieron cargar los clientes.");
+        }
+        const [
+          clientsData,
+          branchesData,
+          areasData,
+          dispensersData,
+          usersData,
+        ] = await Promise.all([
+          clientsResponse.json(),
+          branchesResponse.json(),
+          areasResponse.json(),
+          dispensersResponse.json(),
+          usersResponse.json(),
+        ]);
+        if (!isMounted) return;
+        const branches = (branchesData.results ?? []) as BranchApi[];
+        const areas = (areasData.results ?? []) as AreaApi[];
+        const dispensers = (dispensersData.results ?? []) as DispenserApi[];
+        const users = (usersData.results ?? []) as UserApi[];
+
+        const branchCount = branches.reduce<Record<number, number>>(
+          (acc, branch) => {
+            acc[branch.client.id] = (acc[branch.client.id] ?? 0) + 1;
+            return acc;
+          },
+          {},
+        );
+        const areaToClient = areas.reduce<Record<number, string>>(
+          (acc, area) => {
+            acc[area.id] = area.branch.client;
+            return acc;
+          },
+          {},
+        );
+        const clientByName = (clientsData.results ?? []).reduce<
+          Record<string, number>
+        >((acc, client: ClientApi) => {
+          acc[client.name] = client.id;
+          return acc;
+        }, {});
+        const dispenserCount = dispensers.reduce<Record<number, number>>(
+          (acc, dispenser) => {
+            if (dispenser.area?.id) {
+              const clientName = areaToClient[dispenser.area.id];
+              const clientId = clientByName[clientName];
+              if (clientId) {
+                acc[clientId] = (acc[clientId] ?? 0) + 1;
+              }
+            }
+            return acc;
+          },
+          {},
+        );
+        const contactByClient = users.reduce<Record<number, UserApi>>(
+          (acc, user) => {
+            user.client_ids.forEach((clientId) => {
+              if (!acc[clientId]) {
+                acc[clientId] = user;
+              }
+            });
+            return acc;
+          },
+          {},
+        );
+
+        const rows = (clientsData.results ?? []).map(
+          (client: ClientApi, index: number) => {
+            const initials = client.name
+              .split(" ")
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0]?.toUpperCase())
+              .join("");
+            const branchesTotal = branchCount[client.id] ?? 0;
+            const dispensersTotal = dispenserCount[client.id] ?? 0;
+            const contact = contactByClient[client.id];
+            const status =
+              branchesTotal > 0 || dispensersTotal > 0 ? "Activo" : "Inactivo";
+            const badgeClasses =
+              status === "Activo"
+                ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800"
+                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700";
+            const indicatorClasses =
+              status === "Activo" ? "bg-green-600" : "bg-slate-500";
+
+            return {
+              id: client.id,
+              name: client.name,
+              initials: initials || "NA",
+              branches: branchesTotal,
+              dispensers: dispensersTotal,
+              contactName: contact?.full_name || "Sin asignar",
+              contactEmail: contact?.email || "Sin correo",
+              status,
+              badgeClasses,
+              indicatorClasses,
+              avatarClasses: avatarClassPool[index % avatarClassPool.length],
+            };
+          },
+        );
+
+        setClients(rows);
+        setError(null);
+      } catch (fetchError) {
+        if (!isMounted) return;
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "No se pudieron cargar los clientes.",
+        );
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
+      }
+    };
+
+    loadClients();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const emptyMessage = useMemo(() => {
+    if (isLoading) return "Cargando clientes...";
+    if (error) return error;
+    return "No hay clientes registrados.";
+  }, [error, isLoading]);
+
   return (
     <>
       <DashboardHeader
@@ -225,12 +382,22 @@ export default function ClientesListadoPage() {
                         </td>
                       </tr>
                     ))}
+                    {clients.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="px-6 py-8 text-center text-slate-500"
+                        >
+                          {emptyMessage}
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
               <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
                 <span className="text-sm text-slate-500 dark:text-slate-400">
-                  Mostrando 5 de 48 clientes
+                  Mostrando {clients.length} de {clients.length} clientes
                 </span>
                 <div className="flex items-center gap-2">
                   <button

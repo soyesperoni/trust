@@ -1,61 +1,46 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
 type AreaStatus = "Activo" | "Mantenimiento" | "Inactivo";
 
+type AreaApi = {
+  id: number;
+  name: string;
+  description: string;
+  branch: {
+    id: number;
+    name: string;
+    client: string;
+  };
+};
+
+type DispenserApi = {
+  id: number;
+  identifier: string;
+  installed_at: string | null;
+  model: {
+    id: number;
+    name: string;
+  };
+  area: {
+    id: number;
+    name: string;
+    branch: string;
+  } | null;
+};
+
 type AreaRow = {
-  id: string;
+  id: number;
   name: string;
   branch: string;
   client: string;
   dispensers: number;
   status: AreaStatus;
 };
-
-const areasData: AreaRow[] = [
-  {
-    id: "AR-1024",
-    name: "Baños Piso 1",
-    branch: "Sucursal Norte #45",
-    client: "Supermercados Metro",
-    dispensers: 3,
-    status: "Activo",
-  },
-  {
-    id: "AR-1028",
-    name: "Cocina Principal",
-    branch: "Hotel Fiesta Central",
-    client: "Hotel Fiesta",
-    dispensers: 5,
-    status: "Activo",
-  },
-  {
-    id: "AR-1033",
-    name: "Almacén de Residuos",
-    branch: "Planta Industrial Sur",
-    client: "Industrias Unidas",
-    dispensers: 2,
-    status: "Mantenimiento",
-  },
-  {
-    id: "AR-1045",
-    name: "Baños Públicos",
-    branch: "CC Plaza Real",
-    client: "Grupo Real",
-    dispensers: 8,
-    status: "Inactivo",
-  },
-  {
-    id: "AR-1050",
-    name: "Laboratorio de Calidad",
-    branch: "Fábrica Central",
-    client: "PharmaCorp",
-    dispensers: 4,
-    status: "Activo",
-  },
-];
 
 const statusStyles: Record<AreaStatus, string> = {
   Activo:
@@ -73,6 +58,76 @@ const statusDot: Record<AreaStatus, string> = {
 };
 
 export default function AreasPage() {
+  const [areas, setAreas] = useState<AreaRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAreas = async () => {
+      try {
+        const [areasResponse, dispensersResponse] = await Promise.all([
+          fetch("/api/areas", { cache: "no-store" }),
+          fetch("/api/dispensers", { cache: "no-store" }),
+        ]);
+        if (!areasResponse.ok || !dispensersResponse.ok) {
+          throw new Error("No se pudieron cargar las áreas.");
+        }
+        const [areasData, dispensersData] = await Promise.all([
+          areasResponse.json(),
+          dispensersResponse.json(),
+        ]);
+        if (!isMounted) return;
+        const dispensers = (dispensersData.results ?? []) as DispenserApi[];
+        const dispenserCount = dispensers.reduce<Record<number, number>>(
+          (acc, dispenser) => {
+            if (dispenser.area?.id) {
+              acc[dispenser.area.id] = (acc[dispenser.area.id] ?? 0) + 1;
+            }
+            return acc;
+          },
+          {},
+        );
+        const rows = (areasData.results ?? []).map((area: AreaApi) => {
+          const count = dispenserCount[area.id] ?? 0;
+          const status: AreaStatus = count > 0 ? "Activo" : "Inactivo";
+          return {
+            id: area.id,
+            name: area.name,
+            branch: area.branch.name,
+            client: area.branch.client,
+            dispensers: count,
+            status,
+          };
+        });
+        setAreas(rows);
+        setError(null);
+      } catch (fetchError) {
+        if (!isMounted) return;
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "No se pudieron cargar las áreas.",
+        );
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
+      }
+    };
+
+    loadAreas();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const emptyMessage = useMemo(() => {
+    if (isLoading) return "Cargando áreas...";
+    if (error) return error;
+    return "No hay áreas registradas.";
+  }, [error, isLoading]);
+
   return (
     <>
       <DashboardHeader
@@ -141,7 +196,7 @@ export default function AreasPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {areasData.map((area) => (
+                {areas.map((area) => (
                   <tr
                     key={area.id}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
@@ -218,12 +273,22 @@ export default function AreasPage() {
                     </td>
                   </tr>
                 ))}
+                {areas.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-8 text-center text-slate-500"
+                    >
+                      {emptyMessage}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
           <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
             <span className="text-sm text-slate-500 dark:text-slate-400">
-              Mostrando 5 de 342 áreas
+              Mostrando {areas.length} de {areas.length} áreas
             </span>
             <div className="flex items-center gap-2">
               <button
