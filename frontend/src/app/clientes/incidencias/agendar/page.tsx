@@ -1,48 +1,13 @@
-import Link from "next/link";
-
-import BrandLogo from "../../../components/BrandLogo";
+import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
 export default function AgendarVisitaPage() {
   return (
     <>
-      <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
-        <BrandLogo size="lg" />
-        <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
-          <span className="material-symbols-outlined">menu</span>
-        </button>
-      </header>
-      <header className="h-20 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 hidden md:flex items-center justify-between px-8">
-        <div className="flex flex-col justify-center">
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-0.5">
-            <Link
-              className="hover:text-professional-green transition-colors"
-              href="/clientes/incidencias"
-            >
-              Incidencias
-            </Link>
-            <span className="material-symbols-outlined text-[14px]">
-              chevron_right
-            </span>
-            <span>Detalle</span>
-            <span className="material-symbols-outlined text-[14px]">
-              chevron_right
-            </span>
-            <span className="font-medium text-slate-900 dark:text-white">
-              Agendar Visita
-            </span>
-          </div>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white font-logo">
-            Agendar Visita para Incidencia #1234
-          </h2>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="p-2 relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-            <span className="material-symbols-outlined">notifications</span>
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-          </button>
-        </div>
-      </header>
+      <DashboardHeader
+        title="Agendar Visita"
+        description="Coordina la visita técnica para la incidencia seleccionada."
+      />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
