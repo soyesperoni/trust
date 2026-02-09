@@ -1,6 +1,5 @@
 "use client";
 
-import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
 type AreaStatus = "Activo" | "Mantenimiento" | "Inactivo";
@@ -74,12 +73,7 @@ const statusDot: Record<AreaStatus, string> = {
 
 export default function AreasPage() {
   return (
-    <>
-      <DashboardHeader
-        title="Gestión de Áreas"
-        searchPlaceholder="Buscar áreas..."
-      />
-      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+    <PageTransition className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
