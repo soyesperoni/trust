@@ -1,6 +1,16 @@
 "use client";
 
+import type { FormEvent } from "react";
+
+import { useRouter } from "next/navigation";
+
 export default function Home() {
+  const router = useRouter();
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    router.push("/dashboard");
+  };
+
   return (
     <div className="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col items-center justify-center p-4 antialiased transition-colors duration-300">
       <div className="w-full max-w-[420px] flex flex-col items-center gap-10">
@@ -23,10 +33,7 @@ export default function Home() {
               Inicia sesión para gestionar tus mantenimientos
             </p>
           </div>
-          <form
-            className="flex flex-col gap-5 mt-2"
-            onSubmit={(event) => event.preventDefault()}
-          >
+          <form className="flex flex-col gap-5 mt-2" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label
                 className="block text-slate-800 dark:text-slate-200 text-sm font-bold"
