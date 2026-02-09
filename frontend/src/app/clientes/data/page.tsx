@@ -178,7 +178,7 @@ export default function ClientesListadoPage() {
           {},
         );
 
-        const rows = clients.map((client: ClientApi, index: number) => {
+        const rows: ClientRow[] = clients.map((client: ClientApi, index: number) => {
           const initials = client.name
             .split(" ")
             .filter(Boolean)
@@ -188,30 +188,29 @@ export default function ClientesListadoPage() {
           const branchesTotal = branchCount[client.id] ?? 0;
           const dispensersTotal = dispenserCount[client.id] ?? 0;
           const contact = contactByClient[client.id];
-            const status =
-              branchesTotal > 0 || dispensersTotal > 0 ? "Activo" : "Inactivo";
-            const badgeClasses =
-              status === "Activo"
-                ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800"
-                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700";
-            const indicatorClasses =
-              status === "Activo" ? "bg-green-600" : "bg-slate-500";
+          const status: ClientRow["status"] =
+            branchesTotal > 0 || dispensersTotal > 0 ? "Activo" : "Inactivo";
+          const badgeClasses =
+            status === "Activo"
+              ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800"
+              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700";
+          const indicatorClasses =
+            status === "Activo" ? "bg-green-600" : "bg-slate-500";
 
-            return {
-              id: client.id,
-              name: client.name,
-              initials: initials || "NA",
-              branches: branchesTotal,
-              dispensers: dispensersTotal,
-              contactName: contact?.full_name || "Sin asignar",
-              contactEmail: contact?.email || "Sin correo",
-              status,
-              badgeClasses,
-              indicatorClasses,
-              avatarClasses: avatarClassPool[index % avatarClassPool.length],
-            };
-          },
-        );
+          return {
+            id: client.id,
+            name: client.name,
+            initials: initials || "NA",
+            branches: branchesTotal,
+            dispensers: dispensersTotal,
+            contactName: contact?.full_name || "Sin asignar",
+            contactEmail: contact?.email || "Sin correo",
+            status,
+            badgeClasses,
+            indicatorClasses,
+            avatarClasses: avatarClassPool[index % avatarClassPool.length],
+          };
+        });
 
         setClients(rows);
         setError(null);
