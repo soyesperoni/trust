@@ -16,7 +16,7 @@ export default function Home() {
   return (
     <div className="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col items-center justify-center p-4 antialiased transition-colors duration-300">
       <div className="w-full max-w-[420px] flex flex-col items-center gap-10">
-        <BrandLogo size="xl" />
+        <BrandLogo size="xxl" />
         <div className="w-full bg-white dark:bg-[#161e27] rounded-2xl shadow-card dark:shadow-black/60 border border-slate-100 dark:border-slate-800 p-8 sm:p-10 flex flex-col gap-6">
           <div className="space-y-2 text-center">
             <h2 className="text-slate-900 dark:text-white text-2xl font-bold leading-tight">
