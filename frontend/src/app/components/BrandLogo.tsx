@@ -23,9 +23,9 @@ const sizeStyles: Record<BrandLogoSize, { icon: string; text: string; gap: strin
     gap: "gap-4",
   },
   xxl: {
-    icon: "text-[40px]",
-    text: "text-4xl",
-    gap: "gap-5",
+    icon: "text-[60px]",
+    text: "text-[54px]",
+    gap: "gap-6",
   },
 };
 
