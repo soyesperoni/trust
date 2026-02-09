@@ -169,9 +169,9 @@ export default function ClientesPage() {
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs uppercase">
                               {user.full_name
-                                .split(\" \")
+                                .split(" ")
                                 .map((word) => word[0])
-                                .join(\"\")
+                                .join("")
                                 .slice(0, 2)}
                             </div>
                             <div className="font-semibold text-slate-900 dark:text-white">
@@ -180,7 +180,7 @@ export default function ClientesPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                          {user.email || \"-\"}
+                          {user.email || "-"}
                         </td>
                         <td className="px-6 py-4">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
@@ -198,11 +198,11 @@ export default function ClientesPage() {
                             <span
                               className={`w-1.5 h-1.5 rounded-full ${
                                 user.is_active
-                                  ? \"bg-green-600 dark:bg-green-400\"
-                                  : \"bg-slate-400\"
+                                  ? "bg-green-600 dark:bg-green-400"
+                                  : "bg-slate-400"
                               }`}
                             ></span>
-                            {user.is_active ? \"Activo\" : \"Inactivo\"}
+                            {user.is_active ? "Activo" : "Inactivo"}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
