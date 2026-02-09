@@ -23,9 +23,9 @@ const sizeStyles: Record<BrandLogoSize, { icon: string; text: string; gap: strin
     gap: "gap-4",
   },
   xxl: {
-    icon: "text-[40px]",
-    text: "text-4xl",
-    gap: "gap-5",
+    icon: "text-[72px]",
+    text: "text-[54px]",
+    gap: "gap-6",
   },
 };
 
@@ -38,7 +38,7 @@ export default function BrandLogo({ size = "md" }: BrandLogoProps) {
         <span
           className={`material-symbols-outlined text-slate-900 font-variation-fill ${styles.icon}`}
         >
-          shield
+          water_drop
         </span>
       </div>
       <span className={`font-logo ${styles.text} font-bold text-primary lowercase`}>
