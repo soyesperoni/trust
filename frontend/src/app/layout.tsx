@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import ThemeInitializer from "./components/ThemeInitializer";
 
 export const metadata: Metadata = {
   title: "Trust - Inicio de Sesión",
@@ -25,7 +26,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <ThemeInitializer />
+        {children}
+      </body>
     </html>
   );
 }

@@ -1,3 +1,5 @@
+import SidebarUserCard from "../../components/SidebarUserCard";
+
 const clients = [
   {
     id: "CLI-001",
@@ -130,19 +132,7 @@ export default function ClientesListadoPage() {
             </a>
           </nav>
           <div className="p-6 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-3">
-              <img
-                alt="Admin"
-                className="w-10 h-10 rounded-full"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEahRnyQv02GBHzX-gLrPgyOL0URmQOgHSe_azclMK3UtDyLVqoIsR_xlLa3cg0STfViWFzqU_drEoeTRH-ZcKEXQZmoV-RKc-wm_um98nGOvRAIImVpPpHEQ-po3TOR5j8edOjKDaxDXZ_6Nb9tcmZduDHiHj8fFw7KSL_iONWZfitw23XdkkGtW1dKq-EubBA88kX6oFbT0OabwdIqBlHCs4jO4SQsf3Vlckf0l1UESnFcEXidpY1AcVqZV7puBOxayylnDD62kI"
-              />
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  Admin Global
-                </span>
-                <span className="text-xs text-slate-500">admin@trust.com</span>
-              </div>
-            </div>
+            <SidebarUserCard />
           </div>
         </aside>
         <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">

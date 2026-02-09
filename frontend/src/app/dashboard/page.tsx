@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import SidebarUserCard from "../components/SidebarUserCard";
+import ThemeToggleButton from "../components/ThemeToggleButton";
 
 type DashboardStats = {
   clients: number;
@@ -45,25 +49,11 @@ const formatActivityDate = (value: string) => {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const isDark = document.documentElement.classList.contains("dark");
-    setTheme(isDark ? "dark" : "light");
-  }, []);
-
-  const toggleTheme = () => {
-    if (typeof document === "undefined") return;
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(nextTheme);
-    setTheme(nextTheme);
-  };
 
   useEffect(() => {
     let isMounted = true;
@@ -235,17 +225,7 @@ export default function DashboardPage() {
             ))}
           </nav>
           <div className="p-6 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 font-semibold">
-                AR
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  Alicia Rivera
-                </span>
-                <span className="text-xs text-slate-500">alicia@trust.com</span>
-              </div>
-            </div>
+            <SidebarUserCard />
           </div>
         </aside>
 
@@ -286,17 +266,10 @@ export default function DashboardPage() {
                   type="text"
                 />
               </div>
+              <ThemeToggleButton />
               <button
                 className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-                onClick={toggleTheme}
-                type="button"
-              >
-                <span className="material-symbols-outlined">
-                  {theme === "dark" ? "light_mode" : "dark_mode"}
-                </span>
-              </button>
-              <button
-                className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                onClick={() => router.push("/")}
                 type="button"
               >
                 <span className="material-symbols-outlined">logout</span>
