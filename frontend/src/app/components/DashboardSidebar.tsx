@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import BrandLogo from "./BrandLogo";
 import SidebarUserCard from "./SidebarUserCard";
 
@@ -35,7 +37,7 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
         {navItems.map((item) => {
           const isActive = item.href === activePath;
           return (
-            <a
+            <Link
               key={item.label}
               className={`flex items-center gap-3 px-6 py-3.5 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer ${
                 isActive
@@ -46,7 +48,7 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
             >
               <span className="material-symbols-outlined">{item.icon}</span>
               {item.label}
-            </a>
+            </Link>
           );
         })}
       </nav>

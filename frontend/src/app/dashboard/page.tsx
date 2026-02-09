@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import DashboardHeader from "../components/DashboardHeader";
 import DashboardSidebar from "../components/DashboardSidebar";
+import PageTransition from "../components/PageTransition";
 
 type DashboardStats = {
   clients: number;
@@ -49,7 +50,6 @@ const formatActivityDate = (value: string) => {
 };
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -170,7 +170,7 @@ export default function DashboardPage() {
             description="Mostrando información según los accesos asignados al usuario."
           />
 
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+          <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {statsCards.map((item) => (
                 <div
@@ -209,7 +209,7 @@ export default function DashboardPage() {
                     Últimas visitas y mantenimientos realizados en tus cuentas.
                   </p>
                 </div>
-                <a
+                <Link
                   className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                   href="/clientes/incidencias"
                 >
@@ -217,7 +217,7 @@ export default function DashboardPage() {
                     add
                   </span>
                   Nueva Incidencia
-                </a>
+                </Link>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
@@ -326,15 +326,15 @@ export default function DashboardPage() {
                 </table>
               </div>
               <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-center">
-                <a
+                <Link
                   className="text-sm font-medium text-professional-green hover:text-green-800 transition-colors"
                   href="/clientes/visitas"
                 >
                   Ver toda la actividad
-                </a>
+                </Link>
               </div>
             </section>
-          </div>
+          </PageTransition>
         </main>
       </div>
     </div>

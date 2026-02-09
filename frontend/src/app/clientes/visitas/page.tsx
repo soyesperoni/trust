@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import PageTransition from "../../components/PageTransition";
+
 type Visit = {
   id: number;
   client: string;
@@ -51,7 +53,7 @@ export default function VisitasPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <PageTransition className="space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           Historial de Visitas
@@ -118,6 +120,6 @@ export default function VisitasPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageTransition>
   );
 }
