@@ -267,13 +267,6 @@ export default function DashboardPage() {
                 />
               </div>
               <ThemeToggleButton />
-              <button
-                className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-                onClick={() => router.push("/")}
-                type="button"
-              >
-                <span className="material-symbols-outlined">logout</span>
-              </button>
               <button className="p-2 relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                 <span className="material-symbols-outlined">notifications</span>
                 <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
