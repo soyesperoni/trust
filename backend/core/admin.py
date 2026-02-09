@@ -7,6 +7,8 @@ from .models import (
     Client,
     Dispenser,
     DispenserModel,
+    Incident,
+    IncidentMedia,
     Product,
     User,
     Visit,
@@ -31,6 +33,11 @@ class ProductInline(admin.TabularInline):
 
 class VisitMediaInline(admin.TabularInline):
     model = VisitMedia
+    extra = 0
+
+
+class IncidentMediaInline(admin.TabularInline):
+    model = IncidentMedia
     extra = 0
 
 
@@ -112,6 +119,20 @@ class VisitAdmin(admin.ModelAdmin):
 @admin.register(VisitMedia)
 class VisitMediaAdmin(admin.ModelAdmin):
     list_display = ("visit", "media_type", "file")
+    list_filter = ("media_type",)
+
+
+@admin.register(Incident)
+class IncidentAdmin(admin.ModelAdmin):
+    list_display = ("client", "branch", "area", "dispenser", "created_at")
+    list_filter = ("client", "branch", "area")
+    search_fields = ("client__name", "branch__name", "area__name", "dispenser__identifier")
+    inlines = [IncidentMediaInline]
+
+
+@admin.register(IncidentMedia)
+class IncidentMediaAdmin(admin.ModelAdmin):
+    list_display = ("incident", "media_type", "file")
     list_filter = ("media_type",)
 
 
