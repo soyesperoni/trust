@@ -140,8 +140,13 @@ export default function DashboardPage() {
           </div>
           <nav className="flex-1 overflow-y-auto py-6 flex flex-col gap-1">
             {[
-              { icon: "dashboard", label: "Dashboard", active: true },
-              { icon: "group", label: "Usuarios" },
+              {
+                icon: "dashboard",
+                label: "Dashboard",
+                active: true,
+                href: "/dashboard",
+              },
+              { icon: "group", label: "Usuarios", href: "/clientes" },
               { icon: "apartment", label: "Clientes" },
               { icon: "storefront", label: "Sucursales" },
               { icon: "map", label: "Áreas" },
@@ -157,7 +162,7 @@ export default function DashboardPage() {
                     ? "bg-yellow-50 text-slate-900 border-r-4 border-primary font-semibold"
                     : ""
                 }`}
-                href="#"
+                href={item.href ?? "#"}
               >
                 <span className="material-symbols-outlined">{item.icon}</span>
                 {item.label}
