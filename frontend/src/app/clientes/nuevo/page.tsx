@@ -1,3 +1,4 @@
+import DashboardHeader from "../../components/DashboardHeader";
 import SidebarUserCard from "../../components/SidebarUserCard";
 
 export default function NuevoClientePage() {
@@ -58,37 +59,10 @@ export default function NuevoClientePage() {
           </div>
         </aside>
         <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
-          <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
-            <div className="flex items-center gap-2">
-              <div className="bg-black dark:bg-zinc-800 p-1 rounded flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-[20px] font-variation-fill">
-                  shield
-                </span>
-              </div>
-              <span className="font-logo text-xl font-bold text-slate-900 dark:text-white lowercase">
-                trust
-              </span>
-            </div>
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-          </header>
-          <header className="h-20 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 hidden md:flex items-center justify-between px-8">
-            <div className="flex items-center gap-4">
-              <a className="text-slate-400 hover:text-slate-600 transition-colors" href="/clientes/data">
-                <span className="material-symbols-outlined">arrow_back</span>
-              </a>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-                Gestión de Clientes
-              </h2>
-            </div>
-            <div className="flex items-center gap-4">
-              <button className="p-2 relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                <span className="material-symbols-outlined">notifications</span>
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-              </button>
-            </div>
-          </header>
+          <DashboardHeader
+            title="Nuevo Cliente"
+            description="Complete la información para registrar una nueva empresa cliente en la plataforma."
+          />
           <div className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="max-w-4xl mx-auto">
               <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden">
