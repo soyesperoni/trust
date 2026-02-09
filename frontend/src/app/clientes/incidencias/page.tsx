@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
 type Incident = {
@@ -52,7 +53,13 @@ export default function IncidenciasPage() {
   }, []);
 
   return (
-    <PageTransition className="space-y-4">
+    <>
+      <DashboardHeader
+        title="Incidencias"
+        description="Reportes recientes con detalle por ubicación."
+        searchPlaceholder="Buscar incidencias..."
+      />
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           Incidencias
@@ -119,6 +126,7 @@ export default function IncidenciasPage() {
           </tbody>
         </table>
       </div>
-    </PageTransition>
+      </PageTransition>
+    </>
   );
 }

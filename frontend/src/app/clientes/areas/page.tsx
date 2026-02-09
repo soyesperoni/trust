@@ -198,6 +198,7 @@ export default function AreasPage() {
           </div>
         </div>
       </div>
-    </PageTransition>
+      </PageTransition>
+    </>
   );
 }

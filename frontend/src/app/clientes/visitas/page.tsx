@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
 type Visit = {
@@ -53,7 +54,13 @@ export default function VisitasPage() {
   }, []);
 
   return (
-    <PageTransition className="space-y-4">
+    <>
+      <DashboardHeader
+        title="Historial de Visitas"
+        description="Registros recientes de inspecciones y mantenimientos."
+        searchPlaceholder="Buscar visitas..."
+      />
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           Historial de Visitas
@@ -120,6 +127,7 @@ export default function VisitasPage() {
           </tbody>
         </table>
       </div>
-    </PageTransition>
+      </PageTransition>
+    </>
   );
 }

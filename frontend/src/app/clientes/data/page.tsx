@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import DashboardHeader from "../../components/DashboardHeader";
-import DashboardSidebar from "../../components/DashboardSidebar";
 import PageTransition from "../../components/PageTransition";
 
 const clients = [
@@ -84,15 +83,12 @@ const clients = [
 
 export default function ClientesListadoPage() {
   return (
-    <div className="bg-background-light dark:bg-background-dark font-display min-h-screen text-slate-800 dark:text-slate-200">
-      <div className="flex h-screen overflow-hidden">
-        <DashboardSidebar activePath="/clientes/data" />
-        <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
-          <DashboardHeader
-            title="Gestión de Clientes"
-            description="Administra la lista de clientes corporativos y su estado."
-          />
-          <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
+    <>
+      <DashboardHeader
+        title="Gestión de Clientes"
+        description="Administra la lista de clientes corporativos y su estado."
+      />
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-logo">
@@ -253,9 +249,7 @@ export default function ClientesListadoPage() {
                 </div>
               </div>
             </div>
-          </PageTransition>
-        </main>
-      </div>
-    </div>
+      </PageTransition>
+    </>
   );
 }
