@@ -158,65 +158,52 @@ export default function CalendarioPage() {
       <DashboardHeader
         title="Calendario de Visitas"
         action={
-          <Link
-            href="/clientes/calendario/nueva"
-            className="bg-professional-green hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            Agendar Visita
-          </Link>
+          <div className="flex items-center gap-3 flex-wrap justify-end">
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1">
+              <button
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500"
+                onClick={() =>
+                  setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+                }
+                type="button"
+              >
+                <span className="material-symbols-outlined">chevron_left</span>
+              </button>
+              <p className="min-w-[140px] text-center text-sm font-semibold text-slate-900 dark:text-white capitalize px-1">
+                {formatMonthTitle(currentMonth)}
+              </p>
+              <button
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500"
+                onClick={() =>
+                  setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+                }
+                type="button"
+              >
+                <span className="material-symbols-outlined">chevron_right</span>
+              </button>
+            </div>
+
+            <button
+              className="px-3 py-1.5 text-sm font-medium bg-transparent border border-transparent rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+              onClick={() => setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1))}
+              type="button"
+            >
+              Hoy
+            </button>
+
+            <Link
+              href="/clientes/calendario/nueva"
+              className="bg-professional-green hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[20px]">add</span>
+              Agendar Visita
+            </Link>
+          </div>
         }
       />
 
       <PageTransition className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col p-4 md:p-6 overflow-y-auto">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white capitalize">
-                {formatMonthTitle(currentMonth)}
-              </h3>
-              <div className="flex bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-1">
-                <button
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500"
-                  onClick={() =>
-                    setCurrentMonth((prev) =>
-                      new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
-                    )
-                  }
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">chevron_left</span>
-                </button>
-                <button
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500"
-                  onClick={() =>
-                    setCurrentMonth((prev) =>
-                      new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
-                    )
-                  }
-                  type="button"
-                >
-                  <span className="material-symbols-outlined">chevron_right</span>
-                </button>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
-                type="button"
-              >
-                Mes
-              </button>
-              <button
-                className="px-3 py-1.5 text-sm font-medium bg-transparent border border-transparent rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
-                onClick={() => setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1))}
-                type="button"
-              >
-                Hoy
-              </button>
-            </div>
-          </div>
-
           <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-200 dark:border-slate-800 flex flex-col flex-1 overflow-hidden">
             <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-700">
               {weekHeaders.map((header) => (
