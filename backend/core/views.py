@@ -158,10 +158,71 @@ def dashboard(request):
     return JsonResponse({"stats": stats, "activity": activity})
 
 
-@require_GET
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def clients(request):
-    payload = [_serialize_client(client) for client in Client.objects.all()]
-    return JsonResponse({"results": payload})
+    if request.method == "GET":
+        payload = [_serialize_client(client) for client in Client.objects.all()]
+        return JsonResponse({"results": payload})
+
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    name = str(data.get("name") or "").strip()
+    code = str(data.get("code") or "").strip()
+    notes = str(data.get("notes") or "").strip()
+
+    if not name or not code:
+        return JsonResponse(
+            {"error": "Nombre y código son obligatorios."}, status=400
+        )
+
+    if Client.objects.filter(code=code).exists():
+        return JsonResponse(
+            {"error": "Ya existe un cliente con ese código."}, status=400
+        )
+
+    client = Client.objects.create(name=name, code=code, notes=notes)
+    return JsonResponse(_serialize_client(client), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PUT"])
+def client_detail(request, client_id: int):
+    try:
+        client = Client.objects.get(pk=client_id)
+    except Client.DoesNotExist:
+        return JsonResponse({"error": "Cliente no encontrado."}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_client(client))
+
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    if "name" in data:
+        client.name = str(data.get("name") or "").strip()
+    if "code" in data:
+        code = str(data.get("code") or "").strip()
+        if not code:
+            return JsonResponse({"error": "El código no puede estar vacío."}, status=400)
+        if Client.objects.exclude(pk=client.pk).filter(code=code).exists():
+            return JsonResponse(
+                {"error": "Ya existe un cliente con ese código."}, status=400
+            )
+        client.code = code
+    if "notes" in data:
+        client.notes = str(data.get("notes") or "").strip()
+
+    if not client.name:
+        return JsonResponse({"error": "El nombre no puede estar vacío."}, status=400)
+
+    client.save()
+    return JsonResponse(_serialize_client(client))
 
 
 @require_GET
