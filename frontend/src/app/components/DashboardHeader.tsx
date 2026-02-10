@@ -2,7 +2,15 @@
 
 import type { ChangeEvent } from "react";
 
+import { useEffect, useState } from "react";
+
 import Link from "next/link";
+
+import {
+  fetchNotificationIds,
+  getUnreadNotificationCount,
+  NOTIFICATIONS_UPDATED_EVENT,
+} from "../lib/notifications";
 
 import BrandLogo from "./BrandLogo";
 import ThemeToggleButton from "./ThemeToggleButton";
@@ -25,6 +33,40 @@ export default function DashboardHeader({
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
     onSearchChange?.(event.target.value);
   };
+
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUnreadCount = async () => {
+      try {
+        const notificationIds = await fetchNotificationIds();
+        if (!isMounted) return;
+        setUnreadCount(getUnreadNotificationCount(notificationIds));
+      } catch {
+        if (!isMounted) return;
+        setUnreadCount(0);
+      }
+    };
+
+    loadUnreadCount();
+
+    const handleNotificationsUpdate = () => {
+      loadUnreadCount();
+    };
+
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, handleNotificationsUpdate);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener(
+        NOTIFICATIONS_UPDATED_EVENT,
+        handleNotificationsUpdate,
+      );
+    };
+  }, []);
 
   const searchProps = {
     className:
@@ -71,7 +113,11 @@ export default function DashboardHeader({
             aria-label="Ver notificaciones"
           >
             <span className="material-symbols-outlined">notifications</span>
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            {unreadCount > 0 ? (
+              <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] leading-5 text-center font-semibold border-2 border-white dark:border-[#161e27]">
+                {unreadCount}
+              </span>
+            ) : null}
           </Link>
         </div>
       </header>
