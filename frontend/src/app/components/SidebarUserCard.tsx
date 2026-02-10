@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation";
 type CurrentUser = {
   id: number;
   full_name: string;
+  email?: string;
   role_label: string;
   is_active: boolean;
 };
+
+const SESSION_USER_KEY = "trust.currentUser";
 
 const getInitials = (fullName: string) => {
   const initials = fullName
@@ -27,6 +30,19 @@ export default function SidebarUserCard() {
   useEffect(() => {
     let isMounted = true;
 
+    const sessionUserRaw = window.localStorage.getItem(SESSION_USER_KEY);
+    let sessionUser: CurrentUser | null = null;
+
+    if (sessionUserRaw) {
+      try {
+        sessionUser = JSON.parse(sessionUserRaw) as CurrentUser;
+        setUser(sessionUser);
+        setStatus("idle");
+      } catch {
+        window.localStorage.removeItem(SESSION_USER_KEY);
+      }
+    }
+
     const loadUser = async () => {
       try {
         const response = await fetch("/api/users", { cache: "no-store" });
@@ -36,11 +52,17 @@ export default function SidebarUserCard() {
         const data = await response.json();
         if (!isMounted) return;
         const results = (data.results ?? []) as CurrentUser[];
+        const sessionEmail = sessionUser?.email ?? null;
         const currentUser =
-          results.find((candidate) => candidate.is_active) ?? results[0] ?? null;
+          (sessionEmail
+            ? results.find((candidate) => candidate.email === sessionEmail)
+            : null) ??
+          results.find((candidate) => candidate.is_active) ??
+          results[0] ??
+          null;
         setUser(currentUser);
         setStatus("idle");
-      } catch (error) {
+      } catch {
         if (!isMounted) return;
         setStatus("error");
       }
@@ -58,6 +80,7 @@ export default function SidebarUserCard() {
   }, [user]);
 
   const handleLogout = () => {
+    window.localStorage.removeItem(SESSION_USER_KEY);
     router.push("/");
   };
 
