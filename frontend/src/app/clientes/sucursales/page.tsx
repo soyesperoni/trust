@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-import { ACCOUNT_ADMIN_ROLE } from "../../lib/permissions";
+import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE } from "../../lib/permissions";
 import { getSessionUserEmail } from "../../lib/session";
 
 import PageTransition from "../../components/PageTransition";
@@ -66,7 +66,7 @@ const statusStyles: Record<Branch["status"], string> = {
 
 export default function SucursalesPage() {
   const { user } = useCurrentUser();
-  const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
+  const isReadOnlyAdmin = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE].includes(user?.role ?? "");
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -165,7 +165,7 @@ export default function SucursalesPage() {
         title="Gestión de Sucursales"
         description="Administra las sucursales vinculadas a cada cliente."
         searchPlaceholder="Buscar sucursal..."
-        action={!isAccountAdmin ? (
+        action={!isReadOnlyAdmin ? (
           <Link
             href="/clientes/sucursales/nueva"
             className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
@@ -278,7 +278,7 @@ export default function SucursalesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {!isAccountAdmin && (<button
+                        {!isReadOnlyAdmin && (<button
                           className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-yellow-50 rounded-full transition-colors"
                           title="Editar"
                         >

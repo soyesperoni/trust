@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-import { ACCOUNT_ADMIN_ROLE } from "../../lib/permissions";
+import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE } from "../../lib/permissions";
 import { getSessionUserEmail } from "../../lib/session";
 
 import PageTransition from "../../components/PageTransition";
@@ -64,7 +64,7 @@ const statusDot: Record<AreaStatus, string> = {
 
 export default function AreasPage() {
   const { user } = useCurrentUser();
-  const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
+  const isReadOnlyAdmin = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE].includes(user?.role ?? "");
 
   const [areas, setAreas] = useState<AreaRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -142,7 +142,7 @@ export default function AreasPage() {
       <DashboardHeader
         title="Gestión de Áreas"
         description="Administra las zonas y espacios monitoreados."
-        action={!isAccountAdmin ? (
+        action={!isReadOnlyAdmin ? (
           <Link
             href="/clientes/areas/nueva"
             className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
@@ -256,7 +256,7 @@ export default function AreasPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {!isAccountAdmin && (
+                        {!isReadOnlyAdmin && (
                           <>
                             <button
                               className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
