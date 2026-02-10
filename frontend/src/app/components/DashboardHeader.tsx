@@ -112,7 +112,7 @@ export default function DashboardHeader({
           <ThemeToggleButton />
           <Link
             href="/dashboard/notificaciones"
-            className="p-2 relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+            className="h-10 w-10 inline-flex items-center justify-center relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
             aria-label="Ver notificaciones"
           >
             <span className="material-symbols-outlined">notifications</span>
