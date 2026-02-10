@@ -68,8 +68,9 @@ const statusStyles: Record<DispenserStatus, { badge: string; dot: string }> = {
 };
 
 export default function DispensadoresPage() {
-  const { user } = useCurrentUser();
+  const { user, isLoading: isLoadingUser } = useCurrentUser();
   const isInspector = user?.role === INSPECTOR_ROLE;
+  const canManageDispensers = !isLoadingUser && !isInspector;
   const [dispensers, setDispensers] = useState<DispenserRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +163,7 @@ export default function DispensadoresPage() {
         title="Gestión de Dosificadores"
         description="Administra y monitorea los dosificadores instalados por sucursal."
         searchPlaceholder="Buscar dosificador..."
-        action={!isInspector ? (
+        action={canManageDispensers ? (
           <Link
             className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             href="/clientes/dispensadores/nuevo"
@@ -245,7 +246,7 @@ export default function DispensadoresPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {!isInspector && <Link
+                        {canManageDispensers && <Link
                           className="text-slate-400 hover:text-professional-green transition-colors"
                           href={`/clientes/dispensadores/${dispenser.id}`}
                         >

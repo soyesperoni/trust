@@ -57,8 +57,9 @@ const eventStyles = {
 };
 
 export default function CalendarioPage() {
-  const { user } = useCurrentUser();
+  const { user, isLoading: isLoadingUser } = useCurrentUser();
   const canScheduleVisits = user?.role === GENERAL_ADMIN_ROLE;
+  const canScheduleVisitsFromHeader = !isLoadingUser && canScheduleVisits;
 
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -206,7 +207,7 @@ export default function CalendarioPage() {
               Hoy
             </button>
 
-            {canScheduleVisits && (
+            {canScheduleVisitsFromHeader && (
               <Link
                 href="/clientes/calendario/nueva"
                 className="bg-professional-green hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
