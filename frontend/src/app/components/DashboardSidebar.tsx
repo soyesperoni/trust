@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
   { icon: "map", label: "Áreas", href: "/clientes/areas" },
   { icon: "water_drop", label: "Dosificadores", href: "/clientes/dispensadores" },
   { icon: "inventory_2", label: "Productos", href: "/clientes/productos" },
+  { icon: "calendar_month", label: "Calendario", href: "/clientes/calendario" },
   { icon: "history", label: "Historial de Visitas", href: "/clientes/visitas" },
   { icon: "report_problem", label: "Incidencias", href: "/clientes/incidencias" },
 ];
