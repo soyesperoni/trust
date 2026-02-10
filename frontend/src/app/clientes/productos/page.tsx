@@ -32,8 +32,8 @@ type ProductRow = {
 const statusStyles: Record<ProductStatus, { badge: string; dot: string }> = {
   Asignado: {
     badge:
-      "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-    dot: "bg-green-500",
+      "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+    dot: "bg-yellow-500",
   },
   "Sin asignar": {
     badge:
@@ -112,7 +112,7 @@ export default function ProductosPage() {
         searchPlaceholder="Buscar producto, SKU..."
         action={(
           <Link
-            className="bg-professional-green hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
+            className="bg-professional-green hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
             href="/clientes/productos/nuevo"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
@@ -146,7 +146,7 @@ export default function ProductosPage() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                          <div className="w-10 h-10 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
                             <span className="material-symbols-outlined">
                               inventory_2
                             </span>

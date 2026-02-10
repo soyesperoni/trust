@@ -199,7 +199,7 @@ export default function CalendarioPage() {
 
             <Link
               href="/clientes/calendario/nueva"
-              className="bg-professional-green hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+              className="bg-professional-green hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
             >
               <span className="material-symbols-outlined text-[20px]">add</span>
               Agendar Visita
@@ -315,7 +315,7 @@ export default function CalendarioPage() {
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
                         emergency
                           ? "bg-primary text-black"
-                          : "bg-green-50 text-professional-green dark:bg-green-900/30 dark:text-green-300"
+                          : "bg-yellow-50 text-professional-green dark:bg-yellow-900/30 dark:text-yellow-300"
                       }`}
                     >
                       {emergency ? "Emergencia" : "Mantenimiento"}

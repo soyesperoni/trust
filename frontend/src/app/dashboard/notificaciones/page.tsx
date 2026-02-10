@@ -59,14 +59,14 @@ const tagStyles = {
   },
   visita: {
     tag: "Visita",
-    tagStyle: "bg-green-50 text-green-800 border border-green-100",
+    tagStyle: "bg-yellow-50 text-yellow-800 border border-yellow-100",
     icon: "build",
     iconWrapperStyle:
-      "bg-green-50 dark:bg-green-900/20 text-professional-green",
+      "bg-yellow-50 dark:bg-yellow-900/20 text-professional-green",
     cardStyle:
       "border border-slate-100 dark:border-slate-800 hover:border-professional-green/30",
     actionStyle:
-      "text-professional-green border border-professional-green hover:bg-green-50",
+      "text-professional-green border border-professional-green hover:bg-yellow-50",
   },
 };
 

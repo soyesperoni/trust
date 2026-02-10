@@ -291,7 +291,7 @@ export default function NuevoUsuarioPage() {
                 Cancelar
               </Link>
               <button
-                className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-green-700 disabled:opacity-60"
+                className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700 disabled:opacity-60"
                 disabled={isSaving || isLoadingData}
                 type="submit"
               >

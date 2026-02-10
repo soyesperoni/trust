@@ -45,7 +45,7 @@ type AreaRow = {
 
 const statusStyles: Record<AreaStatus, string> = {
   Activo:
-    "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800",
+    "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-100 dark:border-yellow-800",
   Mantenimiento:
     "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-100 dark:border-amber-800",
   Inactivo:
@@ -53,7 +53,7 @@ const statusStyles: Record<AreaStatus, string> = {
 };
 
 const statusDot: Record<AreaStatus, string> = {
-  Activo: "bg-green-500",
+  Activo: "bg-yellow-500",
   Mantenimiento: "bg-amber-500",
   Inactivo: "bg-red-500",
 };
@@ -137,7 +137,7 @@ export default function AreasPage() {
         action={(
           <Link
             href="/clientes/areas/nueva"
-            className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+            className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nueva Área
@@ -198,7 +198,7 @@ export default function AreasPage() {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <div className="w-10 h-10 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
                           <span className="material-symbols-outlined text-[20px]">
                             map
                           </span>
@@ -249,7 +249,7 @@ export default function AreasPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
                           title="Editar"
                         >
                           <span className="material-symbols-outlined text-[20px]">
