@@ -98,7 +98,7 @@ export default function ClientesPage() {
           </div>
           <Link
             className="bg-professional-green text-white hover:bg-green-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
-            href="/clientes/nuevo"
+            href="/clientes/nuevo-usuario"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nuevo Usuario
