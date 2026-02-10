@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
+import { getSessionUserEmail } from "../../lib/session";
+
 import PageTransition from "../../components/PageTransition";
 
 type Visit = {
@@ -32,9 +34,10 @@ export default function VisitasPage() {
 
     const loadVisits = async () => {
       try {
+        const currentUserEmail = getSessionUserEmail();
         const [visitsResponse, usersResponse] = await Promise.all([
-          fetch("/api/visits", { cache: "no-store" }),
-          fetch("/api/users", { cache: "no-store" }),
+          fetch("/api/visits", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/users", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
         ]);
         if (!visitsResponse.ok || !usersResponse.ok) {
           throw new Error("No se pudieron cargar las visitas.");

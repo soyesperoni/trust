@@ -32,6 +32,25 @@ def _is_general_admin(request) -> bool:
     return User.objects.filter(email__iexact=current_email, role=User.Role.GENERAL_ADMIN).exists()
 
 
+def _get_current_user(request):
+    current_email = str(request.headers.get("X-Current-User-Email") or "").strip().lower()
+    if not current_email:
+        return None
+    return User.objects.filter(email__iexact=current_email, is_active=True).first()
+
+
+def _get_client_scope_ids(request):
+    current_user = _get_current_user(request)
+    if not current_user or current_user.role != User.Role.ACCOUNT_ADMIN:
+        return None
+    return list(current_user.clients.values_list("id", flat=True))
+
+
+def _is_account_admin(request) -> bool:
+    current_user = _get_current_user(request)
+    return bool(current_user and current_user.role == User.Role.ACCOUNT_ADMIN)
+
+
 def _extract_user_data(request):
     if request.content_type and request.content_type.startswith("multipart/form-data"):
         data = request.POST.copy()
@@ -185,18 +204,37 @@ def health(request):
 @require_GET
 def dashboard(request):
     now = timezone.now()
+    client_scope_ids = _get_client_scope_ids(request)
+
+    clients = Client.objects.all()
+    branches = Branch.objects.all()
+    areas = Area.objects.all()
+    dispensers = Dispenser.objects.all()
+    products = Product.objects.all()
+    visits = Visit.objects.all()
+    incidents = Incident.objects.all()
+
+    if client_scope_ids is not None:
+        clients = clients.filter(id__in=client_scope_ids)
+        branches = branches.filter(client_id__in=client_scope_ids)
+        areas = areas.filter(branch__client_id__in=client_scope_ids)
+        dispensers = dispensers.filter(area__branch__client_id__in=client_scope_ids)
+        products = products.filter(dispenser__area__branch__client_id__in=client_scope_ids)
+        visits = visits.filter(area__branch__client_id__in=client_scope_ids)
+        incidents = incidents.filter(client_id__in=client_scope_ids)
+
     stats = {
-        "clients": Client.objects.count(),
-        "branches": Branch.objects.count(),
-        "areas": Area.objects.count(),
-        "dispensers": Dispenser.objects.count(),
-        "products": Product.objects.count(),
-        "visits": Visit.objects.count(),
-        "pending_visits": Visit.objects.filter(visited_at__gt=now).count(),
-        "incidents": Incident.objects.count(),
+        "clients": clients.count(),
+        "branches": branches.count(),
+        "areas": areas.count(),
+        "dispensers": dispensers.count(),
+        "products": products.count(),
+        "visits": visits.count(),
+        "pending_visits": visits.filter(visited_at__gt=now).count(),
+        "incidents": incidents.count(),
     }
     recent_visits = (
-        Visit.objects.select_related("area__branch__client", "inspector")
+        visits.select_related("area__branch__client", "inspector")
         .order_by("-visited_at")[:6]
     )
     activity = []
@@ -285,40 +323,52 @@ def client_detail(request, client_id: int):
 
 @require_GET
 def branches(request):
+    queryset = Branch.objects.select_related("client")
+    client_scope_ids = _get_client_scope_ids(request)
+    if client_scope_ids is not None:
+        queryset = queryset.filter(client_id__in=client_scope_ids)
     payload = [
         _serialize_branch(branch)
-        for branch in Branch.objects.select_related("client").all()
+        for branch in queryset.all()
     ]
     return JsonResponse({"results": payload})
 
 
 @require_GET
 def areas(request):
+    queryset = Area.objects.select_related("branch__client")
+    client_scope_ids = _get_client_scope_ids(request)
+    if client_scope_ids is not None:
+        queryset = queryset.filter(branch__client_id__in=client_scope_ids)
     payload = [
         _serialize_area(area)
-        for area in Area.objects.select_related("branch__client").all()
+        for area in queryset.all()
     ]
     return JsonResponse({"results": payload})
 
 
 @require_GET
 def dispensers(request):
+    queryset = Dispenser.objects.select_related("model", "area__branch__client")
+    client_scope_ids = _get_client_scope_ids(request)
+    if client_scope_ids is not None:
+        queryset = queryset.filter(area__branch__client_id__in=client_scope_ids)
     payload = [
         _serialize_dispenser(dispenser)
-        for dispenser in Dispenser.objects.select_related(
-            "model", "area__branch__client"
-        ).all()
+        for dispenser in queryset.all()
     ]
     return JsonResponse({"results": payload})
 
 
 @require_GET
 def products(request):
+    queryset = Product.objects.select_related("dispenser__model")
+    client_scope_ids = _get_client_scope_ids(request)
+    if client_scope_ids is not None:
+        queryset = queryset.filter(dispenser__area__branch__client_id__in=client_scope_ids)
     payload = [
         _serialize_product(product)
-        for product in Product.objects.select_related(
-            "dispenser__model"
-        ).all()
+        for product in queryset.all()
     ]
     return JsonResponse({"results": payload})
 
@@ -326,10 +376,16 @@ def products(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def visits(request):
+    if request.method == "POST" and _is_account_admin(request):
+        return JsonResponse({"error": "No tienes permisos para agendar visitas."}, status=403)
+
     if request.method == "GET":
         queryset = Visit.objects.select_related(
             "area__branch__client", "inspector", "dispenser"
         )
+        client_scope_ids = _get_client_scope_ids(request)
+        if client_scope_ids is not None:
+            queryset = queryset.filter(area__branch__client_id__in=client_scope_ids)
 
         month = (request.GET.get("month") or "").strip()
         if month:
@@ -406,11 +462,13 @@ def visits(request):
 
 @require_GET
 def incidents(request):
+    queryset = Incident.objects.select_related("client", "branch", "area", "dispenser")
+    client_scope_ids = _get_client_scope_ids(request)
+    if client_scope_ids is not None:
+        queryset = queryset.filter(client_id__in=client_scope_ids)
     payload = [
         _serialize_incident(incident)
-        for incident in Incident.objects.select_related(
-            "client", "branch", "area", "dispenser"
-        ).all()
+        for incident in queryset.all()
     ]
     return JsonResponse({"results": payload})
 

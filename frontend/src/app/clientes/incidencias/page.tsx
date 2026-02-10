@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { ACCOUNT_ADMIN_ROLE } from "../../lib/permissions";
+import { getSessionUserEmail } from "../../lib/session";
+
 import PageTransition from "../../components/PageTransition";
 
 type IncidentApi = {
@@ -114,6 +118,9 @@ const getStatusFromDate = (value: string) => {
 };
 
 export default function IncidenciasPage() {
+  const { user } = useCurrentUser();
+  const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
+
   const [incidents, setIncidents] = useState<IncidentRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +130,8 @@ export default function IncidenciasPage() {
 
     const loadIncidents = async () => {
       try {
-        const response = await fetch("/api/incidents", { cache: "no-store" });
+        const currentUserEmail = getSessionUserEmail();
+        const response = await fetch("/api/incidents", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } });
         if (!response.ok) {
           throw new Error("No se pudieron cargar las incidencias.");
         }
@@ -186,7 +194,7 @@ export default function IncidenciasPage() {
         title="Incidencias"
         description="Gestión y seguimiento de reportes técnicos."
         searchPlaceholder="Buscar incidencia..."
-        action={(
+        action={!isAccountAdmin ? (
           <Link
             className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
             href="/clientes/incidencias/nueva"
@@ -194,7 +202,7 @@ export default function IncidenciasPage() {
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nueva Incidencia
           </Link>
-        )}
+        ) : null}
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -273,7 +281,7 @@ export default function IncidenciasPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        {incident.action === "schedule" ? (
+                        {incident.action === "schedule" && !isAccountAdmin ? (
                           <Link
                             className="bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-700 px-3 py-1.5 rounded text-xs font-medium transition-colors shadow-sm"
                             href="/clientes/incidencias/agendar"

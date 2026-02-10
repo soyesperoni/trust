@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { ACCOUNT_ADMIN_ROLE } from "../../lib/permissions";
+import { getSessionUserEmail } from "../../lib/session";
+
 import PageTransition from "../../components/PageTransition";
 
 type Visit = {
@@ -53,6 +57,9 @@ const eventStyles = {
 };
 
 export default function CalendarioPage() {
+  const { user } = useCurrentUser();
+  const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
+
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -68,8 +75,10 @@ export default function CalendarioPage() {
     const loadVisits = async () => {
       setIsLoading(true);
       try {
+        const currentUserEmail = getSessionUserEmail();
         const response = await fetch(`/api/visits?month=${monthKey(currentMonth)}`, {
           cache: "no-store",
+          headers: { "x-current-user-email": currentUserEmail },
         });
         if (!response.ok) {
           throw new Error("No se pudieron cargar las visitas del calendario.");
@@ -197,13 +206,15 @@ export default function CalendarioPage() {
               Hoy
             </button>
 
-            <Link
-              href="/clientes/calendario/nueva"
-              className="bg-professional-green hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              Agendar Visita
-            </Link>
+            {!isAccountAdmin && (
+              <Link
+                href="/clientes/calendario/nueva"
+                className="bg-professional-green hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[20px]">add</span>
+                Agendar Visita
+              </Link>
+            )}
           </div>
         }
       />

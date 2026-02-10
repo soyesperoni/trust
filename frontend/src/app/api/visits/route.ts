@@ -10,8 +10,10 @@ export async function GET(request: NextRequest) {
     endpoint.searchParams.set("month", month);
   }
 
+  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
   const response = await fetch(endpoint.toString(), {
     cache: "no-store",
+    headers: { "X-Current-User-Email": currentUserEmail },
   });
 
   if (!response.ok) {
@@ -25,11 +27,12 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(data);
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const body = await request.text();
+  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
   const response = await fetch(`${backendBaseUrl}/api/visits/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Current-User-Email": currentUserEmail },
     body,
   });
 

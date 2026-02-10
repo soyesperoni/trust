@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
+import { getSessionUserEmail } from "../../lib/session";
+
 import PageTransition from "../../components/PageTransition";
 
 type DispenserStatus = "Operativo" | "Mantenimiento" | "Inactivo";
@@ -73,9 +75,10 @@ export default function DispensadoresPage() {
 
     const loadDispensers = async () => {
       try {
+        const currentUserEmail = getSessionUserEmail();
         const [dispensersResponse, productsResponse] = await Promise.all([
-          fetch("/api/dispensers", { cache: "no-store" }),
-          fetch("/api/products", { cache: "no-store" }),
+          fetch("/api/dispensers", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/products", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
         ]);
         if (!dispensersResponse.ok || !productsResponse.ok) {
           throw new Error("No se pudieron cargar los dosificadores.");
