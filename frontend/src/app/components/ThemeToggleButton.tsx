@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type ThemeMode = "light" | "dark";
 
@@ -13,11 +13,7 @@ const resolveTheme = (): ThemeMode => {
 };
 
 export default function ThemeToggleButton() {
-  const [theme, setTheme] = useState<ThemeMode>("light");
-
-  useEffect(() => {
-    setTheme(resolveTheme());
-  }, []);
+  const [theme, setTheme] = useState<ThemeMode>(() => resolveTheme());
 
   const toggleTheme = () => {
     if (typeof document === "undefined") return;
@@ -30,7 +26,7 @@ export default function ThemeToggleButton() {
 
   return (
     <button
-      className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+      className="h-10 w-10 inline-flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
       onClick={toggleTheme}
       type="button"
     >
