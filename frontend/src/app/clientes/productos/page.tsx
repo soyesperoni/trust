@@ -17,8 +17,33 @@ type ProductApi = {
   };
 };
 
+type ProductStatus = "Asignado" | "Sin asignar";
+
+type ProductRow = {
+  id: number;
+  name: string;
+  sku: string;
+  description: string;
+  dispenserCode: string;
+  dispenserModel: string;
+  status: ProductStatus;
+};
+
+const statusStyles: Record<ProductStatus, { badge: string; dot: string }> = {
+  Asignado: {
+    badge:
+      "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+    dot: "bg-green-500",
+  },
+  "Sin asignar": {
+    badge:
+      "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+    dot: "bg-slate-500",
+  },
+};
+
 export default function ProductosPage() {
-  const [products, setProducts] = useState<ProductApi[]>([]);
+  const [products, setProducts] = useState<ProductRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +58,23 @@ export default function ProductosPage() {
         }
         const data = await response.json();
         if (!isMounted) return;
-        setProducts(data.results ?? []);
+        const rows = ((data.results ?? []) as ProductApi[]).map((product) => {
+          const hasDispenser = Boolean(product.dispenser?.id);
+          return {
+            id: product.id,
+            name: product.name,
+            sku: `#${product.id}`,
+            description: product.description || "Sin descripción registrada.",
+            dispenserCode: hasDispenser
+              ? product.dispenser.identifier
+              : "Sin dosificador",
+            dispenserModel: hasDispenser
+              ? product.dispenser.model
+              : "Sin modelo",
+            status: hasDispenser ? "Asignado" : "Sin asignar",
+          };
+        });
+        setProducts(rows);
         setError(null);
       } catch (fetchError) {
         if (!isMounted) return;
@@ -60,6 +101,9 @@ export default function ProductosPage() {
     return "No hay productos registrados.";
   }, [error, isLoading]);
 
+  const totalResults = products.length;
+  const displayedResults = products.length;
+
   return (
     <>
       <DashboardHeader
@@ -78,83 +122,107 @@ export default function ProductosPage() {
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {products.length === 0 ? (
-            <div className="col-span-full bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 text-center text-slate-500">
-              {emptyMessage}
-            </div>
-          ) : (
-            products.map((product) => {
-              const statusLabel = product.dispenser?.id
-                ? "Asignado"
-                : "Sin asignar";
-              const statusClasses = product.dispenser?.id
-                ? "bg-green-50 text-green-700 border border-green-100"
-                : "bg-slate-100 text-slate-600 border border-slate-200";
+        <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700">
+                  <th className="px-6 py-4">Producto</th>
+                  <th className="px-6 py-4">Descripción</th>
+                  <th className="px-6 py-4">Dosificador</th>
+                  <th className="px-6 py-4">Modelo</th>
+                  <th className="px-6 py-4">Estado</th>
+                  <th className="px-6 py-4 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                {products.map((product) => {
+                  const statusStyle = statusStyles[product.status];
 
-              return (
-                <div
-                  key={product.id}
-                  className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden hover:border-primary/50 transition-all group"
-                >
-                  <div className="relative h-48 bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center p-4 text-center">
-                    <span className="material-symbols-outlined text-[48px] text-slate-400 mb-2">
-                      inventory_2
-                    </span>
-                    <span className="text-xs font-semibold text-slate-500">
-                      Producto registrado
-                    </span>
-                    <span
-                      className={`absolute top-3 right-3 text-xs font-semibold px-2 py-1 rounded-md ${statusClasses}`}
+                  return (
+                    <tr
+                      key={product.id}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     >
-                      {statusLabel}
-                    </span>
-                  </div>
-                  <div className="p-5">
-                    <div className="flex items-center gap-2 mb-2 text-slate-400">
-                      <span className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-600 dark:text-slate-400">
-                        ID: {product.id}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1 font-logo">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2">
-                      {product.description || "Sin descripción registrada."}
-                    </p>
-                    <div className="border-t border-slate-100 dark:border-slate-800 pt-4 flex flex-col gap-2 text-sm text-slate-600 dark:text-slate-300">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px] text-slate-400">
-                          water_drop
-                        </span>
-                        <span>
-                          {product.dispenser?.identifier
-                            ? `Dosificador ${product.dispenser.identifier}`
-                            : "Sin dosificador asignado"}
-                        </span>
-                      </div>
-                      {product.dispenser?.model ? (
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-[18px] text-slate-400">
-                            settings
-                          </span>
-                          <span>Modelo {product.dispenser.model}</span>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <span className="material-symbols-outlined">
+                              inventory_2
+                            </span>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-900 dark:text-white">
+                              {product.name}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              ID: {product.sku}
+                            </div>
+                          </div>
                         </div>
-                      ) : null}
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Link
-                        className="text-sm text-professional-green hover:text-green-700 font-medium"
-                        href={`/clientes/productos/${product.id}`}
-                      >
-                        Editar
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300 max-w-sm">
+                        <p className="line-clamp-2">{product.description}</p>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                        {product.dispenserCode}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                        {product.dispenserModel}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusStyle.badge}`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`}
+                          ></span>
+                          {product.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link
+                          className="text-slate-400 hover:text-professional-green transition-colors"
+                          href={`/clientes/productos/${product.id}`}
+                        >
+                          <span className="material-symbols-outlined">
+                            edit
+                          </span>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {products.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-8 text-center text-slate-500"
+                    >
+                      {emptyMessage}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-[#161e27]">
+            <div className="text-sm text-slate-500">
+              Mostrando <span className="font-medium">{displayedResults}</span>{" "}
+              de <span className="font-medium">{totalResults}</span> resultados
+            </div>
+            <div className="flex gap-2">
+              <button
+                className="px-3 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                disabled
+              >
+                Anterior
+              </button>
+              <button className="px-3 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm text-slate-600 hover:bg-slate-50">
+                Siguiente
+              </button>
+            </div>
+          </div>
         </div>
       </PageTransition>
     </>
