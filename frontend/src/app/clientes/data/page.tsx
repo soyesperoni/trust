@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
+import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE } from "../../lib/permissions";
 import PageTransition from "../../components/PageTransition";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 type ClientApi = {
   id: number;
@@ -81,6 +83,13 @@ const avatarClassPool = [
 ];
 
 export default function ClientesListadoPage() {
+  const { user, isLoading: isLoadingUser } = useCurrentUser();
+  const canCreateClients =
+    !isLoadingUser &&
+    ![ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(
+      user?.role ?? "",
+    );
+
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -244,7 +253,7 @@ export default function ClientesListadoPage() {
       <DashboardHeader
         title="Gestión de Clientes"
         description="Administra la lista de clientes corporativos y su estado."
-        action={(
+        action={canCreateClients ? (
           <Link
             className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
             href="/clientes/nuevo"
@@ -252,7 +261,7 @@ export default function ClientesListadoPage() {
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nuevo Cliente
           </Link>
-        )}
+        ) : null}
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col h-full">

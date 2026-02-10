@@ -47,8 +47,9 @@ const statusStyles: Record<ProductStatus, { badge: string; dot: string }> = {
 };
 
 export default function ProductosPage() {
-  const { user } = useCurrentUser();
+  const { user, isLoading: isLoadingUser } = useCurrentUser();
   const isInspector = user?.role === INSPECTOR_ROLE;
+  const canManageProducts = !isLoadingUser && !isInspector;
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +118,7 @@ export default function ProductosPage() {
         title="Gestión de Productos"
         description="Administra el catálogo de productos disponibles."
         searchPlaceholder="Buscar producto, SKU..."
-        action={!isInspector ? (
+        action={canManageProducts ? (
           <Link
             className="bg-professional-green hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
             href="/clientes/productos/nuevo"
@@ -188,7 +189,7 @@ export default function ProductosPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {!isInspector && <Link
+                        {canManageProducts && <Link
                           className="text-slate-400 hover:text-professional-green transition-colors"
                           href={`/clientes/productos/${product.id}`}
                         >

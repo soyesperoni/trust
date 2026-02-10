@@ -118,10 +118,11 @@ const getStatusFromDate = (value: string) => {
 };
 
 export default function IncidenciasPage() {
-  const { user } = useCurrentUser();
+  const { user, isLoading: isLoadingUser } = useCurrentUser();
   const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
   const isInspector = user?.role === INSPECTOR_ROLE;
   const canCreateIncident = !isInspector;
+  const canCreateIncidentsFromHeader = !isLoadingUser && canCreateIncident && !isAccountAdmin;
   const canScheduleFromIncident = user?.role === GENERAL_ADMIN_ROLE;
 
   const [incidents, setIncidents] = useState<IncidentRow[]>([]);
@@ -197,7 +198,7 @@ export default function IncidenciasPage() {
         title="Incidencias"
         description="Gestión y seguimiento de reportes técnicos."
         searchPlaceholder="Buscar incidencia..."
-        action={canCreateIncident && !isAccountAdmin ? (
+        action={canCreateIncidentsFromHeader ? (
           <Link
             className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
             href="/clientes/incidencias/nueva"

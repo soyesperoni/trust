@@ -65,8 +65,9 @@ const statusStyles: Record<Branch["status"], string> = {
 };
 
 export default function SucursalesPage() {
-  const { user } = useCurrentUser();
+  const { user, isLoading: isLoadingUser } = useCurrentUser();
   const isReadOnlyAdmin = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
+  const canManageBranches = !isLoadingUser && !isReadOnlyAdmin;
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -165,7 +166,7 @@ export default function SucursalesPage() {
         title="Gestión de Sucursales"
         description="Administra las sucursales vinculadas a cada cliente."
         searchPlaceholder="Buscar sucursal..."
-        action={!isReadOnlyAdmin ? (
+        action={canManageBranches ? (
           <Link
             href="/clientes/sucursales/nueva"
             className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
@@ -278,7 +279,7 @@ export default function SucursalesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {!isReadOnlyAdmin && (<button
+                        {canManageBranches && (<button
                           className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-yellow-50 rounded-full transition-colors"
                           title="Editar"
                         >
