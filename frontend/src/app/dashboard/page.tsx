@@ -13,6 +13,7 @@ type DashboardStats = {
   products: number;
   visits: number;
   incidents: number;
+  pending_visits: number;
 };
 
 export default function DashboardPage() {
@@ -61,49 +62,56 @@ export default function DashboardPage() {
         value: stats?.clients ?? 0,
         icon: "apartment",
         iconStyle:
-          "bg-blue-500/10 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300",
+          "bg-primary/20 text-primary dark:bg-primary/15 dark:text-primary",
       },
       {
         label: "Sucursales",
         value: stats?.branches ?? 0,
         icon: "storefront",
         iconStyle:
-          "bg-violet-500/10 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300",
+          "bg-professional-green/15 text-professional-green dark:bg-professional-green/20 dark:text-professional-green",
       },
       {
         label: "Áreas",
         value: stats?.areas ?? 0,
         icon: "map",
         iconStyle:
-          "bg-indigo-500/10 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-300",
+          "bg-primary/15 text-professional-green dark:bg-primary/10 dark:text-primary",
       },
       {
         label: "Dosificadores",
         value: stats?.dispensers ?? 0,
         icon: "water_drop",
         iconStyle:
-          "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
+          "bg-professional-green/10 text-professional-green dark:bg-professional-green/20 dark:text-professional-green",
       },
       {
         label: "Productos",
         value: stats?.products ?? 0,
         icon: "inventory_2",
         iconStyle:
-          "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
+          "bg-primary/15 text-primary dark:bg-primary/10 dark:text-primary",
       },
       {
         label: "Visitas",
         value: stats?.visits ?? 0,
         icon: "history",
         iconStyle:
-          "bg-cyan-500/10 text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-300",
+          "bg-professional-green/10 text-professional-green dark:bg-professional-green/20 dark:text-professional-green",
+      },
+      {
+        label: "Visitas pendientes",
+        value: stats?.pending_visits ?? 0,
+        icon: "event_upcoming",
+        iconStyle:
+          "bg-primary/20 text-professional-green dark:bg-primary/15 dark:text-primary",
       },
       {
         label: "Incidencias",
         value: stats?.incidents ?? 0,
         icon: "report_problem",
         iconStyle:
-          "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300",
+          "bg-primary/15 text-primary dark:bg-primary/10 dark:text-primary",
       },
     ],
     [stats],

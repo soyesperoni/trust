@@ -134,6 +134,7 @@ def health(request):
 
 @require_GET
 def dashboard(request):
+    now = timezone.now()
     stats = {
         "clients": Client.objects.count(),
         "branches": Branch.objects.count(),
@@ -141,6 +142,7 @@ def dashboard(request):
         "dispensers": Dispenser.objects.count(),
         "products": Product.objects.count(),
         "visits": Visit.objects.count(),
+        "pending_visits": Visit.objects.filter(visited_at__gt=now).count(),
         "incidents": Incident.objects.count(),
     }
     recent_visits = (
