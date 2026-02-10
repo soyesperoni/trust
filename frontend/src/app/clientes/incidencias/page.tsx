@@ -30,8 +30,10 @@ type IncidentRow = {
   priority: {
     label: string;
     className: string;
+    mobileClassName: string;
   };
   status: {
+    key: "open" | "in_progress" | "closed";
     label: string;
     className: string;
     pulse: boolean;
@@ -71,9 +73,10 @@ const getPriorityFromDescription = (description: string) => {
   const normalized = description.toLowerCase();
   if (normalized.includes("crítico") || normalized.includes("urgente")) {
     return {
-      label: "Alta",
+      label: "Crítica",
       className:
         "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-100 dark:border-red-900/50",
+      mobileClassName: "bg-red-100 text-red-900",
     };
   }
   if (normalized.includes("revisar") || normalized.includes("fuga")) {
@@ -81,12 +84,14 @@ const getPriorityFromDescription = (description: string) => {
       label: "Media",
       className:
         "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border border-yellow-100 dark:border-yellow-900/50",
+      mobileClassName: "bg-amber-100 text-amber-800",
     };
   }
   return {
     label: "Baja",
     className:
       "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border border-yellow-100 dark:border-yellow-900/50",
+    mobileClassName: "bg-slate-100 text-slate-600",
   };
 };
 
@@ -94,28 +99,47 @@ const getStatusFromDate = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return {
-      label: "Registrada",
+      key: "in_progress" as const,
+      label: "En Proceso",
       className:
         "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
       pulse: false,
     };
   }
   const diffHours = Math.abs(Date.now() - date.getTime()) / 3600000;
-  if (diffHours <= 48) {
+  if (diffHours <= 24) {
     return {
+      key: "open" as const,
       label: "Abierta",
       className:
         "bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
       pulse: true,
     };
   }
+  if (diffHours <= 72) {
+    return {
+      key: "in_progress" as const,
+      label: "En Proceso",
+      className:
+        "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+      pulse: false,
+    };
+  }
   return {
-    label: "Registrada",
+    key: "closed" as const,
+    label: "Cerrada",
     className:
-      "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+      "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
     pulse: false,
   };
 };
+
+const mobileFilters = [
+  { label: "Todas", value: "all" as const },
+  { label: "Abiertas", value: "open" as const },
+  { label: "En Proceso", value: "in_progress" as const },
+  { label: "Cerradas", value: "closed" as const },
+];
 
 export default function IncidenciasPage() {
   const { user, isLoading: isLoadingUser } = useCurrentUser();
@@ -128,6 +152,8 @@ export default function IncidenciasPage() {
   const [incidents, setIncidents] = useState<IncidentRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeFilter, setActiveFilter] = useState<(typeof mobileFilters)[number]["value"]>("all");
 
   useEffect(() => {
     let isMounted = true;
@@ -161,7 +187,7 @@ export default function IncidenciasPage() {
               priority: getPriorityFromDescription(incident.description),
               status,
               reportedAt: formatRelativeTime(incident.created_at),
-              action: status.label === "Abierta" ? "schedule" : "view",
+              action: status.key === "open" ? "schedule" : "view",
             };
           },
         );
@@ -192,24 +218,134 @@ export default function IncidenciasPage() {
     return "No hay incidencias registradas.";
   }, [error, isLoading]);
 
+  const filteredIncidents = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return incidents.filter((incident) => {
+      const matchesFilter = activeFilter === "all" || incident.status.key === activeFilter;
+      if (!matchesFilter) return false;
+      if (!query) return true;
+      return [
+        incident.client,
+        incident.branch,
+        incident.dispenser,
+        incident.priority.label,
+        `#${incident.id}`,
+      ].some((item) => item.toLowerCase().includes(query));
+    });
+  }, [activeFilter, incidents, searchTerm]);
+
   return (
     <>
-      <DashboardHeader
-        title="Incidencias"
-        description="Gestión y seguimiento de reportes técnicos."
-        searchPlaceholder="Buscar incidencia..."
-        action={canCreateIncidentsFromHeader ? (
-          <Link
-            className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
-            href="/clientes/incidencias/nueva"
-          >
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            Nueva Incidencia
-          </Link>
-        ) : null}
-      />
+      <div className="hidden md:block">
+        <DashboardHeader
+          title="Incidencias"
+          description="Gestión y seguimiento de reportes técnicos."
+          searchPlaceholder="Buscar incidencia..."
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          action={canCreateIncidentsFromHeader ? (
+            <Link
+              className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
+              href="/clientes/incidencias/nueva"
+            >
+              <span className="material-symbols-outlined text-[20px]">add</span>
+              Nueva Incidencia
+            </Link>
+          ) : null}
+        />
+      </div>
 
-      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
+      <div className="md:hidden px-4 pt-3 pb-2 sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100">
+        <div className="flex items-center gap-3 bg-slate-100 rounded-full px-4 py-2.5 shadow-sm">
+          <span className="material-symbols-outlined text-slate-500">search</span>
+          <input
+            className="bg-transparent border-none focus:ring-0 p-0 text-slate-700 w-full placeholder-slate-500 text-base"
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Buscar incidencias..."
+            type="text"
+            value={searchTerm}
+          />
+          <button className="flex items-center justify-center text-slate-600" type="button">
+            <span className="material-symbols-outlined">filter_list</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="md:hidden pl-4 pr-0 py-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 pr-4">
+          {mobileFilters.map((filter) => {
+            const isActive = activeFilter === filter.value;
+            return (
+              <button
+                key={filter.value}
+                className={`px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap border transition-colors ${
+                  isActive
+                    ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                    : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                }`}
+                onClick={() => setActiveFilter(filter.value)}
+                type="button"
+              >
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <section className="md:hidden flex-1 px-4 pt-2 pb-32 space-y-4 overflow-y-auto">
+        {filteredIncidents.map((incident) => (
+          <article
+            key={incident.id}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden active:bg-slate-50 transition-colors"
+          >
+            <div className="flex justify-between items-start mb-2 gap-2">
+              <div>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                  ID #INC-{incident.id}
+                </span>
+                <h3 className="text-lg font-bold text-slate-900 leading-tight mt-0.5">
+                  {incident.client}
+                </h3>
+              </div>
+              <span
+                className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase ${incident.priority.mobileClassName}`}
+              >
+                {incident.priority.label}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-sm text-slate-600 mt-2">
+              <span className="material-symbols-outlined text-[18px] text-slate-400">store</span>
+              <span>{incident.branch}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-sm text-slate-600 mt-1">
+              <span className="material-symbols-outlined text-[18px] text-slate-400">schedule</span>
+              <span>{incident.reportedAt}</span>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+              {incident.action === "schedule" && !isAccountAdmin && canScheduleFromIncident ? (
+                <Link
+                  className="text-primary font-semibold text-sm px-4 py-2 hover:bg-yellow-50 rounded-full transition-colors"
+                  href="/clientes/incidencias/agendar"
+                >
+                  Agendar visita
+                </Link>
+              ) : (
+                <button className="text-primary font-semibold text-sm px-4 py-2 hover:bg-yellow-50 rounded-full transition-colors" type="button">
+                  Ver detalles
+                </button>
+              )}
+            </div>
+          </article>
+        ))}
+        {filteredIncidents.length === 0 ? (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-sm text-slate-500 text-center">
+            {emptyMessage}
+          </div>
+        ) : null}
+      </section>
+
+      <PageTransition className="hidden md:flex flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
           <div className="overflow-x-auto custom-scrollbar flex-1">
             <table className="w-full text-left border-collapse min-w-[1000px]">
@@ -225,7 +361,7 @@ export default function IncidenciasPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {incidents.map((incident) => (
+                {filteredIncidents.map((incident) => (
                   <tr
                     key={incident.id}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
@@ -303,7 +439,7 @@ export default function IncidenciasPage() {
                     </td>
                   </tr>
                 ))}
-                {incidents.length === 0 && (
+                {filteredIncidents.length === 0 && (
                   <tr>
                     <td
                       colSpan={7}
@@ -318,7 +454,7 @@ export default function IncidenciasPage() {
           </div>
           <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <span className="text-sm text-slate-500">
-              Mostrando {incidents.length} de {incidents.length} incidencias
+              Mostrando {filteredIncidents.length} de {incidents.length} incidencias
             </span>
             <div className="flex gap-2">
               <button className="px-3 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500">
