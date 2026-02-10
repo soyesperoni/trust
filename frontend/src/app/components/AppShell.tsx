@@ -24,6 +24,9 @@ const navigationPriority = [
 
 const resolveActivePath = (path: string) => {
   if (!path) return "/dashboard";
+  if (path.startsWith("/clientes/nuevo-usuario")) {
+    return "/clientes";
+  }
   if (path.startsWith("/clientes/nuevo")) {
     return "/clientes/data";
   }
