@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import DashboardHeader from "../../../components/DashboardHeader";
@@ -19,11 +19,9 @@ const initialState: FormState = {
   notes: "",
 };
 
-export default function EditarClientePage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function EditarClientePage() {
+  const params = useParams<{ id: string }>();
+  const clientId = params?.id;
   const router = useRouter();
   const [formState, setFormState] = useState<FormState>(initialState);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,11 +29,16 @@ export default function EditarClientePage({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!clientId) {
+      setError("No se encontró el cliente solicitado.");
+      setIsLoading(false);
+      return;
+    }
     let isMounted = true;
 
     const loadClient = async () => {
       try {
-        const response = await fetch(`/api/clients/${params.id}`, {
+        const response = await fetch(`/api/clients/${clientId}`, {
           cache: "no-store",
         });
         const payload = await response.json();
@@ -66,7 +69,7 @@ export default function EditarClientePage({
     return () => {
       isMounted = false;
     };
-  }, [params.id]);
+  }, [clientId]);
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -81,7 +84,11 @@ export default function EditarClientePage({
     setError(null);
 
     try {
-      const response = await fetch(`/api/clients/${params.id}`, {
+      if (!clientId) {
+        throw new Error("No se encontró el cliente solicitado.");
+      }
+
+      const response = await fetch(`/api/clients/${clientId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formState),

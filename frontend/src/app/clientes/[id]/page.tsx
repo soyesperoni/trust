@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
@@ -35,11 +36,9 @@ type Area = {
   branch: { id: number; name: string; client: string };
 };
 
-export default function EditarUsuarioPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function EditarUsuarioPage() {
+  const params = useParams<{ id: string }>();
+  const userId = params?.id;
   const [formState, setFormState] = useState({
     full_name: "",
     email: "",
@@ -62,13 +61,20 @@ export default function EditarUsuarioPage({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!userId) {
+      setError("No se encontró el usuario solicitado.");
+      setLoadError("No se encontró el usuario solicitado.");
+      setIsLoading(false);
+      setIsLoadingData(false);
+      return;
+    }
     let isMounted = true;
 
     const loadData = async () => {
       try {
         const [userRes, clientsRes, branchesRes, areasRes] =
           await Promise.all([
-            fetch(`/api/users/${params.id}`, { cache: "no-store" }),
+            fetch(`/api/users/${userId}`, { cache: "no-store" }),
             fetch("/api/clients", { cache: "no-store" }),
             fetch("/api/branches", { cache: "no-store" }),
             fetch("/api/areas", { cache: "no-store" }),
@@ -131,7 +137,7 @@ export default function EditarUsuarioPage({
     return () => {
       isMounted = false;
     };
-  }, [params.id]);
+  }, [userId]);
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -170,7 +176,11 @@ export default function EditarUsuarioPage({
     setSuccess(false);
 
     try {
-      const response = await fetch(`/api/users/${params.id}`, {
+      if (!userId) {
+        throw new Error("No se encontró el usuario solicitado.");
+      }
+
+      const response = await fetch(`/api/users/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
