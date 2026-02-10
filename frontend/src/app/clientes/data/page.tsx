@@ -362,22 +362,24 @@ export default function ClientesListadoPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
+                            <Link
                               className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded transition-colors"
+                              href={`/clientes/data/${client.id}`}
                               title="Ver detalles"
                             >
                               <span className="material-symbols-outlined text-[20px]">
                                 visibility
                               </span>
-                            </button>
-                            <button
+                            </Link>
+                            <Link
                               className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              href={`/clientes/data/${client.id}`}
                               title="Editar"
                             >
                               <span className="material-symbols-outlined text-[20px]">
                                 edit
                               </span>
-                            </button>
+                            </Link>
                           </div>
                         </td>
                       </tr>

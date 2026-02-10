@@ -18,3 +18,15 @@ export async function GET() {
   const data = await response.json();
   return NextResponse.json(data);
 }
+
+export async function POST(request: Request) {
+  const body = await request.text();
+  const response = await fetch(`${backendBaseUrl}/api/clients/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+
+  const payload = await response.json();
+  return NextResponse.json(payload, { status: response.status });
+}
