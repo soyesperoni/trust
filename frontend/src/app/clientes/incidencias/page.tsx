@@ -186,27 +186,19 @@ export default function IncidenciasPage() {
         title="Incidencias"
         description="Gestión y seguimiento de reportes técnicos."
         searchPlaceholder="Buscar incidencia..."
+        action={(
+          <Link
+            className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
+            href="/clientes/incidencias/nueva"
+          >
+            <span className="material-symbols-outlined text-[20px]">add</span>
+            Nueva Incidencia
+          </Link>
+        )}
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden">
-          <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white font-logo">
-                Listado de Incidencias
-              </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Gestión y seguimiento de reportes técnicos.
-              </p>
-            </div>
-            <Link
-              className="bg-primary text-slate-900 hover:bg-yellow-300 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
-              href="/clientes/incidencias/nueva"
-            >
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              Nueva Incidencia
-            </Link>
-          </div>
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
