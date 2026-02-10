@@ -142,6 +142,14 @@ export default function ProductosPage() {
                         </div>
                       ) : null}
                     </div>
+                    <div className="mt-4 flex justify-end">
+                      <Link
+                        className="text-sm text-professional-green hover:text-green-700 font-medium"
+                        href={`/clientes/productos/${product.id}`}
+                      >
+                        Editar
+                      </Link>
+                    </div>
                   </div>
                 </div>
               );

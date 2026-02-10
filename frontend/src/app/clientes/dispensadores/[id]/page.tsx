@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
-export default function NuevoDosificadorPage() {
+export default function EditarDosificadorPage() {
+  const params = useParams<{ id: string }>();
+
   return (
     <>
       <DashboardHeader
-        title="Nuevo Dosificador"
-        description="Registra un nuevo dosificador con la misma experiencia visual de clientes."
+        title="Editar Dosificador"
+        description="Actualiza la información del dosificador con la misma UI de edición de cliente."
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-3xl mx-auto bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
@@ -19,7 +22,7 @@ export default function NuevoDosificadorPage() {
               Datos del dosificador
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Completa la información base para registrar un nuevo equipo.
+              Editando el dosificador #{params.id}.
             </p>
           </div>
 
@@ -29,8 +32,8 @@ export default function NuevoDosificadorPage() {
                 Identificador
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                  defaultValue={`DISP-${params.id}`}
                   id="identifier"
-                  placeholder="Ej. DISP-001"
                   required
                   type="text"
                 />
@@ -40,8 +43,8 @@ export default function NuevoDosificadorPage() {
                 Modelo
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                  defaultValue="EcoPro 2000"
                   id="model"
-                  placeholder="Ej. EcoPro 2000"
                   required
                   type="text"
                 />
@@ -51,8 +54,8 @@ export default function NuevoDosificadorPage() {
                 Cliente
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                  defaultValue="Cliente asociado"
                   id="client"
-                  placeholder="Cliente asociado"
                   type="text"
                 />
               </label>
@@ -61,8 +64,8 @@ export default function NuevoDosificadorPage() {
                 Área
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                  defaultValue="Área principal"
                   id="area"
-                  placeholder="Área de instalación"
                   type="text"
                 />
               </label>
@@ -71,8 +74,8 @@ export default function NuevoDosificadorPage() {
                 Notas
                 <textarea
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-24"
+                  defaultValue="Observaciones del equipo."
                   id="notes"
-                  placeholder="Observaciones técnicas del equipo..."
                 />
               </label>
             </div>
@@ -89,7 +92,7 @@ export default function NuevoDosificadorPage() {
                 type="submit"
               >
                 <span className="material-symbols-outlined text-[20px]">save</span>
-                Guardar Dosificador
+                Guardar cambios
               </button>
             </div>
           </form>
