@@ -154,30 +154,24 @@ export default function NuevaVisitaPage() {
 
   return (
     <>
-      <DashboardHeader title="Agendar Nueva Visita" />
+      <DashboardHeader
+        title="Agendar Nueva Visita"
+        description="Registra los datos base para programar una nueva visita técnica."
+      />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
-                  <span className="material-symbols-outlined">calendar_add_on</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white font-logo">Detalles de la Visita</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Complete el formulario para programar una nueva visita técnica.
-                  </p>
-                </div>
-              </div>
-            </div>
+        <div className="max-w-3xl mx-auto bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Datos de la visita</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Completa la información base para agendar una nueva visita técnica.
+            </p>
+          </div>
 
-            <div className="p-6 md:p-8">
-              <form className="space-y-8" onSubmit={handleSubmit}>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Tipo de Visita</label>
-                  <div className="grid grid-cols-2 gap-4">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div>
+              <label className="block text-sm text-slate-600 dark:text-slate-300 mb-2">Tipo de visita</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label className="relative">
                       <input checked={visitType === "mantenimiento"} className="peer hidden" name="visit_type" onChange={() => setVisitType("mantenimiento")} type="radio" value="mantenimiento" />
                       <span className="flex flex-col items-center justify-center p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 peer-checked:border-primary peer-checked:bg-yellow-50 dark:peer-checked:bg-yellow-900/10 transition-all">
@@ -193,115 +187,115 @@ export default function NuevaVisitaPage() {
                       </span>
                     </label>
                   </div>
-                </div>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="client">Cliente</label>
-                    <select className="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:border-primary focus:ring focus:ring-primary/20 transition-shadow" id="client" onChange={(e) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="client">
+                  Cliente
+                  <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="client" onChange={(e) => {
                       setClientId(e.target.value);
                       setBranchId("");
                       setAreaId("");
                       setDispenserId("");
                     }} value={clientId}>
-                      <option value="">Seleccione un cliente</option>
-                      {clients.map((client) => (
-                        <option key={client.id} value={client.id}>{client.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                    <option value="">Seleccione un cliente</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="branch">Sucursal</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">storefront</span>
-                      <select className="pl-10 w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:border-primary focus:ring focus:ring-primary/20 transition-shadow" id="branch" onChange={(e) => {
+              <div>
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="branch">
+                  Sucursal
+                  <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="branch" onChange={(e) => {
                         setBranchId(e.target.value);
                         setAreaId("");
                         setDispenserId("");
                       }} value={branchId}>
-                        <option value="">Seleccione una sucursal</option>
-                        {filteredBranches.map((branch) => (
-                          <option key={branch.id} value={branch.id}>{branch.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                    <option value="">Seleccione una sucursal</option>
+                    {filteredBranches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>{branch.name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="area">Área</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">domain</span>
-                      <select className="pl-10 w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:border-primary focus:ring focus:ring-primary/20 transition-shadow" id="area" onChange={(e) => {
+              <div>
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="area">
+                  Área
+                  <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="area" onChange={(e) => {
                         setAreaId(e.target.value);
                         setDispenserId("");
                       }} value={areaId}>
-                        <option value="">Seleccione un área</option>
-                        {filteredAreas.map((area) => (
-                          <option key={area.id} value={area.id}>{area.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                    <option value="">Seleccione un área</option>
+                    {filteredAreas.map((area) => (
+                      <option key={area.id} value={area.id}>{area.name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="doser">Dosificador</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">water_drop</span>
-                      <select className="pl-10 w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:border-primary focus:ring focus:ring-primary/20 transition-shadow" id="doser" onChange={(e) => setDispenserId(e.target.value)} value={dispenserId}>
-                        <option value="">Seleccione equipo dosificador</option>
-                        {filteredDispensers.map((dispenser) => (
-                          <option key={dispenser.id} value={dispenser.id}>{dispenser.identifier}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
+              <div className="md:col-span-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="doser">
+                  Dosificador
+                  <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="doser" onChange={(e) => setDispenserId(e.target.value)} value={dispenserId}>
+                    <option value="">Seleccione equipo dosificador</option>
+                    {filteredDispensers.map((dispenser) => (
+                      <option key={dispenser.id} value={dispenser.id}>{dispenser.identifier}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-                <div className="border-t border-slate-100 dark:border-slate-800" />
+              <div className="md:col-span-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="inspector">
+                  Inspector asignado
+                  <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="inspector" onChange={(e) => setInspectorId(e.target.value)} value={inspectorId}>
+                    <option value="">Asignar inspector</option>
+                    {inspectors.map((inspector) => (
+                      <option key={inspector.id} value={inspector.id}>{inspector.full_name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="inspector">Inspector Asignado</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">person</span>
-                      <select className="pl-10 w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:border-primary focus:ring focus:ring-primary/20 transition-shadow" id="inspector" onChange={(e) => setInspectorId(e.target.value)} value={inspectorId}>
-                        <option value="">Asignar inspector</option>
-                        {inspectors.map((inspector) => (
-                          <option key={inspector.id} value={inspector.id}>{inspector.full_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+              <div>
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="date">
+                  Fecha
+                  <input className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="date" onChange={(e) => setDate(e.target.value)} type="date" value={date} />
+                </label>
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="date">Fecha</label>
-                    <input className="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:border-primary focus:ring focus:ring-primary/20 transition-shadow" id="date" onChange={(e) => setDate(e.target.value)} type="date" value={date} />
-                  </div>
+              <div>
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="time">
+                  Hora
+                  <input className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="time" onChange={(e) => setTime(e.target.value)} type="time" value={time} />
+                </label>
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="time">Hora</label>
-                    <input className="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:border-primary focus:ring focus:ring-primary/20 transition-shadow" id="time" onChange={(e) => setTime(e.target.value)} type="time" value={time} />
-                  </div>
-                </div>
+              <div className="md:col-span-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="notes">
+                  Notas adicionales
+                  <textarea className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-24" id="notes" onChange={(e) => setNotes(e.target.value)} placeholder="Instrucciones especiales para el inspector..." value={notes} />
+                </label>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="notes">Notas Adicionales</label>
-                  <textarea className="w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:border-primary focus:ring focus:ring-primary/20 transition-shadow placeholder-slate-400" id="notes" onChange={(e) => setNotes(e.target.value)} placeholder="Instrucciones especiales para el inspector..." rows={3} value={notes} />
-                </div>
-
-                {statusMessage && <p className="text-sm text-slate-500">{statusMessage}</p>}
-
-                <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" onClick={() => router.push("/clientes/calendario")} type="button">Cancelar</button>
-                  <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-professional-green text-white font-medium hover:bg-green-700 shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 disabled:opacity-70" disabled={isSubmitting} type="submit">
-                    <span className="material-symbols-outlined text-[20px]">check_circle</span>
-                    {isSubmitting ? "Guardando..." : "Confirmar Visita"}
-                  </button>
-                </div>
-              </form>
+              {statusMessage && <p className="text-sm text-slate-500 md:col-span-2">{statusMessage}</p>}
             </div>
-          </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <button className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800" onClick={() => router.push("/clientes/calendario")} type="button">
+                Cancelar
+              </button>
+              <button className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-green-700 flex items-center gap-2 disabled:opacity-60" disabled={isSubmitting} type="submit">
+                <span className="material-symbols-outlined text-[20px]">save</span>
+                {isSubmitting ? "Guardando..." : "Guardar Visita"}
+              </button>
+            </div>
+          </form>
         </div>
       </PageTransition>
     </>
