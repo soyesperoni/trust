@@ -6,6 +6,9 @@ import ThemeInitializer from "./components/ThemeInitializer";
 export const metadata: Metadata = {
   title: "Trust - Inicio de Sesión",
   description: "Inicia sesión para gestionar tus mantenimientos.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
