@@ -247,11 +247,6 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {user?.role === INSPECTOR_ROLE && (
-                <p className="mt-4 rounded-xl bg-yellow-50 px-3 py-2 text-xs text-amber-800">
-                  Solo el usuario con rol inspector puede realizar una visita.
-                </p>
-              )}
             </div>
           </div>
 
