@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../components/DashboardHeader";
+import { useCurrentUser } from "../hooks/useCurrentUser";
+import { INSPECTOR_ROLE } from "../lib/permissions";
 import { getSessionUserEmail } from "../lib/session";
 
 import PageTransition from "../components/PageTransition";
@@ -18,8 +21,18 @@ type DashboardStats = {
   pending_visits: number;
 };
 
+type Visit = {
+  id: number;
+  branch: string;
+  visited_at: string;
+  inspector: string;
+  notes: string;
+};
+
 export default function DashboardPage() {
+  const { user } = useCurrentUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [todayVisits, setTodayVisits] = useState<Visit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,16 +42,28 @@ export default function DashboardPage() {
     const loadDashboard = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const response = await fetch("/api/dashboard", {
-          cache: "no-store",
-          headers: { "x-current-user-email": currentUserEmail },
-        });
-        if (!response.ok) {
+        const [dashboardResponse, visitsResponse] = await Promise.all([
+          fetch("/api/dashboard", {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
+          fetch("/api/visits", {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
+        ]);
+        if (!dashboardResponse.ok || !visitsResponse.ok) {
           throw new Error("No se pudo cargar el dashboard.");
         }
-        const data = await response.json();
+
+        const [dashboardData, visitsData] = await Promise.all([
+          dashboardResponse.json(),
+          visitsResponse.json(),
+        ]);
         if (!isMounted) return;
-        setStats(data.stats);
+
+        setStats(dashboardData.stats);
+        setTodayVisits(visitsData.results ?? []);
         setError(null);
       } catch (fetchError) {
         if (!isMounted) return;
@@ -121,6 +146,36 @@ export default function DashboardPage() {
     [stats],
   );
 
+  const mobileCards = useMemo(
+    () => [
+      { label: "Sucursales", value: stats?.branches ?? 0, icon: "storefront", iconStyle: "bg-blue-100 text-blue-600" },
+      { label: "Pendientes", value: stats?.pending_visits ?? 0, icon: "pending_actions", iconStyle: "bg-orange-100 text-orange-600" },
+      { label: "Incidencias", value: stats?.incidents ?? 0, icon: "report_problem", iconStyle: "bg-red-100 text-red-600" },
+      { label: "Completadas", value: (stats?.visits ?? 0) - (stats?.pending_visits ?? 0), icon: "check_circle", iconStyle: "bg-green-100 text-green-600" },
+    ],
+    [stats],
+  );
+
+  const todayScheduledVisits = useMemo(() => {
+    const today = new Date();
+    const isSameDate = (value: string) => {
+      const date = new Date(value);
+      return (
+        date.getFullYear() === today.getFullYear() &&
+        date.getMonth() === today.getMonth() &&
+        date.getDate() === today.getDate()
+      );
+    };
+
+    const filtered = todayVisits.filter((visit) => {
+      if (!isSameDate(visit.visited_at)) return false;
+      if (user?.role !== INSPECTOR_ROLE || !user.full_name) return true;
+      return visit.inspector.trim().toLowerCase() === user.full_name.trim().toLowerCase();
+    });
+
+    return filtered.sort((a, b) => a.visited_at.localeCompare(b.visited_at));
+  }, [todayVisits, user?.full_name, user?.role]);
+
   return (
     <>
       <DashboardHeader
@@ -136,7 +191,71 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          <div className="md:hidden">
+            <div className="mb-4 flex gap-3 overflow-x-auto pb-2">
+              {mobileCards.map((item) => (
+                <article key={item.label} className="flex min-w-[130px] flex-col justify-between rounded-2xl bg-slate-50 p-4">
+                  <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-full ${item.iconStyle}`}>
+                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">{item.value}</p>
+                    <p className="text-xs font-medium text-slate-500">{item.label}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Visitas de hoy</h3>
+                <Link
+                  href="/clientes/calendario"
+                  className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-amber-900"
+                >
+                  Ver todas
+                </Link>
+              </div>
+
+              <div className="space-y-3">
+                {todayScheduledVisits.map((visit) => {
+                  const date = new Date(visit.visited_at);
+                  const typeLabel = visit.notes?.toLowerCase().includes("emergencia") ? "Emergencia" : "Programada";
+                  const tagClassName = typeLabel === "Emergencia" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700";
+                  return (
+                    <article key={visit.id} className="rounded-2xl bg-slate-50 p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <span className={`inline-flex rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase ${tagClassName}`}>
+                            {typeLabel}
+                          </span>
+                          <h4 className="mt-2 text-base font-bold text-slate-900 dark:text-white">{visit.branch}</h4>
+                        </div>
+                        <span className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600">
+                          {date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-600">Inspector asignado: {visit.inspector}</p>
+                    </article>
+                  );
+                })}
+
+                {!isLoading && !error && todayScheduledVisits.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+                    No hay visitas programadas para hoy.
+                  </div>
+                )}
+              </div>
+
+              {user?.role === INSPECTOR_ROLE && (
+                <p className="mt-4 rounded-xl bg-yellow-50 px-3 py-2 text-xs text-amber-800">
+                  Solo el usuario con rol inspector puede realizar una visita.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden md:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {statsCards.map((item) => (
               <article
                 key={item.label}

@@ -81,9 +81,18 @@ export default function DashboardHeader({
     <>
       <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
         <BrandLogo size="lg" />
-        <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
-          <span className="material-symbols-outlined">menu</span>
-        </button>
+        <Link
+          href="/dashboard/notificaciones"
+          className="h-10 w-10 inline-flex items-center justify-center relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+          aria-label="Ver notificaciones"
+        >
+          <span className="material-symbols-outlined">notifications</span>
+          {unreadCount > 0 ? (
+            <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] leading-5 text-center font-semibold border-2 border-white dark:border-[#161e27]">
+              {unreadCount}
+            </span>
+          ) : null}
+        </Link>
       </header>
 
       <header className="h-20 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 hidden md:flex items-center justify-between px-8">
