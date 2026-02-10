@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
+import { getSessionUserEmail } from "../../../lib/session";
 
 type Client = { id: number; name: string };
 type Branch = { id: number; name: string; client: { id: number; name: string } };
@@ -78,7 +79,7 @@ export default function NuevaVisitaPage() {
         setDispensers(dispensersPayload.results ?? []);
         setInspectors(
           (usersPayload.results ?? []).filter(
-            (user: User) => user.role === "inspector" || user.role === "branch_admin",
+            (user: User) => user.role === "inspector",
           ),
         );
       } catch (error) {
@@ -125,9 +126,10 @@ export default function NuevaVisitaPage() {
 
     try {
       const visitDateTime = new Date(`${date}T${time}:00`);
+      const currentUserEmail = getSessionUserEmail();
       const response = await fetch("/api/visits", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-current-user-email": currentUserEmail },
         body: JSON.stringify({
           area_id: Number(areaId),
           dispenser_id: dispenserId ? Number(dispenserId) : null,

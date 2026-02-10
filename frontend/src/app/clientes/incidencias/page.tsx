@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-import { ACCOUNT_ADMIN_ROLE } from "../../lib/permissions";
+import { ACCOUNT_ADMIN_ROLE, GENERAL_ADMIN_ROLE, INSPECTOR_ROLE } from "../../lib/permissions";
 import { getSessionUserEmail } from "../../lib/session";
 
 import PageTransition from "../../components/PageTransition";
@@ -120,6 +120,9 @@ const getStatusFromDate = (value: string) => {
 export default function IncidenciasPage() {
   const { user } = useCurrentUser();
   const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
+  const isInspector = user?.role === INSPECTOR_ROLE;
+  const canCreateIncident = !isInspector;
+  const canScheduleFromIncident = user?.role === GENERAL_ADMIN_ROLE;
 
   const [incidents, setIncidents] = useState<IncidentRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -194,7 +197,7 @@ export default function IncidenciasPage() {
         title="Incidencias"
         description="Gestión y seguimiento de reportes técnicos."
         searchPlaceholder="Buscar incidencia..."
-        action={!isAccountAdmin ? (
+        action={canCreateIncident && !isAccountAdmin ? (
           <Link
             className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
             href="/clientes/incidencias/nueva"
@@ -281,7 +284,7 @@ export default function IncidenciasPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        {incident.action === "schedule" && !isAccountAdmin ? (
+                        {incident.action === "schedule" && !isAccountAdmin && canScheduleFromIncident ? (
                           <Link
                             className="bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-700 px-3 py-1.5 rounded text-xs font-medium transition-colors shadow-sm"
                             href="/clientes/incidencias/agendar"
