@@ -118,15 +118,6 @@ export default function DashboardPage() {
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <section className="mx-auto w-full max-w-7xl">
-          <div className="mb-6 rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white via-white to-slate-50 p-4 shadow-sm dark:border-slate-800 dark:from-[#161e27] dark:via-[#161e27] dark:to-slate-900/70 sm:p-5">
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white sm:text-lg">
-              Resumen del dashboard
-            </h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Vista rápida de los indicadores principales.
-            </p>
-          </div>
-
           {error && !isLoading && (
             <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
               {error}
