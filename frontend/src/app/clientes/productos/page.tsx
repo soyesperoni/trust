@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
+import { getSessionUserEmail } from "../../lib/session";
+
 import PageTransition from "../../components/PageTransition";
 
 type ProductApi = {
@@ -52,7 +54,8 @@ export default function ProductosPage() {
 
     const loadProducts = async () => {
       try {
-        const response = await fetch("/api/products", { cache: "no-store" });
+        const currentUserEmail = getSessionUserEmail();
+        const response = await fetch("/api/products", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } });
         if (!response.ok) {
           throw new Error("No se pudieron cargar los productos.");
         }

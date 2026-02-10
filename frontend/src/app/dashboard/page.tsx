@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../components/DashboardHeader";
+import { getSessionUserEmail } from "../lib/session";
+
 import PageTransition from "../components/PageTransition";
 
 type DashboardStats = {
@@ -26,8 +28,10 @@ export default function DashboardPage() {
 
     const loadDashboard = async () => {
       try {
+        const currentUserEmail = getSessionUserEmail();
         const response = await fetch("/api/dashboard", {
           cache: "no-store",
+          headers: { "x-current-user-email": currentUserEmail },
         });
         if (!response.ok) {
           throw new Error("No se pudo cargar el dashboard.");

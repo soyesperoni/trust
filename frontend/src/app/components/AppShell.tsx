@@ -1,9 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
+import { useCurrentUser } from "../hooks/useCurrentUser";
+import {
+  ACCOUNT_ADMIN_ROLE,
+  isAccountAdminAllowedPath,
+} from "../lib/permissions";
 import DashboardSidebar from "./DashboardSidebar";
 
 type AppShellProps = {
@@ -41,6 +47,15 @@ const resolveActivePath = (path: string) => {
 
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isLoading } = useCurrentUser();
+
+  useEffect(() => {
+    if (!pathname || pathname === "/" || isLoading) return;
+    if (user?.role === ACCOUNT_ADMIN_ROLE && !isAccountAdminAllowedPath(pathname)) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, pathname, router, user?.role]);
 
   if (!pathname || pathname === "/") {
     return <>{children}</>;

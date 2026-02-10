@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import DashboardHeader from "../../components/DashboardHeader";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { ACCOUNT_ADMIN_ROLE } from "../../lib/permissions";
+import { getSessionUserEmail } from "../../lib/session";
+
 import PageTransition from "../../components/PageTransition";
 
 type AreaStatus = "Activo" | "Mantenimiento" | "Inactivo";
@@ -59,6 +63,9 @@ const statusDot: Record<AreaStatus, string> = {
 };
 
 export default function AreasPage() {
+  const { user } = useCurrentUser();
+  const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
+
   const [areas, setAreas] = useState<AreaRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,9 +75,10 @@ export default function AreasPage() {
 
     const loadAreas = async () => {
       try {
+        const currentUserEmail = getSessionUserEmail();
         const [areasResponse, dispensersResponse] = await Promise.all([
-          fetch("/api/areas", { cache: "no-store" }),
-          fetch("/api/dispensers", { cache: "no-store" }),
+          fetch("/api/areas", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/dispensers", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
         ]);
         if (!areasResponse.ok || !dispensersResponse.ok) {
           throw new Error("No se pudieron cargar las áreas.");
@@ -134,7 +142,7 @@ export default function AreasPage() {
       <DashboardHeader
         title="Gestión de Áreas"
         description="Administra las zonas y espacios monitoreados."
-        action={(
+        action={!isAccountAdmin ? (
           <Link
             href="/clientes/areas/nueva"
             className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
@@ -142,7 +150,7 @@ export default function AreasPage() {
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nueva Área
           </Link>
-        )}
+        ) : null}
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
@@ -248,22 +256,26 @@ export default function AreasPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
-                          title="Editar"
-                        >
-                          <span className="material-symbols-outlined text-[20px]">
-                            edit
-                          </span>
-                        </button>
-                        <button
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                          title="Eliminar"
-                        >
-                          <span className="material-symbols-outlined text-[20px]">
-                            delete
-                          </span>
-                        </button>
+                        {!isAccountAdmin && (
+                          <>
+                            <button
+                              className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
+                              title="Editar"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                edit
+                              </span>
+                            </button>
+                            <button
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                              title="Eliminar"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                delete
+                              </span>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

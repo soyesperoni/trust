@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import DashboardHeader from "../../components/DashboardHeader";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { ACCOUNT_ADMIN_ROLE } from "../../lib/permissions";
+import { getSessionUserEmail } from "../../lib/session";
+
 import PageTransition from "../../components/PageTransition";
 
 type BranchApi = {
@@ -61,6 +65,9 @@ const statusStyles: Record<Branch["status"], string> = {
 };
 
 export default function SucursalesPage() {
+  const { user } = useCurrentUser();
+  const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
+
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,11 +77,12 @@ export default function SucursalesPage() {
 
     const loadBranches = async () => {
       try {
+        const currentUserEmail = getSessionUserEmail();
         const [branchesResponse, areasResponse, dispensersResponse] =
           await Promise.all([
-            fetch("/api/branches", { cache: "no-store" }),
-            fetch("/api/areas", { cache: "no-store" }),
-            fetch("/api/dispensers", { cache: "no-store" }),
+            fetch("/api/branches", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+            fetch("/api/areas", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+            fetch("/api/dispensers", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
           ]);
         if (
           !branchesResponse.ok ||
@@ -157,7 +165,7 @@ export default function SucursalesPage() {
         title="Gestión de Sucursales"
         description="Administra las sucursales vinculadas a cada cliente."
         searchPlaceholder="Buscar sucursal..."
-        action={(
+        action={!isAccountAdmin ? (
           <Link
             href="/clientes/sucursales/nueva"
             className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
@@ -165,7 +173,7 @@ export default function SucursalesPage() {
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nueva Sucursal
           </Link>
-        )}
+        ) : null}
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
@@ -270,14 +278,14 @@ export default function SucursalesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
+                        {!isAccountAdmin && (<button
                           className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-yellow-50 rounded-full transition-colors"
                           title="Editar"
                         >
                           <span className="material-symbols-outlined text-[20px]">
                             edit
                           </span>
-                        </button>
+                        </button>)}
                         <button
                           className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                           title="Ver detalles"
