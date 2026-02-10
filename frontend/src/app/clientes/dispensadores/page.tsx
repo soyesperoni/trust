@@ -238,11 +238,14 @@ export default function DispensadoresPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="text-slate-400 hover:text-professional-green transition-colors">
+                        <Link
+                          className="text-slate-400 hover:text-professional-green transition-colors"
+                          href={`/clientes/dispensadores/${dispenser.id}`}
+                        >
                           <span className="material-symbols-outlined">
-                            more_vert
+                            edit
                           </span>
-                        </button>
+                        </Link>
                       </td>
                     </tr>
                   );

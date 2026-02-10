@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
@@ -18,20 +19,29 @@ type AreaApi = {
 
 type DispenserApi = {
   id: number;
+  identifier: string;
+  installed_at: string | null;
   model: {
     id: number;
     name: string;
   };
+  area: {
+    id: number;
+  } | null;
 };
 
-export default function NuevoDosificadorPage() {
+export default function EditarDosificadorPage() {
+  const params = useParams<{ id: string }>();
+  const dispenserId = Number(params.id);
+
   const [areas, setAreas] = useState<AreaApi[]>([]);
   const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
+  const [data, setData] = useState<DispenserApi | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadOptions = async () => {
+    const loadData = async () => {
       try {
         const [areasResponse, dispensersResponse] = await Promise.all([
           fetch("/api/areas", { cache: "no-store" }),
@@ -40,15 +50,15 @@ export default function NuevoDosificadorPage() {
 
         if (!areasResponse.ok || !dispensersResponse.ok) return;
 
-        const [areasData, dispensersData] = await Promise.all([
+        const [areasPayload, dispensersPayload] = await Promise.all([
           areasResponse.json(),
           dispensersResponse.json(),
         ]);
 
         if (!isMounted) return;
 
-        const areaList = (areasData.results ?? []) as AreaApi[];
-        const dispensers = (dispensersData.results ?? []) as DispenserApi[];
+        const areaList = (areasPayload.results ?? []) as AreaApi[];
+        const dispensers = (dispensersPayload.results ?? []) as DispenserApi[];
 
         const uniqueModels = Array.from(
           new Map(dispensers.map((item) => [item.model.id, item.model])).values(),
@@ -56,24 +66,23 @@ export default function NuevoDosificadorPage() {
 
         setAreas(areaList);
         setModels(uniqueModels);
+        setData(dispensers.find((item) => item.id === dispenserId) ?? null);
       } catch {
-        // UI-only fallback sin bloquear render
+        // no-op visual fallback
       }
     };
 
-    loadOptions();
+    loadData();
 
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  const hasModelOptions = useMemo(() => models.length > 0, [models.length]);
+  }, [dispenserId]);
 
   return (
     <>
       <DashboardHeader
-        title="Nuevo Dosificador"
+        title="Editar Dosificador"
         description="Campos alineados con Django Admin (modelo, identificador, área, fecha de instalación y foto)."
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -83,7 +92,7 @@ export default function NuevoDosificadorPage() {
               Datos del dosificador
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Completa los mismos campos del admin para registrar el equipo.
+              Editando el dosificador #{params.id}.
             </p>
           </div>
 
@@ -93,12 +102,12 @@ export default function NuevoDosificadorPage() {
                 Modelo
                 <select
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  defaultValue=""
+                  defaultValue={data?.model.id ? String(data.model.id) : ""}
                   id="model"
                   required
                 >
                   <option disabled value="">
-                    {hasModelOptions ? "Seleccionar modelo..." : "Sin modelos disponibles"}
+                    Seleccionar modelo...
                   </option>
                   {models.map((model) => (
                     <option key={model.id} value={model.id}>
@@ -112,8 +121,8 @@ export default function NuevoDosificadorPage() {
                 Identificador
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                  defaultValue={data?.identifier ?? ""}
                   id="identifier"
-                  placeholder="Ej. DISP-001"
                   required
                   type="text"
                 />
@@ -123,7 +132,7 @@ export default function NuevoDosificadorPage() {
                 Área (opcional)
                 <select
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  defaultValue=""
+                  defaultValue={data?.area?.id ? String(data.area.id) : ""}
                   id="area"
                 >
                   <option value="">Sin área</option>
@@ -139,6 +148,7 @@ export default function NuevoDosificadorPage() {
                 Fecha de instalación (opcional)
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                  defaultValue={data?.installed_at ?? ""}
                   id="installedAt"
                   type="date"
                 />
@@ -167,7 +177,7 @@ export default function NuevoDosificadorPage() {
                 type="submit"
               >
                 <span className="material-symbols-outlined text-[20px]">save</span>
-                Guardar Dosificador
+                Guardar cambios
               </button>
             </div>
           </form>

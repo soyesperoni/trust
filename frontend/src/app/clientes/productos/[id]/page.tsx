@@ -1,10 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
+
+type ProductApi = {
+  id: number;
+  name: string;
+  description: string;
+  dispenser: {
+    id: number;
+  };
+};
 
 type DispenserApi = {
   id: number;
@@ -14,35 +24,53 @@ type DispenserApi = {
   };
 };
 
-export default function NuevoProductoPage() {
+export default function EditarProductoPage() {
+  const params = useParams<{ id: string }>();
+  const productId = Number(params.id);
+
+  const [product, setProduct] = useState<ProductApi | null>(null);
   const [dispensers, setDispensers] = useState<DispenserApi[]>([]);
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadDispensers = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch("/api/dispensers", { cache: "no-store" });
-        if (!response.ok) return;
-        const payload = await response.json();
+        const [productsResponse, dispensersResponse] = await Promise.all([
+          fetch("/api/products", { cache: "no-store" }),
+          fetch("/api/dispensers", { cache: "no-store" }),
+        ]);
+
+        if (!productsResponse.ok || !dispensersResponse.ok) return;
+
+        const [productsPayload, dispensersPayload] = await Promise.all([
+          productsResponse.json(),
+          dispensersResponse.json(),
+        ]);
+
         if (!isMounted) return;
-        setDispensers((payload.results ?? []) as DispenserApi[]);
+
+        const products = (productsPayload.results ?? []) as ProductApi[];
+        const dispenserList = (dispensersPayload.results ?? []) as DispenserApi[];
+
+        setProduct(products.find((item) => item.id === productId) ?? null);
+        setDispensers(dispenserList);
       } catch {
         // fallback visual
       }
     };
 
-    loadDispensers();
+    loadData();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [productId]);
 
   return (
     <>
       <DashboardHeader
-        title="Nuevo Producto"
+        title="Editar Producto"
         description="Campos alineados con Django Admin (dosificador, nombre, descripción y foto)."
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -52,7 +80,7 @@ export default function NuevoProductoPage() {
               Datos del producto
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Completa los mismos campos del admin para registrar el producto.
+              Editando el producto #{params.id}.
             </p>
           </div>
 
@@ -62,7 +90,7 @@ export default function NuevoProductoPage() {
                 Dosificador
                 <select
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  defaultValue=""
+                  defaultValue={product?.dispenser?.id ? String(product.dispenser.id) : ""}
                   id="dispenser"
                   required
                 >
@@ -81,8 +109,8 @@ export default function NuevoProductoPage() {
                 Nombre del producto
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                  defaultValue={product?.name ?? ""}
                   id="name"
-                  placeholder="Ej. Desinfectante alcalino"
                   required
                   type="text"
                 />
@@ -102,8 +130,8 @@ export default function NuevoProductoPage() {
                 Descripción (opcional)
                 <textarea
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-24"
+                  defaultValue={product?.description ?? ""}
                   id="description"
-                  placeholder="Descripción técnica o comercial..."
                 />
               </label>
             </div>
@@ -120,7 +148,7 @@ export default function NuevoProductoPage() {
                 type="submit"
               >
                 <span className="material-symbols-outlined text-[20px]">save</span>
-                Guardar Producto
+                Guardar cambios
               </button>
             </div>
           </form>
