@@ -249,7 +249,7 @@ export default function AreasPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
                           title="Editar"
                         >
                           <span className="material-symbols-outlined text-[20px]">
@@ -257,7 +257,7 @@ export default function AreasPage() {
                           </span>
                         </button>
                         <button
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                           title="Eliminar"
                         >
                           <span className="material-symbols-outlined text-[20px]">

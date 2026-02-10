@@ -272,7 +272,7 @@ export default function VisitasPage() {
                       <td className="px-6 py-4 text-right">
                         <button
                           type="button"
-                          className="text-slate-400 hover:text-professional-green transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded-full transition-colors"
                           title="Ver Reporte"
                         >
                           <span className="material-symbols-outlined">

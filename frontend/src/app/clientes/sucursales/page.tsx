@@ -271,7 +271,7 @@ export default function SucursalesPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded-full transition-colors"
                           title="Editar"
                         >
                           <span className="material-symbols-outlined text-[20px]">
@@ -279,7 +279,7 @@ export default function SucursalesPage() {
                           </span>
                         </button>
                         <button
-                          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                           title="Ver detalles"
                         >
                           <span className="material-symbols-outlined text-[20px]">

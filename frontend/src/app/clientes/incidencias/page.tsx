@@ -281,7 +281,7 @@ export default function IncidenciasPage() {
                             Agendar Visita
                           </Link>
                         ) : (
-                          <button className="text-slate-400 hover:text-professional-green transition-colors p-1">
+                          <button className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded-full transition-colors">
                             <span className="material-symbols-outlined">
                               visibility
                             </span>
