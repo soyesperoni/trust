@@ -355,7 +355,7 @@ export default function ClientesListadoPage() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Link
-                              className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded-full transition-colors"
                               href={`/clientes/data/${client.id}`}
                               title="Ver detalles"
                             >
@@ -364,7 +364,7 @@ export default function ClientesListadoPage() {
                               </span>
                             </Link>
                             <Link
-                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                               href={`/clientes/data/${client.id}`}
                               title="Editar"
                             >
