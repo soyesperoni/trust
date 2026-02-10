@@ -1,78 +1,70 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
-export default function NuevoDosificadorPage() {
+export default function EditarProductoPage() {
+  const params = useParams<{ id: string }>();
+
   return (
     <>
       <DashboardHeader
-        title="Nuevo Dosificador"
-        description="Registra un nuevo dosificador con la misma experiencia visual de clientes."
+        title="Editar Producto"
+        description="Actualiza la información del producto con la misma UI de edición de cliente."
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-3xl mx-auto bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-              Datos del dosificador
+              Datos del producto
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Completa la información base para registrar un nuevo equipo.
+              Editando el producto #{params.id}.
             </p>
           </div>
 
           <form className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="identifier">
-                Identificador
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="name">
+                Nombre del producto
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  id="identifier"
-                  placeholder="Ej. DISP-001"
+                  defaultValue={`Producto ${params.id}`}
+                  id="name"
                   required
                   type="text"
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="model">
-                Modelo
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="sku">
+                SKU
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  id="model"
-                  placeholder="Ej. EcoPro 2000"
-                  required
+                  defaultValue={`SKU-${params.id}`}
+                  id="sku"
                   type="text"
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="client">
-                Cliente
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="dispenser">
+                Dosificador asignado
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  id="client"
-                  placeholder="Cliente asociado"
+                  defaultValue="DISP-001"
+                  id="dispenser"
                   type="text"
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="area">
-                Área
-                <input
-                  className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  id="area"
-                  placeholder="Área de instalación"
-                  type="text"
-                />
-              </label>
-
-              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="notes">
-                Notas
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="description">
+                Descripción
                 <textarea
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-24"
-                  id="notes"
-                  placeholder="Observaciones técnicas del equipo..."
+                  defaultValue="Descripción del producto."
+                  id="description"
                 />
               </label>
             </div>
@@ -80,7 +72,7 @@ export default function NuevoDosificadorPage() {
             <div className="flex items-center justify-end gap-3">
               <Link
                 className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-                href="/clientes/dispensadores"
+                href="/clientes/productos"
               >
                 Cancelar
               </Link>
@@ -89,7 +81,7 @@ export default function NuevoDosificadorPage() {
                 type="submit"
               >
                 <span className="material-symbols-outlined text-[20px]">save</span>
-                Guardar Dosificador
+                Guardar cambios
               </button>
             </div>
           </form>
