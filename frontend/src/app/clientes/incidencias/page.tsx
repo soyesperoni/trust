@@ -236,26 +236,24 @@ export default function IncidenciasPage() {
 
   return (
     <>
-      <div className="hidden md:block">
-        <DashboardHeader
-          title="Incidencias"
-          description="Gestión y seguimiento de reportes técnicos."
-          searchPlaceholder="Buscar incidencia..."
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
-          action={canCreateIncidentsFromHeader ? (
-            <Link
-              className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
-              href="/clientes/incidencias/nueva"
-            >
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              Nueva Incidencia
-            </Link>
-          ) : null}
-        />
-      </div>
+      <DashboardHeader
+        title="Incidencias"
+        description="Gestión y seguimiento de reportes técnicos."
+        searchPlaceholder="Buscar incidencia..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        action={canCreateIncidentsFromHeader ? (
+          <Link
+            className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
+            href="/clientes/incidencias/nueva"
+          >
+            <span className="material-symbols-outlined text-[20px]">add</span>
+            Nueva Incidencia
+          </Link>
+        ) : null}
+      />
 
-      <div className="md:hidden px-4 pt-3 pb-2 sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100">
+      <div className="md:hidden px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100">
         <div className="flex items-center gap-3 bg-slate-100 rounded-full px-4 py-2.5 shadow-sm">
           <span className="material-symbols-outlined text-slate-500">search</span>
           <input

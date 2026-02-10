@@ -158,16 +158,14 @@ export default function VisitasPage() {
 
   return (
     <>
-      <div className="hidden md:block">
-        <DashboardHeader
-          title="Historial de Visitas"
-          description="Registros recientes de inspecciones y mantenimientos."
-        />
-      </div>
+      <DashboardHeader
+        title="Historial de Visitas"
+        description="Registros recientes de inspecciones y mantenimientos."
+      />
 
       <PageTransition className="flex flex-1 flex-col overflow-y-auto">
         <section className="md:hidden">
-          <header className="sticky top-0 z-30 bg-white/95 px-4 py-3 backdrop-blur-md dark:bg-[#0f1720]/95">
+          <header className="sticky top-16 z-20 bg-white/95 px-4 py-3 backdrop-blur-md dark:bg-[#0f1720]/95">
             <div className="flex items-center gap-3">
               <div className="flex h-12 flex-1 items-center rounded-full bg-slate-100 px-4 dark:bg-slate-800">
                 <span className="material-symbols-outlined mr-3 text-slate-500">
