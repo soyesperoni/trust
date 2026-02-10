@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE } from "../../lib/permissions";
+import { GENERAL_ADMIN_ROLE } from "../../lib/permissions";
 import { getSessionUserEmail } from "../../lib/session";
 
 import PageTransition from "../../components/PageTransition";
@@ -58,7 +58,7 @@ const eventStyles = {
 
 export default function CalendarioPage() {
   const { user } = useCurrentUser();
-  const isReadOnlyAdmin = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE].includes(user?.role ?? "");
+  const canScheduleVisits = user?.role === GENERAL_ADMIN_ROLE;
 
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -206,7 +206,7 @@ export default function CalendarioPage() {
               Hoy
             </button>
 
-            {!isReadOnlyAdmin && (
+            {canScheduleVisits && (
               <Link
                 href="/clientes/calendario/nueva"
                 className="bg-professional-green hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"

@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { getSessionUserEmail } from "../../lib/session";
+import { INSPECTOR_ROLE } from "../../lib/permissions";
 
 import PageTransition from "../../components/PageTransition";
 
@@ -45,6 +47,8 @@ const statusStyles: Record<ProductStatus, { badge: string; dot: string }> = {
 };
 
 export default function ProductosPage() {
+  const { user } = useCurrentUser();
+  const isInspector = user?.role === INSPECTOR_ROLE;
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +117,7 @@ export default function ProductosPage() {
         title="Gestión de Productos"
         description="Administra el catálogo de productos disponibles."
         searchPlaceholder="Buscar producto, SKU..."
-        action={(
+        action={!isInspector ? (
           <Link
             className="bg-professional-green hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
             href="/clientes/productos/nuevo"
@@ -121,7 +125,7 @@ export default function ProductosPage() {
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nuevo Producto
           </Link>
-        )}
+        ) : null}
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -184,14 +188,14 @@ export default function ProductosPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Link
+                        {!isInspector && <Link
                           className="text-slate-400 hover:text-professional-green transition-colors"
                           href={`/clientes/productos/${product.id}`}
                         >
                           <span className="material-symbols-outlined">
                             edit
                           </span>
-                        </Link>
+                        </Link>}
                       </td>
                     </tr>
                   );

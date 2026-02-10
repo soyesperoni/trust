@@ -41,7 +41,10 @@ def _get_current_user(request):
 
 def _get_client_scope_ids(request):
     current_user = _get_current_user(request)
-    if not current_user or current_user.role != User.Role.ACCOUNT_ADMIN:
+    if not current_user or current_user.role not in {
+        User.Role.ACCOUNT_ADMIN,
+        User.Role.INSPECTOR,
+    }:
         return None
     return list(current_user.clients.values_list("id", flat=True))
 
@@ -271,8 +274,16 @@ def dashboard(request):
 @require_http_methods(["GET", "POST"])
 def clients(request):
     if request.method == "GET":
-        payload = [_serialize_client(client) for client in Client.objects.all()]
+        queryset = Client.objects.all()
+        client_scope_ids = _get_client_scope_ids(request)
+        if client_scope_ids is not None:
+            queryset = queryset.filter(id__in=client_scope_ids)
+        payload = [_serialize_client(client) for client in queryset]
         return JsonResponse({"results": payload})
+
+    current_user = _get_current_user(request)
+    if current_user and current_user.role == User.Role.INSPECTOR:
+        return JsonResponse({"error": "No tienes permisos para editar clientes."}, status=403)
 
     data, files = _extract_user_data(request)
     if data is None:
@@ -306,6 +317,10 @@ def client_detail(request, client_id: int):
 
     if request.method == "GET":
         return JsonResponse(_serialize_client(client))
+
+    current_user = _get_current_user(request)
+    if current_user and current_user.role == User.Role.INSPECTOR:
+        return JsonResponse({"error": "No tienes permisos para editar clientes."}, status=403)
 
     data, files = _extract_user_data(request)
     if data is None:
@@ -400,11 +415,9 @@ def products(request):
 @require_http_methods(["GET", "POST"])
 def visits(request):
     current_user = _get_current_user(request)
-    if request.method == "POST" and current_user and current_user.role in {
-        User.Role.ACCOUNT_ADMIN,
-        User.Role.BRANCH_ADMIN,
-    }:
-        return JsonResponse({"error": "No tienes permisos para agendar visitas."}, status=403)
+    if request.method == "POST":
+        if not current_user or current_user.role != User.Role.GENERAL_ADMIN:
+            return JsonResponse({"error": "Solo el Administrador general puede agendar visitas."}, status=403)
 
     if request.method == "GET":
         queryset = Visit.objects.select_related(

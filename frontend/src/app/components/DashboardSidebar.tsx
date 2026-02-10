@@ -6,6 +6,7 @@ import { useCurrentUser } from "../hooks/useCurrentUser";
 import {
   ACCOUNT_ADMIN_ROLE,
   BRANCH_ADMIN_ROLE,
+  INSPECTOR_ROLE,
 } from "../lib/permissions";
 import BrandLogo from "./BrandLogo";
 import SidebarUserCard from "./SidebarUserCard";
@@ -16,6 +17,7 @@ type NavItem = {
   href: string;
   accountAdminOnly?: boolean;
   branchAdminOnly?: boolean;
+  hiddenForInspector?: boolean;
 };
 
 type DashboardSidebarProps = {
@@ -24,7 +26,7 @@ type DashboardSidebarProps = {
 
 const navItems: NavItem[] = [
   { icon: "dashboard", label: "Dashboard", href: "/dashboard", accountAdminOnly: true, branchAdminOnly: true },
-  { icon: "group", label: "Usuarios", href: "/clientes" },
+  { icon: "group", label: "Usuarios", href: "/clientes", hiddenForInspector: true },
   { icon: "apartment", label: "Clientes", href: "/clientes/data" },
   { icon: "storefront", label: "Sucursales", href: "/clientes/sucursales", accountAdminOnly: true },
   { icon: "map", label: "Áreas", href: "/clientes/areas", accountAdminOnly: true , branchAdminOnly: true },
@@ -48,10 +50,12 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
   const { user } = useCurrentUser();
   const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
   const isBranchAdmin = user?.role === BRANCH_ADMIN_ROLE;
+  const isInspector = user?.role === INSPECTOR_ROLE;
 
   const visibleNavItems = navItems.filter((item) => {
     if (isAccountAdmin) return !!item.accountAdminOnly;
     if (isBranchAdmin) return !!item.branchAdminOnly;
+    if (isInspector) return !item.hiddenForInspector;
     return true;
   });
 
@@ -71,7 +75,7 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
           );
         })}
 
-        {!isAccountAdmin && !isBranchAdmin && (
+        {!isAccountAdmin && !isBranchAdmin && !isInspector && (
           <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
             {secondaryItems.map((item) => {
               const isActive = item.href === activePath;

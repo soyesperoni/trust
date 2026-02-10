@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE } from "../../lib/permissions";
+import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE } from "../../lib/permissions";
 import { getSessionUserEmail } from "../../lib/session";
 
 import PageTransition from "../../components/PageTransition";
@@ -64,7 +64,7 @@ const statusDot: Record<AreaStatus, string> = {
 
 export default function AreasPage() {
   const { user } = useCurrentUser();
-  const isReadOnlyAdmin = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE].includes(user?.role ?? "");
+  const isReadOnlyAdmin = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
 
   const [areas, setAreas] = useState<AreaRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);

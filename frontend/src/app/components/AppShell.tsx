@@ -9,8 +9,10 @@ import { useCurrentUser } from "../hooks/useCurrentUser";
 import {
   ACCOUNT_ADMIN_ROLE,
   BRANCH_ADMIN_ROLE,
+  INSPECTOR_ROLE,
   isAccountAdminAllowedPath,
   isBranchAdminAllowedPath,
+  isInspectorAllowedPath,
 } from "../lib/permissions";
 import DashboardSidebar from "./DashboardSidebar";
 
@@ -59,6 +61,10 @@ export default function AppShell({ children }: AppShellProps) {
       return;
     }
     if (user?.role === BRANCH_ADMIN_ROLE && !isBranchAdminAllowedPath(pathname)) {
+      router.replace("/dashboard");
+      return;
+    }
+    if (user?.role === INSPECTOR_ROLE && !isInspectorAllowedPath(pathname)) {
       router.replace("/dashboard");
     }
   }, [isLoading, pathname, router, user?.role]);
