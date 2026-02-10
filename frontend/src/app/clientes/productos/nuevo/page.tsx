@@ -43,7 +43,7 @@ export default function NuevoProductoPage() {
     <>
       <DashboardHeader
         title="Nuevo Producto"
-        description="Campos alineados con Django Admin (dosificador, nombre, descripción y foto)."
+        description="Registra un nuevo producto con la misma UI de creación y edición de cliente."
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-3xl mx-auto bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
@@ -52,58 +52,49 @@ export default function NuevoProductoPage() {
               Datos del producto
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Completa los mismos campos del admin para registrar el producto.
+              Completa la información principal para registrar un nuevo producto.
             </p>
           </div>
 
           <form className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="dispenser">
-                Dosificador
-                <select
-                  className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  defaultValue=""
-                  id="dispenser"
-                  required
-                >
-                  <option disabled value="">
-                    Seleccionar dosificador...
-                  </option>
-                  {dispensers.map((dispenser) => (
-                    <option key={dispenser.id} value={dispenser.id}>
-                      {dispenser.identifier} · {dispenser.model.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="name">
                 Nombre del producto
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
                   id="name"
-                  placeholder="Ej. Desinfectante alcalino"
+                  placeholder="Ej. Detergente Industrial"
                   required
                   type="text"
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="photo">
-                Foto (opcional)
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="sku">
+                SKU
                 <input
-                  accept="image/*"
-                  className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none file:mr-3 file:rounded-md file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-sm file:text-slate-700 dark:file:bg-slate-700 dark:file:text-slate-200"
-                  id="photo"
-                  type="file"
+                  className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                  id="sku"
+                  placeholder="Ej. DET-IND-001"
+                  type="text"
+                />
+              </label>
+
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="dispenser">
+                Dosificador asignado
+                <input
+                  className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                  id="dispenser"
+                  placeholder="Ej. DISP-001"
+                  type="text"
                 />
               </label>
 
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="description">
-                Descripción (opcional)
+                Descripción
                 <textarea
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-24"
                   id="description"
-                  placeholder="Descripción técnica o comercial..."
+                  placeholder="Descripción técnica o comercial del producto..."
                 />
               </label>
             </div>
