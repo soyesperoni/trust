@@ -55,7 +55,7 @@ type Branch = {
 
 const statusStyles: Record<Branch["status"], string> = {
   Activa:
-    "bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800",
+    "bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800",
   Inactiva:
     "bg-slate-50 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
 };
@@ -160,7 +160,7 @@ export default function SucursalesPage() {
         action={(
           <Link
             href="/clientes/sucursales/nueva"
-            className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+            className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nueva Sucursal
@@ -261,7 +261,7 @@ export default function SucursalesPage() {
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
                             branch.status === "Activa"
-                              ? "bg-green-600"
+                              ? "bg-yellow-600"
                               : "bg-slate-400"
                           }`}
                         ></span>
@@ -271,7 +271,7 @@ export default function SucursalesPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded-full transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-yellow-50 rounded-full transition-colors"
                           title="Editar"
                         >
                           <span className="material-symbols-outlined text-[20px]">

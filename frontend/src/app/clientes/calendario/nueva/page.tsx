@@ -290,7 +290,7 @@ export default function NuevaVisitaPage() {
               <button className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800" onClick={() => router.push("/clientes/calendario")} type="button">
                 Cancelar
               </button>
-              <button className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-green-700 flex items-center gap-2 disabled:opacity-60" disabled={isSubmitting} type="submit">
+              <button className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700 flex items-center gap-2 disabled:opacity-60" disabled={isSubmitting} type="submit">
                 <span className="material-symbols-outlined text-[20px]">save</span>
                 {isSubmitting ? "Guardando..." : "Guardar Visita"}
               </button>

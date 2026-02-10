@@ -104,7 +104,7 @@ export default function VisitasPage() {
 
   const typeStyles: Record<string, string> = {
     Mantenimiento:
-      "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-100 dark:border-blue-900/50",
+      "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-100 dark:border-yellow-900/50",
     Emergencia:
       "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-100 dark:border-red-900/50",
     Inspección:
@@ -175,7 +175,7 @@ export default function VisitasPage() {
             <div className="flex gap-2 w-full lg:w-auto">
               <button
                 type="button"
-                className="w-full lg:w-auto px-4 py-2 bg-professional-green hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
+                className="w-full lg:w-auto px-4 py-2 bg-professional-green hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]">
                   filter_list
@@ -246,7 +246,7 @@ export default function VisitasPage() {
                       </td>
                       <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                         <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-[16px] text-blue-500">
+                          <span className="material-symbols-outlined text-[16px] text-yellow-500">
                             water_drop
                           </span>
                           <span>{visit.dispenser ?? "D-—"}</span>
@@ -272,7 +272,7 @@ export default function VisitasPage() {
                       <td className="px-6 py-4 text-right">
                         <button
                           type="button"
-                          className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded-full transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-yellow-50 rounded-full transition-colors"
                           title="Ver Reporte"
                         >
                           <span className="material-symbols-outlined">

@@ -37,9 +37,9 @@ type IncidentRow = {
 };
 
 const initialsClassPool = [
-  "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300",
-  "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300",
-  "bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-300",
+  "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-300",
+  "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-300",
+  "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-300",
   "bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-300",
   "bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300",
 ];
@@ -82,7 +82,7 @@ const getPriorityFromDescription = (description: string) => {
   return {
     label: "Baja",
     className:
-      "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-100 dark:border-green-900/50",
+      "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border border-yellow-100 dark:border-yellow-900/50",
   };
 };
 
@@ -108,7 +108,7 @@ const getStatusFromDate = (value: string) => {
   return {
     label: "Registrada",
     className:
-      "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+      "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
     pulse: false,
   };
 };
@@ -281,7 +281,7 @@ export default function IncidenciasPage() {
                             Agendar Visita
                           </Link>
                         ) : (
-                          <button className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded-full transition-colors">
+                          <button className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-yellow-50 rounded-full transition-colors">
                             <span className="material-symbols-outlined">
                               visibility
                             </span>

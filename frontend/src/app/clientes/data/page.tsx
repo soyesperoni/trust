@@ -74,10 +74,10 @@ type ClientRow = {
 const avatarClassPool = [
   "bg-red-50 dark:bg-red-900/20 text-red-600 border-red-100 dark:border-red-900/30",
   "bg-orange-50 dark:bg-orange-900/20 text-orange-600 border-orange-100 dark:border-orange-900/30",
-  "bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-100 dark:border-blue-900/30",
+  "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 border-yellow-100 dark:border-yellow-900/30",
   "bg-purple-50 dark:bg-purple-900/20 text-purple-600 border-purple-100 dark:border-purple-900/30",
-  "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 border-cyan-100 dark:border-cyan-900/30",
-  "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border-emerald-100 dark:border-emerald-900/30",
+  "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 border-yellow-100 dark:border-yellow-900/30",
+  "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 border-yellow-100 dark:border-yellow-900/30",
 ];
 
 export default function ClientesListadoPage() {
@@ -192,10 +192,10 @@ export default function ClientesListadoPage() {
             branchesTotal > 0 || dispensersTotal > 0 ? "Activo" : "Inactivo";
           const badgeClasses =
             status === "Activo"
-              ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-100 dark:border-green-800"
+              ? "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-100 dark:border-yellow-800"
               : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700";
           const indicatorClasses =
-            status === "Activo" ? "bg-green-600" : "bg-slate-500";
+            status === "Activo" ? "bg-yellow-600" : "bg-slate-500";
 
           return {
             id: client.id,
@@ -246,7 +246,7 @@ export default function ClientesListadoPage() {
         description="Administra la lista de clientes corporativos y su estado."
         action={(
           <Link
-            className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+            className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
             href="/clientes/nuevo"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
@@ -355,7 +355,7 @@ export default function ClientesListadoPage() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Link
-                              className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-green-50 rounded-full transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-yellow-50 rounded-full transition-colors"
                               href={`/clientes/data/${client.id}`}
                               title="Ver detalles"
                             >
@@ -364,7 +364,7 @@ export default function ClientesListadoPage() {
                               </span>
                             </Link>
                             <Link
-                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
                               href={`/clientes/data/${client.id}`}
                               title="Editar"
                             >

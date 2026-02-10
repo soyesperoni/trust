@@ -138,7 +138,7 @@ export default function DashboardPage() {
                 key={item.label}
                 className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-slate-800 dark:bg-[#161e27]"
               >
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/80 via-professional-green to-cyan-500 opacity-70"></div>
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/80 via-professional-green to-yellow-500 opacity-70"></div>
                 <div className="mb-6 flex items-center justify-between gap-3">
                   <div
                     className={`${item.iconStyle} rounded-xl p-2.5 transition-transform duration-300 group-hover:scale-105`}

@@ -121,8 +121,8 @@ export default function NuevaIncidenciaPage() {
                         type="radio"
                         value="low"
                       />
-                      <div className="flex items-center justify-center gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 peer-checked:bg-green-50 peer-checked:border-green-500 peer-checked:text-green-700 dark:peer-checked:bg-green-900/20 dark:peer-checked:text-green-400 transition-all">
-                        <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                      <div className="flex items-center justify-center gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 peer-checked:bg-yellow-50 peer-checked:border-yellow-500 peer-checked:text-yellow-700 dark:peer-checked:bg-yellow-900/20 dark:peer-checked:text-yellow-400 transition-all">
+                        <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
                         <span className="font-medium text-sm">Baja</span>
                       </div>
                     </label>
@@ -200,7 +200,7 @@ export default function NuevaIncidenciaPage() {
                     Cancelar
                   </button>
                   <button
-                    className="px-5 py-2.5 rounded-lg bg-professional-green hover:bg-green-700 text-white font-medium shadow-sm transition-colors flex items-center gap-2"
+                    className="px-5 py-2.5 rounded-lg bg-professional-green hover:bg-yellow-700 text-white font-medium shadow-sm transition-colors flex items-center gap-2"
                     type="submit"
                   >
                     <span className="material-symbols-outlined text-[20px]">

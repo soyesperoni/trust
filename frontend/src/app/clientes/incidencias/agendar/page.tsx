@@ -78,10 +78,10 @@ export default function AgendarVisitaPage() {
                         id="inspector"
                       >
                         <option value="">Seleccione un inspector...</option>
-                        <option className="text-green-600" value="1">
+                        <option className="text-yellow-600" value="1">
                           Carlos Ruiz (Disponible)
                         </option>
-                        <option className="text-green-600" value="2">
+                        <option className="text-yellow-600" value="2">
                           Ana Gómez (Disponible)
                         </option>
                         <option className="text-slate-400" disabled value="3">
@@ -93,7 +93,7 @@ export default function AgendarVisitaPage() {
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
-                      <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>2
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full inline-block"></span>2
                       inspectores disponibles en esta zona
                     </p>
                   </div>
@@ -172,7 +172,7 @@ export default function AgendarVisitaPage() {
               <button className="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium transition-colors">
                 Cancelar
               </button>
-              <button className="px-6 py-2.5 rounded-lg bg-professional-green hover:bg-green-800 text-white font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+              <button className="px-6 py-2.5 rounded-lg bg-professional-green hover:bg-yellow-800 text-white font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2">
                 <span className="material-symbols-outlined">check_circle</span>
                 Confirmar Visita
               </button>
@@ -240,7 +240,7 @@ export default function AgendarVisitaPage() {
                 </div>
                 <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
+                    <div className="w-8 h-8 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center text-xs font-bold">
                       JD
                     </div>
                     <div className="flex flex-col">

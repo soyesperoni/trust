@@ -16,7 +16,7 @@ type UserRecord = {
 };
 
 const statusStyles: Record<string, string> = {
-  active: "text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20",
+  active: "text-yellow-700 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/20",
   inactive:
     "text-slate-500 bg-slate-100 dark:text-slate-400 dark:bg-slate-800",
 };
@@ -87,7 +87,7 @@ export default function ClientesPage() {
         description="Solo el Administrador General puede ver, crear o editar usuarios."
         action={(
           <Link
-            className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+            className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
             href="/clientes/nuevo-usuario"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
@@ -202,7 +202,7 @@ export default function ClientesPage() {
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
                             user.is_active
-                              ? "bg-green-600 dark:bg-green-400"
+                              ? "bg-yellow-600 dark:bg-yellow-400"
                               : "bg-slate-400"
                           }`}
                         ></span>

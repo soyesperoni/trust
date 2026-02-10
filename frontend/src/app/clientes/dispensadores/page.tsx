@@ -49,8 +49,8 @@ type DispenserRow = {
 const statusStyles: Record<DispenserStatus, { badge: string; dot: string }> = {
   Operativo: {
     badge:
-      "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-    dot: "bg-green-500",
+      "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+    dot: "bg-yellow-500",
   },
   Mantenimiento: {
     badge:
@@ -157,7 +157,7 @@ export default function DispensadoresPage() {
         searchPlaceholder="Buscar dosificador..."
         action={(
           <Link
-            className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             href="/clientes/dispensadores/nuevo"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
@@ -191,7 +191,7 @@ export default function DispensadoresPage() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                          <div className="w-10 h-10 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
                             <span className="material-symbols-outlined">
                               water_drop
                             </span>

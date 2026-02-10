@@ -84,7 +84,7 @@ export default function NuevaSucursalPage() {
             </Link>
             <button
               type="button"
-              className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-green-700"
+              className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700"
             >
               Guardar sucursal
             </button>

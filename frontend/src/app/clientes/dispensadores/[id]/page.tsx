@@ -88,7 +88,7 @@ export default function EditarDosificadorPage() {
                 Cancelar
               </Link>
               <button
-                className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-green-700 flex items-center gap-2"
+                className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700 flex items-center gap-2"
                 type="submit"
               >
                 <span className="material-symbols-outlined text-[20px]">save</span>
