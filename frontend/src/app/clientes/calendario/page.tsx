@@ -184,6 +184,12 @@ export default function CalendarioPage() {
             </div>
 
             <button
+              className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+              type="button"
+            >
+              Mes
+            </button>
+            <button
               className="px-3 py-1.5 text-sm font-medium bg-transparent border border-transparent rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
               onClick={() => setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1))}
               type="button"
