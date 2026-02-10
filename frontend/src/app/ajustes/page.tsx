@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import DashboardHeader from "../components/DashboardHeader";
 import PageTransition from "../components/PageTransition";
@@ -33,6 +33,7 @@ export default function AjustesPage() {
   const [formState, setFormState] = useState({ full_name: "", email: "", role: "", password: "", confirmPassword: "" });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -95,6 +96,10 @@ export default function AjustesPage() {
     }
   };
 
+  const handlePhotoButtonClick = () => {
+    photoInputRef.current?.click();
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFeedback(null);
@@ -152,7 +157,15 @@ export default function AjustesPage() {
                     <div className="flex h-full w-full items-center justify-center text-4xl font-bold text-slate-700">{initials}</div>
                   )}
                 </div>
-                <input accept="image/*" onChange={onPhotoChange} type="file" />
+                <input accept="image/*" className="hidden" onChange={onPhotoChange} ref={photoInputRef} type="file" />
+                <button
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500"
+                  onClick={handlePhotoButtonClick}
+                  type="button"
+                >
+                  <span>Subir foto de perfil</span>
+                  <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 flex-1">
