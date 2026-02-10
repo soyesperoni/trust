@@ -15,6 +15,7 @@ import {
   isInspectorAllowedPath,
 } from "../lib/permissions";
 import DashboardSidebar from "./DashboardSidebar";
+import MobileBottomNav from "./MobileBottomNav";
 
 type AppShellProps = {
   children: ReactNode;
@@ -80,10 +81,11 @@ export default function AppShell({ children }: AppShellProps) {
       <div className="flex h-screen overflow-hidden">
         <DashboardSidebar activePath={activePath} />
 
-        <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative">
+        <main className="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative pb-24 md:pb-0">
           {children}
         </main>
       </div>
+      <MobileBottomNav activePath={activePath} />
     </div>
   );
 }
