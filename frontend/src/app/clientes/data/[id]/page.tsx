@@ -116,69 +116,71 @@ export default function EditarClientePage() {
         description="Actualiza la información real del cliente en backend."
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="max-w-3xl mx-auto">
-          <form
-            className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden"
-            onSubmit={handleSubmit}
-          >
-            <div className="p-6 md:p-8 space-y-6">
-              {isLoading ? (
-                <p className="text-sm text-slate-500">Cargando cliente...</p>
-              ) : (
-                <>
-                  <div>
-                    <label className="form-label" htmlFor="name">
-                      Nombre del cliente
-                    </label>
-                    <input
-                      className="form-input"
-                      id="name"
-                      name="name"
-                      onChange={handleChange}
-                      required
-                      type="text"
-                      value={formState.name}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" htmlFor="code">
-                      Código único
-                    </label>
-                    <input
-                      className="form-input"
-                      id="code"
-                      name="code"
-                      onChange={handleChange}
-                      required
-                      type="text"
-                      value={formState.code}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" htmlFor="notes">
-                      Notas
-                    </label>
-                    <textarea
-                      className="form-input min-h-24"
-                      id="notes"
-                      name="notes"
-                      onChange={handleChange}
-                      value={formState.notes}
-                    />
-                  </div>
-                </>
-              )}
-              {error && <p className="text-sm text-red-500">{error}</p>}
-            </div>
-            <div className="flex items-center justify-end gap-3 px-6 md:px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/20">
+        <div className="max-w-3xl mx-auto bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+              Datos del cliente
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Actualiza la información base del cliente seleccionado.
+            </p>
+          </div>
+
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {isLoading ? (
+              <p className="text-sm text-slate-500">Cargando cliente...</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="name">
+                  Nombre del cliente
+                  <input
+                    className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                    id="name"
+                    name="name"
+                    onChange={handleChange}
+                    required
+                    type="text"
+                    value={formState.name}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="code">
+                  Código único
+                  <input
+                    className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                    id="code"
+                    name="code"
+                    onChange={handleChange}
+                    required
+                    type="text"
+                    value={formState.code}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="notes">
+                  Notas
+                  <textarea
+                    className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-24"
+                    id="notes"
+                    name="notes"
+                    onChange={handleChange}
+                    value={formState.notes}
+                  />
+                </label>
+              </div>
+            )}
+
+            {error && <p className="text-sm text-red-500">{error}</p>}
+
+            <div className="flex items-center justify-end gap-3">
               <Link
-                className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 href="/clientes/data"
               >
                 Cancelar
               </Link>
               <button
-                className="px-5 py-2.5 rounded-lg bg-professional-green text-white font-medium hover:bg-green-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-60"
+                className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-green-700 flex items-center gap-2 disabled:opacity-60"
                 disabled={isSaving || isLoading}
                 type="submit"
               >
