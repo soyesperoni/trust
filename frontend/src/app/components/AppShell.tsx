@@ -8,7 +8,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import {
   ACCOUNT_ADMIN_ROLE,
+  BRANCH_ADMIN_ROLE,
   isAccountAdminAllowedPath,
+  isBranchAdminAllowedPath,
 } from "../lib/permissions";
 import DashboardSidebar from "./DashboardSidebar";
 
@@ -53,6 +55,10 @@ export default function AppShell({ children }: AppShellProps) {
   useEffect(() => {
     if (!pathname || pathname === "/" || isLoading) return;
     if (user?.role === ACCOUNT_ADMIN_ROLE && !isAccountAdminAllowedPath(pathname)) {
+      router.replace("/dashboard");
+      return;
+    }
+    if (user?.role === BRANCH_ADMIN_ROLE && !isBranchAdminAllowedPath(pathname)) {
       router.replace("/dashboard");
     }
   }, [isLoading, pathname, router, user?.role]);

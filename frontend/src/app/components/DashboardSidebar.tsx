@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import {
   ACCOUNT_ADMIN_ROLE,
+  BRANCH_ADMIN_ROLE,
 } from "../lib/permissions";
 import BrandLogo from "./BrandLogo";
 import SidebarUserCard from "./SidebarUserCard";
@@ -14,6 +15,7 @@ type NavItem = {
   label: string;
   href: string;
   accountAdminOnly?: boolean;
+  branchAdminOnly?: boolean;
 };
 
 type DashboardSidebarProps = {
@@ -21,16 +23,16 @@ type DashboardSidebarProps = {
 };
 
 const navItems: NavItem[] = [
-  { icon: "dashboard", label: "Dashboard", href: "/dashboard", accountAdminOnly: true },
+  { icon: "dashboard", label: "Dashboard", href: "/dashboard", accountAdminOnly: true, branchAdminOnly: true },
   { icon: "group", label: "Usuarios", href: "/clientes" },
   { icon: "apartment", label: "Clientes", href: "/clientes/data" },
   { icon: "storefront", label: "Sucursales", href: "/clientes/sucursales", accountAdminOnly: true },
-  { icon: "map", label: "Áreas", href: "/clientes/areas", accountAdminOnly: true },
-  { icon: "water_drop", label: "Dosificadores", href: "/clientes/dispensadores", accountAdminOnly: true },
-  { icon: "inventory_2", label: "Productos", href: "/clientes/productos", accountAdminOnly: true },
-  { icon: "calendar_month", label: "Calendario", href: "/clientes/calendario", accountAdminOnly: true },
-  { icon: "history", label: "Historial de Visitas", href: "/clientes/visitas", accountAdminOnly: true },
-  { icon: "report_problem", label: "Incidencias", href: "/clientes/incidencias", accountAdminOnly: true },
+  { icon: "map", label: "Áreas", href: "/clientes/areas", accountAdminOnly: true , branchAdminOnly: true },
+  { icon: "water_drop", label: "Dosificadores", href: "/clientes/dispensadores", accountAdminOnly: true , branchAdminOnly: true },
+  { icon: "inventory_2", label: "Productos", href: "/clientes/productos", accountAdminOnly: true , branchAdminOnly: true },
+  { icon: "calendar_month", label: "Calendario", href: "/clientes/calendario", accountAdminOnly: true , branchAdminOnly: true },
+  { icon: "history", label: "Historial de Visitas", href: "/clientes/visitas", accountAdminOnly: true , branchAdminOnly: true },
+  { icon: "report_problem", label: "Incidencias", href: "/clientes/incidencias", accountAdminOnly: true , branchAdminOnly: true },
 ];
 
 const secondaryItems: NavItem[] = [
@@ -45,10 +47,13 @@ const linkClassName = (isActive: boolean) =>
 export default function DashboardSidebar({ activePath }: DashboardSidebarProps) {
   const { user } = useCurrentUser();
   const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
+  const isBranchAdmin = user?.role === BRANCH_ADMIN_ROLE;
 
-  const visibleNavItems = navItems.filter((item) =>
-    isAccountAdmin ? item.accountAdminOnly : true,
-  );
+  const visibleNavItems = navItems.filter((item) => {
+    if (isAccountAdmin) return !!item.accountAdminOnly;
+    if (isBranchAdmin) return !!item.branchAdminOnly;
+    return true;
+  });
 
   return (
     <aside className="w-64 bg-white dark:bg-[#161e27] border-r border-slate-200 dark:border-slate-800 flex flex-col hidden md:flex shrink-0">
@@ -66,7 +71,7 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
           );
         })}
 
-        {!isAccountAdmin && (
+        {!isAccountAdmin && !isBranchAdmin && (
           <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
             {secondaryItems.map((item) => {
               const isActive = item.href === activePath;

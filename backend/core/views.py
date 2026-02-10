@@ -46,9 +46,12 @@ def _get_client_scope_ids(request):
     return list(current_user.clients.values_list("id", flat=True))
 
 
-def _is_account_admin(request) -> bool:
+def _get_branch_scope_ids(request):
     current_user = _get_current_user(request)
-    return bool(current_user and current_user.role == User.Role.ACCOUNT_ADMIN)
+    if not current_user or current_user.role != User.Role.BRANCH_ADMIN:
+        return None
+    return list(current_user.branches.values_list("id", flat=True))
+
 
 
 def _extract_user_data(request):
@@ -205,6 +208,7 @@ def health(request):
 def dashboard(request):
     now = timezone.now()
     client_scope_ids = _get_client_scope_ids(request)
+    branch_scope_ids = _get_branch_scope_ids(request)
 
     clients = Client.objects.all()
     branches = Branch.objects.all()
@@ -222,6 +226,13 @@ def dashboard(request):
         products = products.filter(dispenser__area__branch__client_id__in=client_scope_ids)
         visits = visits.filter(area__branch__client_id__in=client_scope_ids)
         incidents = incidents.filter(client_id__in=client_scope_ids)
+    if branch_scope_ids is not None:
+        branches = branches.filter(id__in=branch_scope_ids)
+        areas = areas.filter(branch_id__in=branch_scope_ids)
+        dispensers = dispensers.filter(area__branch_id__in=branch_scope_ids)
+        products = products.filter(dispenser__area__branch_id__in=branch_scope_ids)
+        visits = visits.filter(area__branch_id__in=branch_scope_ids)
+        incidents = incidents.filter(branch_id__in=branch_scope_ids)
 
     stats = {
         "clients": clients.count(),
@@ -325,8 +336,11 @@ def client_detail(request, client_id: int):
 def branches(request):
     queryset = Branch.objects.select_related("client")
     client_scope_ids = _get_client_scope_ids(request)
+    branch_scope_ids = _get_branch_scope_ids(request)
     if client_scope_ids is not None:
         queryset = queryset.filter(client_id__in=client_scope_ids)
+    if branch_scope_ids is not None:
+        queryset = queryset.filter(id__in=branch_scope_ids)
     payload = [
         _serialize_branch(branch)
         for branch in queryset.all()
@@ -338,8 +352,11 @@ def branches(request):
 def areas(request):
     queryset = Area.objects.select_related("branch__client")
     client_scope_ids = _get_client_scope_ids(request)
+    branch_scope_ids = _get_branch_scope_ids(request)
     if client_scope_ids is not None:
         queryset = queryset.filter(branch__client_id__in=client_scope_ids)
+    if branch_scope_ids is not None:
+        queryset = queryset.filter(branch_id__in=branch_scope_ids)
     payload = [
         _serialize_area(area)
         for area in queryset.all()
@@ -351,8 +368,11 @@ def areas(request):
 def dispensers(request):
     queryset = Dispenser.objects.select_related("model", "area__branch__client")
     client_scope_ids = _get_client_scope_ids(request)
+    branch_scope_ids = _get_branch_scope_ids(request)
     if client_scope_ids is not None:
         queryset = queryset.filter(area__branch__client_id__in=client_scope_ids)
+    if branch_scope_ids is not None:
+        queryset = queryset.filter(area__branch_id__in=branch_scope_ids)
     payload = [
         _serialize_dispenser(dispenser)
         for dispenser in queryset.all()
@@ -364,8 +384,11 @@ def dispensers(request):
 def products(request):
     queryset = Product.objects.select_related("dispenser__model")
     client_scope_ids = _get_client_scope_ids(request)
+    branch_scope_ids = _get_branch_scope_ids(request)
     if client_scope_ids is not None:
         queryset = queryset.filter(dispenser__area__branch__client_id__in=client_scope_ids)
+    if branch_scope_ids is not None:
+        queryset = queryset.filter(dispenser__area__branch_id__in=branch_scope_ids)
     payload = [
         _serialize_product(product)
         for product in queryset.all()
@@ -376,7 +399,11 @@ def products(request):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def visits(request):
-    if request.method == "POST" and _is_account_admin(request):
+    current_user = _get_current_user(request)
+    if request.method == "POST" and current_user and current_user.role in {
+        User.Role.ACCOUNT_ADMIN,
+        User.Role.BRANCH_ADMIN,
+    }:
         return JsonResponse({"error": "No tienes permisos para agendar visitas."}, status=403)
 
     if request.method == "GET":
@@ -384,8 +411,11 @@ def visits(request):
             "area__branch__client", "inspector", "dispenser"
         )
         client_scope_ids = _get_client_scope_ids(request)
+        branch_scope_ids = _get_branch_scope_ids(request)
         if client_scope_ids is not None:
             queryset = queryset.filter(area__branch__client_id__in=client_scope_ids)
+        if branch_scope_ids is not None:
+            queryset = queryset.filter(area__branch_id__in=branch_scope_ids)
 
         month = (request.GET.get("month") or "").strip()
         if month:
@@ -464,8 +494,11 @@ def visits(request):
 def incidents(request):
     queryset = Incident.objects.select_related("client", "branch", "area", "dispenser")
     client_scope_ids = _get_client_scope_ids(request)
+    branch_scope_ids = _get_branch_scope_ids(request)
     if client_scope_ids is not None:
         queryset = queryset.filter(client_id__in=client_scope_ids)
+    if branch_scope_ids is not None:
+        queryset = queryset.filter(branch_id__in=branch_scope_ids)
     payload = [
         _serialize_incident(incident)
         for incident in queryset.all()
