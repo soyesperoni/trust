@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -93,15 +94,22 @@ def _serialize_product(product: Product) -> dict:
 
 def _serialize_visit(visit: Visit) -> dict:
     inspector = "Sin asignar"
+    inspector_id = None
     if visit.inspector:
         inspector = visit.inspector.get_full_name() or visit.inspector.username
+        inspector_id = visit.inspector_id
     return {
         "id": visit.id,
         "client": visit.area.branch.client.name,
+        "client_id": visit.area.branch.client_id,
         "branch": visit.area.branch.name,
+        "branch_id": visit.area.branch_id,
         "area": visit.area.name,
+        "area_id": visit.area_id,
         "dispenser": visit.dispenser.identifier if visit.dispenser else None,
+        "dispenser_id": visit.dispenser_id,
         "inspector": inspector,
+        "inspector_id": inspector_id,
         "visited_at": visit.visited_at.isoformat(),
         "notes": visit.notes,
     }
@@ -265,15 +273,86 @@ def products(request):
     return JsonResponse({"results": payload})
 
 
-@require_GET
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def visits(request):
-    payload = [
-        _serialize_visit(visit)
-        for visit in Visit.objects.select_related(
+    if request.method == "GET":
+        queryset = Visit.objects.select_related(
             "area__branch__client", "inspector", "dispenser"
-        ).all()
-    ]
-    return JsonResponse({"results": payload})
+        )
+
+        month = (request.GET.get("month") or "").strip()
+        if month:
+            try:
+                month_date = datetime.strptime(month, "%Y-%m")
+                queryset = queryset.filter(
+                    visited_at__year=month_date.year,
+                    visited_at__month=month_date.month,
+                )
+            except ValueError:
+                return JsonResponse(
+                    {"error": "El parámetro month debe tener formato YYYY-MM."},
+                    status=400,
+                )
+
+        payload = [_serialize_visit(visit) for visit in queryset.all()]
+        return JsonResponse({"results": payload})
+
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    area_id = data.get("area_id")
+    if not area_id:
+        return JsonResponse({"error": "El área es obligatoria."}, status=400)
+
+    try:
+        area = Area.objects.get(pk=int(area_id))
+    except (Area.DoesNotExist, ValueError, TypeError):
+        return JsonResponse({"error": "Área no válida."}, status=400)
+
+    dispenser = None
+    dispenser_id = data.get("dispenser_id")
+    if dispenser_id:
+        try:
+            dispenser = Dispenser.objects.get(pk=int(dispenser_id))
+        except (Dispenser.DoesNotExist, ValueError, TypeError):
+            return JsonResponse({"error": "Dosificador no válido."}, status=400)
+
+    inspector = None
+    inspector_id = data.get("inspector_id")
+    if inspector_id:
+        try:
+            inspector = User.objects.get(pk=int(inspector_id))
+        except (User.DoesNotExist, ValueError, TypeError):
+            return JsonResponse({"error": "Inspector no válido."}, status=400)
+
+    notes = str(data.get("notes") or "").strip()
+
+    visited_at = None
+    visited_at_input = str(data.get("visited_at") or "").strip()
+    if visited_at_input:
+        try:
+            visited_at = datetime.fromisoformat(visited_at_input.replace("Z", "+00:00"))
+        except ValueError:
+            return JsonResponse(
+                {"error": "La fecha/hora de la visita no tiene un formato válido."},
+                status=400,
+            )
+
+    create_kwargs = {
+        "area": area,
+        "dispenser": dispenser,
+        "inspector": inspector,
+        "notes": notes,
+    }
+    if visited_at:
+        create_kwargs["visited_at"] = visited_at
+
+    visit = Visit.objects.create(**create_kwargs)
+
+    return JsonResponse(_serialize_visit(visit), status=201)
 
 
 @require_GET

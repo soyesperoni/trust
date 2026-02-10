@@ -119,15 +119,6 @@ export default function VisitasPage() {
       />
       <PageTransition className="flex-1 overflow-y-auto">
         <div className="px-4 md:px-8 py-6 pb-2">
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
-            >
-              <span className="material-symbols-outlined text-[20px]">map</span>
-              <span>Ver Mapa</span>
-            </button>
-          </div>
           <div className="mt-6 bg-white dark:bg-[#161e27] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row gap-4 items-center justify-between">
             <div className="flex flex-col lg:flex-row gap-4 w-full">
               <div className="relative w-full lg:w-64">

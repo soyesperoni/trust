@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
@@ -109,7 +110,7 @@ class Visit(models.Model):
         blank=True,
         null=True,
     )
-    visited_at = models.DateTimeField(auto_now_add=True)
+    visited_at = models.DateTimeField(default=timezone.now)
     notes = models.TextField(blank=True)
 
     class Meta:
