@@ -594,8 +594,12 @@ def user_detail(request, user_id: int):
 
     if "email" in data:
         user.email = str(data.get("email") or "").strip()
+    current_user = _get_current_user(request)
     if "role" in data and _is_general_admin(request):
-        user.role = data.get("role") or user.role
+        if not current_user or current_user.id != user.id:
+            user.role = data.get("role") or user.role
+        else:
+            return JsonResponse({"error": "No puedes editar tu propio rol."}, status=400)
     if "is_active" in data:
         user.is_active = bool(data.get("is_active"))
     if data.get("password"):

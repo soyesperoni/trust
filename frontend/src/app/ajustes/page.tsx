@@ -77,8 +77,6 @@ export default function AjustesPage() {
     };
   }, []);
 
-  const isGeneralAdmin = user.role === "general_admin";
-
   const initials = useMemo(
     () => user.full_name.split(" ").filter(Boolean).slice(0, 2).map((word) => word[0]).join("").toUpperCase() || "?",
     [user.full_name],
@@ -114,7 +112,6 @@ export default function AjustesPage() {
       const body = new FormData();
       body.append("full_name", formState.full_name);
       body.append("email", formState.email);
-      if (isGeneralAdmin) body.append("role", formState.role);
       if (formState.password) body.append("password", formState.password);
       if (photoFile) body.append("profile_photo", photoFile);
 
@@ -176,16 +173,7 @@ export default function AjustesPage() {
                   <input className="mt-1 w-full rounded-lg border px-3 py-2" name="email" onChange={(e)=>setFormState((p)=>({...p, email:e.target.value}))} value={formState.email} />
                 </label>
                 <label className="text-sm">Rol
-                  {isGeneralAdmin ? (
-                    <select className="mt-1 w-full rounded-lg border px-3 py-2" value={formState.role} onChange={(e)=>setFormState((p)=>({...p, role:e.target.value}))}>
-                      <option value="general_admin">Admin Global</option>
-                      <option value="account_admin">Admin de Cuentas</option>
-                      <option value="branch_admin">Admin de Sucursal</option>
-                      <option value="inspector">Inspector</option>
-                    </select>
-                  ) : (
-                    <input className="mt-1 w-full rounded-lg border px-3 py-2 bg-slate-100" readOnly value={user.role_label} />
-                  )}
+                  <input className="mt-1 w-full rounded-lg border px-3 py-2 bg-slate-100" readOnly value={user.role_label} />
                 </label>
                 <label className="text-sm">Nueva contraseña
                   <input className="mt-1 w-full rounded-lg border px-3 py-2" onChange={(e)=>setFormState((p)=>({...p, password:e.target.value}))} type="password" value={formState.password} />
