@@ -107,7 +107,7 @@ export default function DashboardHeader({
           ) : null}
         </div>
         <div className="flex items-center gap-4">
-          {action ? <div className="hidden lg:flex">{action}</div> : null}
+          {action ? <div className="hidden md:flex">{action}</div> : null}
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
               search

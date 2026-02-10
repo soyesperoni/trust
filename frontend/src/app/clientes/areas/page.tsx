@@ -64,8 +64,8 @@ const statusDot: Record<AreaStatus, string> = {
 
 export default function AreasPage() {
   const { user, isLoading: isLoadingUser } = useCurrentUser();
-  const isReadOnlyAdmin = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
-  const canManageAreas = !isLoadingUser && !isReadOnlyAdmin;
+  const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
+  const canManageAreas = !isLoadingUser && !isRestrictedRole;
 
   const [areas, setAreas] = useState<AreaRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);

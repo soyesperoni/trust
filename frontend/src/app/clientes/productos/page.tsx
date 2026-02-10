@@ -6,7 +6,7 @@ import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { getSessionUserEmail } from "../../lib/session";
-import { INSPECTOR_ROLE } from "../../lib/permissions";
+import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE } from "../../lib/permissions";
 
 import PageTransition from "../../components/PageTransition";
 
@@ -48,8 +48,8 @@ const statusStyles: Record<ProductStatus, { badge: string; dot: string }> = {
 
 export default function ProductosPage() {
   const { user, isLoading: isLoadingUser } = useCurrentUser();
-  const isInspector = user?.role === INSPECTOR_ROLE;
-  const canManageProducts = !isLoadingUser && !isInspector;
+  const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
+  const canManageProducts = !isLoadingUser && !isRestrictedRole;
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
