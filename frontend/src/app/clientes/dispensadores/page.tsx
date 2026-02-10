@@ -153,6 +153,7 @@ export default function DispensadoresPage() {
     <>
       <DashboardHeader
         title="Gestión de Dosificadores"
+        description="Administra y monitorea los dosificadores instalados por sucursal."
         searchPlaceholder="Buscar dosificador..."
         action={(
           <Link

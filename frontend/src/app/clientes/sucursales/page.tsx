@@ -153,7 +153,8 @@ export default function SucursalesPage() {
   return (
     <>
       <DashboardHeader
-        title="Sucursales"
+        title="Gestión de Sucursales"
+        description="Administra las sucursales vinculadas a cada cliente."
         searchPlaceholder="Buscar sucursal..."
         action={(
           <button className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
