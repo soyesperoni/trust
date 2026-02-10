@@ -117,8 +117,8 @@ export default function VisitasPage() {
         title="Historial de Visitas"
         description="Registros recientes de inspecciones y mantenimientos."
       />
-      <PageTransition className="flex-1 overflow-y-auto">
-        <div className="px-4 md:px-8 py-6 pb-2">
+      <PageTransition className="flex flex-col flex-1 overflow-y-auto">
+        <div className="px-4 md:px-8 py-6 pb-2 shrink-0">
           <div className="mt-6 bg-white dark:bg-[#161e27] p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row gap-4 items-center justify-between">
             <div className="flex flex-col lg:flex-row gap-4 w-full">
               <div className="relative w-full lg:w-64">
@@ -194,10 +194,10 @@ export default function VisitasPage() {
             </div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 pt-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 pt-4">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto custom-scrollbar flex-1">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700">
                   <th className="px-6 py-4">Fecha</th>
