@@ -14,7 +14,7 @@ const sizeStyles: Record<BrandLogoSize, { text: string }> = {
     text: "text-2xl",
   },
   xl: {
-    text: "text-3xl",
+    text: "text-[2.44rem]",
   },
   xxl: {
     text: "text-[54px]",
