@@ -249,7 +249,7 @@ export default function VisitasPage() {
                           ID #VIS-{visit.id}
                         </span>
                         <h3 className="text-lg font-bold text-slate-900 leading-tight mt-0.5">
-                          {visit.branch}
+                          {visit.client}
                         </h3>
                       </div>
                       <span
@@ -260,7 +260,7 @@ export default function VisitasPage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-sm text-slate-600 mt-2">
                       <span className="material-symbols-outlined text-[18px] text-slate-400">store</span>
-                      <span>{visit.client}</span>
+                      <span>{visit.branch}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-sm text-slate-600 mt-1">
                       <span className="material-symbols-outlined text-[18px] text-slate-400">schedule</span>
@@ -268,7 +268,7 @@ export default function VisitasPage() {
                     </div>
                     <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
                       <button className="text-primary font-semibold text-sm px-4 py-2 hover:bg-yellow-50 rounded-full transition-colors" type="button">
-                        Ver reporte
+                        Ver detalles
                       </button>
                     </div>
                   </article>

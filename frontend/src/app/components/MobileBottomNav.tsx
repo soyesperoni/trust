@@ -2,12 +2,6 @@
 
 import Link from "next/link";
 
-import { useCurrentUser } from "../hooks/useCurrentUser";
-import {
-  ACCOUNT_ADMIN_ROLE,
-  BRANCH_ADMIN_ROLE,
-  INSPECTOR_ROLE,
-} from "../lib/permissions";
 
 type MobileBottomNavProps = {
   activePath: string;
@@ -27,16 +21,6 @@ const mobileItems: MobileNavItem[] = [
 ];
 
 export default function MobileBottomNav({ activePath }: MobileBottomNavProps) {
-  const { user } = useCurrentUser();
-  const isRestrictedRole =
-    user?.role === ACCOUNT_ADMIN_ROLE ||
-    user?.role === BRANCH_ADMIN_ROLE ||
-    user?.role === INSPECTOR_ROLE;
-
-  if (!isRestrictedRole) {
-    return null;
-  }
-
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 md:hidden dark:border-slate-800 dark:bg-[#161e27]">
       <div className="grid grid-cols-4 gap-1">
