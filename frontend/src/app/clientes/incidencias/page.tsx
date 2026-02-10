@@ -341,6 +341,16 @@ export default function IncidenciasPage() {
             {emptyMessage}
           </div>
         ) : null}
+
+        {canCreateIncident ? (
+          <Link
+            aria-label="Crear incidencia"
+            className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-slate-900 shadow-lg transition-transform active:scale-95"
+            href="/clientes/incidencias/nueva"
+          >
+            <span className="material-symbols-outlined text-[28px]">add</span>
+          </Link>
+        ) : null}
       </section>
 
       <PageTransition className="hidden md:flex flex-1 overflow-y-auto p-4 md:p-8">

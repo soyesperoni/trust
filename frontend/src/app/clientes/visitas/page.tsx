@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
-import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { getSessionUserEmail } from "../../lib/session";
 
 type Visit = {
@@ -23,14 +22,20 @@ type User = {
   full_name: string;
 };
 
-const mobileFilters = ["Todo", "Finalizadas", "Canceladas", "Incidencias"];
+const mobileFilters = [
+  { label: "Todas", value: "all" as const },
+  { label: "Finalizadas", value: "finalizada" as const },
+  { label: "Canceladas", value: "cancelada" as const },
+  { label: "Incidencias", value: "incidencia" as const },
+];
 
 export default function VisitasPage() {
-  const { user } = useCurrentUser();
   const [visits, setVisits] = useState<Visit[]>([]);
   const [inspectors, setInspectors] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeFilter, setActiveFilter] = useState<(typeof mobileFilters)[number]["value"]>("all");
 
   useEffect(() => {
     let isMounted = true;
@@ -119,21 +124,19 @@ export default function VisitasPage() {
       .join("");
 
   const visitType = (notes: string) => {
-    if (!notes) return "Mantenimiento";
+    if (!notes) return "Finalizada";
     const normalized = notes.toLowerCase();
     if (normalized.includes("cancel")) return "Cancelada";
     if (normalized.includes("incidencia") || normalized.includes("falla")) {
       return "Incidencia";
     }
-    if (normalized.includes("emergencia")) return "Emergencia";
-    if (
-      normalized.includes("inspeccion") ||
-      normalized.includes("inspección") ||
-      normalized.includes("finalizada")
-    ) {
-      return "Finalizada";
-    }
     return "Finalizada";
+  };
+
+  const mapVisitTypeToFilter = (typeLabel: string) => {
+    if (typeLabel === "Cancelada") return "cancelada" as const;
+    if (typeLabel === "Incidencia") return "incidencia" as const;
+    return "finalizada" as const;
   };
 
   const typeStyles: Record<string, string> = {
@@ -151,10 +154,30 @@ export default function VisitasPage() {
       "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-900/60",
   };
 
-  const mobileUserInitials = useMemo(() => {
-    if (!user?.full_name) return "US";
-    return getInitials(user.full_name) || "US";
-  }, [user?.full_name]);
+  const filteredVisits = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return visits.filter((visit) => {
+      const typeLabel = visitType(visit.notes);
+      const mappedFilter = mapVisitTypeToFilter(typeLabel);
+      const matchesFilter = activeFilter === "all" || mappedFilter === activeFilter;
+      if (!matchesFilter) return false;
+      if (!query) return true;
+      return [
+        visit.client,
+        visit.branch,
+        visit.area,
+        visit.inspector,
+        typeLabel,
+        `#${visit.id}`,
+      ].some((value) => value.toLowerCase().includes(query));
+    });
+  }, [activeFilter, searchTerm, visits]);
+
+  const emptyMessage = useMemo(() => {
+    if (isLoading) return "Cargando historial...";
+    if (error) return error;
+    return "No hay visitas registradas.";
+  }, [error, isLoading]);
 
   return (
     <>
@@ -164,50 +187,48 @@ export default function VisitasPage() {
       />
 
       <PageTransition className="flex flex-1 flex-col overflow-y-auto">
-        <section className="md:hidden">
-          <header className="sticky top-16 z-20 bg-white/95 px-4 py-3 backdrop-blur-md dark:bg-[#0f1720]/95">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 flex-1 items-center rounded-full bg-slate-100 px-4 dark:bg-slate-800">
-                <span className="material-symbols-outlined mr-3 text-slate-500">
-                  search
-                </span>
-                <input
-                  className="w-full border-none bg-transparent p-0 text-base text-slate-800 placeholder:text-slate-500 focus:ring-0 dark:text-slate-200"
-                  placeholder="Buscar historial..."
-                  type="text"
-                />
-              </div>
-              <button
-                type="button"
-                className="relative flex h-12 w-12 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
+        <section className="md:hidden flex-1 overflow-y-auto">
+          <div className="px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100">
+            <div className="flex items-center gap-3 bg-slate-100 rounded-full px-4 py-2.5 shadow-sm">
+              <span className="material-symbols-outlined text-slate-500">search</span>
+              <input
+                className="bg-transparent border-none focus:ring-0 p-0 text-slate-700 w-full placeholder-slate-500 text-base"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar historial..."
+                type="text"
+                value={searchTerm}
+              />
+              <button className="flex items-center justify-center text-slate-600" type="button">
                 <span className="material-symbols-outlined">filter_list</span>
               </button>
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-yellow-100 text-sm font-bold text-amber-900">
-                {mobileUserInitials}
-              </div>
             </div>
+          </div>
 
-            <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto pb-2">
-              {mobileFilters.map((filter, index) => (
-                <button
-                  key={filter}
-                  type="button"
-                  className={`whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium ${
-                    index === 0
-                      ? "bg-slate-900 text-white shadow-sm"
-                      : "border border-slate-200 bg-white text-slate-600"
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
+          <div className="pl-4 pr-0 py-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex gap-2 pr-4">
+              {mobileFilters.map((filter) => {
+                const isActive = activeFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    className={`px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap border transition-colors ${
+                      isActive
+                        ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                        : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                    }`}
+                    onClick={() => setActiveFilter(filter.value)}
+                    type="button"
+                  >
+                    {filter.label}
+                  </button>
+                );
+              })}
             </div>
-          </header>
+          </div>
 
           <main className="flex-1 px-4 pb-32 pt-2">
             <div className="space-y-4">
-              {visits.map((visit) => {
+              {filteredVisits.map((visit) => {
                 const typeLabel = visitType(visit.notes);
                 const formatted = formatDate(visit.visited_at);
                 const mobileStatusStyle =
@@ -220,36 +241,33 @@ export default function VisitasPage() {
                 return (
                   <article
                     key={visit.id}
-                    className="group relative overflow-hidden rounded-[20px] border border-slate-100 bg-slate-50/80 p-0 shadow-card transition-colors hover:bg-slate-100/70"
+                    className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden active:bg-slate-50 transition-colors"
                   >
-                    <div className="px-5 pb-1 pt-4">
-                      <p className="mb-2 text-sm font-medium capitalize text-slate-500">
-                        {formatted.fullDate}
-                      </p>
-                      <div className="flex items-start justify-between gap-3">
-                        <h4 className="leading-tight text-lg font-bold text-slate-900">
+                    <div className="flex justify-between items-start mb-2 gap-2">
+                      <div>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                          ID #VIS-{visit.id}
+                        </span>
+                        <h3 className="text-lg font-bold text-slate-900 leading-tight mt-0.5">
                           {visit.branch}
-                        </h4>
-                        <span
-                          className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${mobileStatusStyle}`}
-                        >
-                          {typeLabel}
-                        </span>
+                        </h3>
                       </div>
-                    </div>
-                    <div className="px-5 pb-3">
-                      <div className="mt-2 flex items-center text-sm text-slate-600">
-                        <span className="material-symbols-outlined mr-2 text-[18px] text-slate-400">
-                          location_on
-                        </span>
-                        {visit.client}
-                      </div>
-                    </div>
-                    <div className="px-3 pb-3 pt-1">
-                      <button
-                        type="button"
-                        className="w-full rounded-xl py-2.5 text-center text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase ${mobileStatusStyle}`}
                       >
+                        {typeLabel}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm text-slate-600 mt-2">
+                      <span className="material-symbols-outlined text-[18px] text-slate-400">store</span>
+                      <span>{visit.client}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm text-slate-600 mt-1">
+                      <span className="material-symbols-outlined text-[18px] text-slate-400">schedule</span>
+                      <span>{formatted.date} · {formatted.time}</span>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                      <button className="text-primary font-semibold text-sm px-4 py-2 hover:bg-yellow-50 rounded-full transition-colors" type="button">
                         Ver reporte
                       </button>
                     </div>
@@ -257,23 +275,11 @@ export default function VisitasPage() {
                 );
               })}
 
-              {error && !isLoading && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                  {error}
+              {filteredVisits.length === 0 ? (
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-sm text-slate-500 text-center">
+                  {emptyMessage}
                 </div>
-              )}
-
-              {isLoading && (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-                  Cargando historial...
-                </div>
-              )}
-
-              {!error && !isLoading && visits.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-                  No hay visitas registradas.
-                </div>
-              )}
+              ) : null}
             </div>
           </main>
         </section>
