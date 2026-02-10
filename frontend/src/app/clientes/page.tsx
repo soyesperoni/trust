@@ -13,6 +13,7 @@ type UserRecord = {
   role: string;
   role_label: string;
   is_active: boolean;
+  profile_photo?: string | null;
 };
 
 const statusStyles: Record<string, string> = {
@@ -171,12 +172,17 @@ export default function ClientesPage() {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs uppercase">
-                          {user.full_name
-                            .split(" ")
-                            .map((word) => word[0])
-                            .join("")
-                            .slice(0, 2)}
+                        <div className="w-9 h-9 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-slate-600 font-bold text-xs uppercase">
+                          {user.profile_photo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img alt={`Foto de ${user.full_name}`} className="h-full w-full object-cover" src={user.profile_photo} />
+                          ) : (
+                            user.full_name
+                              .split(" ")
+                              .map((word) => word[0])
+                              .join("")
+                              .slice(0, 2)
+                          )}
                         </div>
                         <div className="font-semibold text-slate-900 dark:text-white">
                           {user.full_name}

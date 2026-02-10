@@ -17,6 +17,7 @@ type UserRecord = {
   client_ids?: number[];
   branch_ids?: number[];
   area_ids?: number[];
+  profile_photo?: string | null;
 };
 
 type Client = {
@@ -49,6 +50,7 @@ export default function EditarUsuarioPage() {
     selectedAreaId: "",
     readOnlyAccess: false,
   });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +114,7 @@ export default function EditarUsuarioPage() {
             : "",
           readOnlyAccess: false,
         });
+        setPhotoFile(null);
         setClients(clientsData.results ?? []);
         setBranches(branchesData.results ?? []);
         setAreas(areasData.results ?? []);
@@ -171,24 +174,23 @@ export default function EditarUsuarioPage() {
         throw new Error("No se encontró el usuario solicitado.");
       }
 
+      const body = new FormData();
+      body.append("full_name", formState.full_name);
+      body.append("email", formState.email);
+      body.append("role", formState.role);
+      body.append("is_active", String(formState.is_active));
+      if (formState.selectedClientId) body.append("client_ids", formState.selectedClientId);
+      if (formState.selectedBranchId) body.append("branch_ids", formState.selectedBranchId);
+      if (formState.selectedAreaId) body.append("area_ids", formState.selectedAreaId);
+      if (photoFile) body.append("profile_photo", photoFile);
+
+      const sessionUserRaw = window.localStorage.getItem("trust.currentUser");
+      const sessionEmail = sessionUserRaw ? (JSON.parse(sessionUserRaw) as { email?: string }).email ?? "" : "";
+
       const response = await fetch(`/api/users/${userId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: formState.full_name,
-          email: formState.email,
-          role: formState.role,
-          is_active: formState.is_active,
-          client_ids: formState.selectedClientId
-            ? [Number(formState.selectedClientId)]
-            : [],
-          branch_ids: formState.selectedBranchId
-            ? [Number(formState.selectedBranchId)]
-            : [],
-          area_ids: formState.selectedAreaId
-            ? [Number(formState.selectedAreaId)]
-            : [],
-        }),
+        headers: { "x-current-user-email": sessionEmail },
+        body,
       });
 
       const payload = await response.json();
@@ -254,6 +256,16 @@ export default function EditarUsuarioPage() {
                   />
                 </label>
 
+
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2">
+                  Foto de perfil
+                  <input
+                    accept="image/*"
+                    className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                    onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
+                    type="file"
+                  />
+                </label>
                 <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300">
                   Rol
                   <select

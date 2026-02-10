@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const backendBaseUrl =
   process.env.BACKEND_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
@@ -19,11 +19,17 @@ export async function GET() {
   return NextResponse.json(data);
 }
 
-export async function POST(request: Request) {
-  const body = await request.text();
+export async function POST(request: NextRequest) {
+  const contentType = request.headers.get("content-type") ?? "application/json";
+  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
+  const body = await request.arrayBuffer();
+
   const response = await fetch(`${backendBaseUrl}/api/users/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": contentType,
+      "X-Current-User-Email": currentUserEmail,
+    },
     body,
   });
 

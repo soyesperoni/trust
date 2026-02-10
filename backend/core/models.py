@@ -172,6 +172,7 @@ class User(AbstractUser):
         INSPECTOR = "inspector", _("Inspector")
 
     role = models.CharField(max_length=30, choices=Role.choices, default=Role.INSPECTOR)
+    profile_photo = models.ImageField(upload_to="users/profiles/", blank=True, null=True)
     clients = models.ManyToManyField(Client, blank=True, related_name="users")
     branches = models.ManyToManyField(Branch, blank=True, related_name="users")
     areas = models.ManyToManyField(Area, blank=True, related_name="users")

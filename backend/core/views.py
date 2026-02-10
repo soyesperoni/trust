@@ -18,10 +18,59 @@ def _serialize_user(user: User) -> dict:
         "role": user.role,
         "role_label": user.get_role_display(),
         "is_active": user.is_active,
+        "profile_photo": user.profile_photo.url if user.profile_photo else None,
         "client_ids": list(user.clients.values_list("id", flat=True)),
         "branch_ids": list(user.branches.values_list("id", flat=True)),
         "area_ids": list(user.areas.values_list("id", flat=True)),
     }
+
+
+def _is_general_admin(request) -> bool:
+    current_email = str(request.headers.get("X-Current-User-Email") or "").strip().lower()
+    if not current_email:
+        return False
+    return User.objects.filter(email__iexact=current_email, role=User.Role.GENERAL_ADMIN).exists()
+
+
+def _extract_user_data(request):
+    if request.content_type and request.content_type.startswith("multipart/form-data"):
+        data = request.POST.copy()
+        if "client_ids" in data and isinstance(data.get("client_ids"), str):
+            data.setlist("client_ids", [value for value in data.getlist("client_ids") if value != ""])
+        if "branch_ids" in data and isinstance(data.get("branch_ids"), str):
+            data.setlist("branch_ids", [value for value in data.getlist("branch_ids") if value != ""])
+        if "area_ids" in data and isinstance(data.get("area_ids"), str):
+            data.setlist("area_ids", [value for value in data.getlist("area_ids") if value != ""])
+        return data, request.FILES
+
+    try:
+        return json.loads(request.body or "{}"), request.FILES
+    except json.JSONDecodeError:
+        return None, None
+
+
+def _as_id_list(source, key: str):
+    if hasattr(source, "getlist"):
+        values = source.getlist(key)
+        if not values and key in source:
+            maybe = source.get(key)
+            values = maybe if isinstance(maybe, list) else [maybe]
+    else:
+        values = source.get(key) if isinstance(source, dict) else None
+        if values is None:
+            return None
+        if not isinstance(values, list):
+            values = [values]
+
+    resolved = []
+    for value in values:
+        if value in (None, ""):
+            continue
+        try:
+            resolved.append(int(value))
+        except (TypeError, ValueError):
+            continue
+    return resolved
 
 
 def _serialize_client(client: Client) -> dict:
@@ -176,9 +225,8 @@ def clients(request):
         payload = [_serialize_client(client) for client in Client.objects.all()]
         return JsonResponse({"results": payload})
 
-    try:
-        data = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
+    data, files = _extract_user_data(request)
+    if data is None:
         return JsonResponse({"error": "Formato JSON inválido."}, status=400)
 
     name = str(data.get("name") or "").strip()
@@ -210,9 +258,8 @@ def client_detail(request, client_id: int):
     if request.method == "GET":
         return JsonResponse(_serialize_client(client))
 
-    try:
-        data = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
+    data, files = _extract_user_data(request)
+    if data is None:
         return JsonResponse({"error": "Formato JSON inválido."}, status=400)
 
     if "name" in data:
@@ -301,9 +348,8 @@ def visits(request):
         payload = [_serialize_visit(visit) for visit in queryset.all()]
         return JsonResponse({"results": payload})
 
-    try:
-        data = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
+    data, files = _extract_user_data(request)
+    if data is None:
         return JsonResponse({"error": "Formato JSON inválido."}, status=400)
 
     area_id = data.get("area_id")
@@ -376,9 +422,8 @@ def users(request):
         payload = [_serialize_user(user) for user in User.objects.order_by("id")]
         return JsonResponse({"results": payload})
 
-    try:
-        data = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
+    data, files = _extract_user_data(request)
+    if data is None:
         return JsonResponse({"error": "Formato JSON inválido."}, status=400)
 
     full_name = str(data.get("full_name", "")).strip()
@@ -405,9 +450,14 @@ def users(request):
         role=role,
         is_active=bool(data.get("is_active", True)),
     )
-    client_ids = data.get("client_ids")
-    branch_ids = data.get("branch_ids")
-    area_ids = data.get("area_ids")
+    profile_photo = files.get("profile_photo") if files else None
+    if profile_photo is not None:
+        user.profile_photo = profile_photo
+        user.save(update_fields=["profile_photo"])
+
+    client_ids = _as_id_list(data, "client_ids")
+    branch_ids = _as_id_list(data, "branch_ids")
+    area_ids = _as_id_list(data, "area_ids")
     if client_ids is not None:
         user.clients.set(Client.objects.filter(id__in=client_ids))
     if branch_ids is not None:
@@ -428,9 +478,8 @@ def user_detail(request, user_id: int):
     if request.method == "GET":
         return JsonResponse(_serialize_user(user))
 
-    try:
-        data = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
+    data, files = _extract_user_data(request)
+    if data is None:
         return JsonResponse({"error": "Formato JSON inválido."}, status=400)
 
     full_name = str(data.get("full_name", "")).strip()
@@ -441,19 +490,32 @@ def user_detail(request, user_id: int):
 
     if "email" in data:
         user.email = str(data.get("email") or "").strip()
-    if "role" in data:
+    if "role" in data and _is_general_admin(request):
         user.role = data.get("role") or user.role
     if "is_active" in data:
         user.is_active = bool(data.get("is_active"))
     if data.get("password"):
         user.set_password(str(data.get("password")))
 
-    if "client_ids" in data:
-        user.clients.set(Client.objects.filter(id__in=data.get("client_ids") or []))
-    if "branch_ids" in data:
-        user.branches.set(Branch.objects.filter(id__in=data.get("branch_ids") or []))
-    if "area_ids" in data:
-        user.areas.set(Area.objects.filter(id__in=data.get("area_ids") or []))
+    remove_profile_photo = str(data.get("remove_profile_photo") or "").lower() in {"1", "true", "yes"}
+    if remove_profile_photo and user.profile_photo:
+        user.profile_photo.delete(save=False)
+        user.profile_photo = None
+
+    profile_photo = files.get("profile_photo") if files else None
+    if profile_photo is not None:
+        user.profile_photo = profile_photo
+
+    client_ids = _as_id_list(data, "client_ids") if "client_ids" in data else None
+    branch_ids = _as_id_list(data, "branch_ids") if "branch_ids" in data else None
+    area_ids = _as_id_list(data, "area_ids") if "area_ids" in data else None
+
+    if client_ids is not None:
+        user.clients.set(Client.objects.filter(id__in=client_ids))
+    if branch_ids is not None:
+        user.branches.set(Branch.objects.filter(id__in=branch_ids))
+    if area_ids is not None:
+        user.areas.set(Area.objects.filter(id__in=area_ids))
 
     user.save()
     return JsonResponse(_serialize_user(user))
