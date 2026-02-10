@@ -8,12 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const resolvedParams = await params;
-  const response = await fetch(
-    `${backendBaseUrl}/api/users/${resolvedParams.id}/`,
-    {
-      cache: "no-store",
-    },
-  );
+  const response = await fetch(`${backendBaseUrl}/api/users/${resolvedParams.id}/`, {
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     return NextResponse.json(
@@ -31,15 +28,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const resolvedParams = await params;
-  const body = await request.text();
-  const response = await fetch(
-    `${backendBaseUrl}/api/users/${resolvedParams.id}/`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body,
+  const contentType = request.headers.get("content-type") ?? "application/json";
+  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
+  const body = await request.arrayBuffer();
+
+  const response = await fetch(`${backendBaseUrl}/api/users/${resolvedParams.id}/`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": contentType,
+      "X-Current-User-Email": currentUserEmail,
     },
-  );
+    body,
+  });
 
   const payload = await response.json();
   return NextResponse.json(payload, { status: response.status });
