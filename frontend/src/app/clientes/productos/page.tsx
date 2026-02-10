@@ -66,26 +66,18 @@ export default function ProductosPage() {
         title="Gestión de Productos"
         description="Administra el catálogo de productos disponibles."
         searchPlaceholder="Buscar producto, SKU..."
-      />
-
-      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-logo">
-              Productos
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">
-              Administra el catálogo de productos disponibles.
-            </p>
-          </div>
+        action={(
           <Link
-            className="bg-professional-green hover:bg-green-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
+            className="bg-professional-green hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
             href="/clientes/productos/nuevo"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nuevo Producto
           </Link>
-        </div>
+        )}
+      />
+
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {products.length === 0 ? (
             <div className="col-span-full bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 text-center text-slate-500">

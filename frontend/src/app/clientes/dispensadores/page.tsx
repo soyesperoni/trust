@@ -154,26 +154,18 @@ export default function DispensadoresPage() {
       <DashboardHeader
         title="Gestión de Dosificadores"
         searchPlaceholder="Buscar dosificador..."
+        action={(
+          <Link
+            className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            href="/clientes/dispensadores/nuevo"
+          >
+            <span className="material-symbols-outlined text-[20px]">add</span>
+            Nuevo Dosificador
+          </Link>
+        )}
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
-          <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                Dosificadores
-              </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Listado completo de equipos instalados.
-              </p>
-            </div>
-            <Link
-              className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-              href="/clientes/dispensadores/nuevo"
-            >
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              Nuevo Dosificador
-            </Link>
-          </div>
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse">
               <thead>

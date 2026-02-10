@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 
 import { useEffect, useState } from "react";
 
@@ -18,6 +18,7 @@ import ThemeToggleButton from "./ThemeToggleButton";
 type DashboardHeaderProps = {
   title: string;
   description?: string;
+  action?: ReactNode;
   searchPlaceholder?: string;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -26,6 +27,7 @@ type DashboardHeaderProps = {
 export default function DashboardHeader({
   title,
   description,
+  action,
   searchPlaceholder = "Buscar...",
   searchValue,
   onSearchChange,
@@ -96,6 +98,7 @@ export default function DashboardHeader({
           ) : null}
         </div>
         <div className="flex items-center gap-4">
+          {action ? <div className="hidden lg:flex">{action}</div> : null}
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
               search

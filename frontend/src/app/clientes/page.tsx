@@ -85,25 +85,17 @@ export default function ClientesPage() {
       <DashboardHeader
         title="Gestión de Usuarios"
         description="Solo el Administrador General puede ver, crear o editar usuarios."
-      />
-      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-logo">
-              Usuarios
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-              Administra los accesos y roles de la plataforma.
-            </p>
-          </div>
+        action={(
           <Link
-            className="bg-professional-green text-white hover:bg-green-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+            className="bg-professional-green text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
             href="/clientes/nuevo-usuario"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nuevo Usuario
           </Link>
-        </div>
+        )}
+      />
+      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col h-full">
           <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="relative w-full md:w-96">
