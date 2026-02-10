@@ -66,8 +66,8 @@ const statusStyles: Record<Branch["status"], string> = {
 
 export default function SucursalesPage() {
   const { user, isLoading: isLoadingUser } = useCurrentUser();
-  const isReadOnlyAdmin = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
-  const canManageBranches = !isLoadingUser && !isReadOnlyAdmin;
+  const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
+  const canManageBranches = !isLoadingUser && !isRestrictedRole;
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
