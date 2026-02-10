@@ -58,7 +58,7 @@ export default function ProductosPage() {
         }
         const data = await response.json();
         if (!isMounted) return;
-        const rows = ((data.results ?? []) as ProductApi[]).map((product) => {
+        const rows: ProductRow[] = ((data.results ?? []) as ProductApi[]).map((product) => {
           const hasDispenser = Boolean(product.dispenser?.id);
           return {
             id: product.id,
