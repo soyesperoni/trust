@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
+import {
+  getUnreadNotificationCount,
+  markNotificationsAsRead,
+} from "../../lib/notifications";
 
 type Incident = {
   id: number;
@@ -89,6 +93,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -141,6 +146,7 @@ export default function NotificationsPage() {
           .slice(0, 12);
 
         setNotifications(combined);
+        setUnreadCount(getUnreadNotificationCount(combined.map((item) => item.id)));
         setError(null);
       } catch (fetchError) {
         if (!isMounted) return;
@@ -160,6 +166,12 @@ export default function NotificationsPage() {
       isMounted = false;
     };
   }, []);
+
+  const handleMarkAllAsRead = () => {
+    if (notifications.length === 0) return;
+    markNotificationsAsRead(notifications.map((item) => item.id));
+    setUnreadCount(0);
+  };
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando notificaciones...";
@@ -186,11 +198,15 @@ export default function NotificationsPage() {
                 Revisa las últimas actualizaciones del sistema.
               </p>
             </div>
-            <button className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-2 bg-white dark:bg-[#161e27] px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 transition-colors shadow-sm">
+            <button
+              onClick={handleMarkAllAsRead}
+              disabled={notifications.length === 0 || unreadCount === 0}
+              className="text-sm font-medium text-slate-600 hover:text-slate-900 disabled:text-slate-400 disabled:cursor-not-allowed dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-2 bg-white dark:bg-[#161e27] px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 transition-colors shadow-sm"
+            >
               <span className="material-symbols-outlined text-[18px]">
                 done_all
               </span>
-              Marcar todas como leídas
+              Marcar todas como leídas ({unreadCount})
             </button>
           </div>
 
