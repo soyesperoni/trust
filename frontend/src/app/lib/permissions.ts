@@ -21,7 +21,6 @@ const BRANCH_ADMIN_BLOCKED_PATH_PREFIXES = [
 ];
 
 const INSPECTOR_BLOCKED_PATH_PREFIXES = [
-  "/ajustes",
   "/clientes/sucursales/nueva",
   "/clientes/areas/nueva",
   "/clientes/calendario/nueva",
@@ -30,6 +29,7 @@ const INSPECTOR_BLOCKED_PATH_PREFIXES = [
 ];
 
 export const ACCOUNT_ADMIN_ALLOWED_PATH_PREFIXES = [
+  "/ajustes",
   "/dashboard",
   "/clientes/sucursales",
   "/clientes/areas",
@@ -41,6 +41,7 @@ export const ACCOUNT_ADMIN_ALLOWED_PATH_PREFIXES = [
 ];
 
 export const BRANCH_ADMIN_ALLOWED_PATH_PREFIXES = [
+  "/ajustes",
   "/dashboard",
   "/clientes/areas",
   "/clientes/dispensadores",
@@ -51,6 +52,7 @@ export const BRANCH_ADMIN_ALLOWED_PATH_PREFIXES = [
 ];
 
 export const INSPECTOR_ALLOWED_PATH_PREFIXES = [
+  "/ajustes",
   "/dashboard",
   "/clientes/data",
   "/clientes/sucursales",
