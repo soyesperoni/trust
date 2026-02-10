@@ -5,7 +5,70 @@ import Link from "next/link";
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
+type AreaApi = {
+  id: number;
+  name: string;
+  branch: {
+    id: number;
+    name: string;
+    client: string;
+  };
+};
+
+type DispenserApi = {
+  id: number;
+  model: {
+    id: number;
+    name: string;
+  };
+};
+
 export default function NuevoDosificadorPage() {
+  const [areas, setAreas] = useState<AreaApi[]>([]);
+  const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadOptions = async () => {
+      try {
+        const [areasResponse, dispensersResponse] = await Promise.all([
+          fetch("/api/areas", { cache: "no-store" }),
+          fetch("/api/dispensers", { cache: "no-store" }),
+        ]);
+
+        if (!areasResponse.ok || !dispensersResponse.ok) return;
+
+        const [areasData, dispensersData] = await Promise.all([
+          areasResponse.json(),
+          dispensersResponse.json(),
+        ]);
+
+        if (!isMounted) return;
+
+        const areaList = (areasData.results ?? []) as AreaApi[];
+        const dispensers = (dispensersData.results ?? []) as DispenserApi[];
+
+        const uniqueModels = Array.from(
+          new Map(dispensers.map((item) => [item.model.id, item.model])).values(),
+        );
+
+        setAreas(areaList);
+        setModels(uniqueModels);
+      } catch {
+        // UI-only fallback sin bloquear render
+      }
+    };
+
+    loadOptions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const hasModelOptions = useMemo(() => models.length > 0, [models.length]);
+
   return (
     <>
       <DashboardHeader

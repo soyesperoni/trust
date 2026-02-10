@@ -1,11 +1,44 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
+type DispenserApi = {
+  id: number;
+  identifier: string;
+  model: {
+    name: string;
+  };
+};
+
 export default function NuevoProductoPage() {
+  const [dispensers, setDispensers] = useState<DispenserApi[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDispensers = async () => {
+      try {
+        const response = await fetch("/api/dispensers", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (!isMounted) return;
+        setDispensers((payload.results ?? []) as DispenserApi[]);
+      } catch {
+        // fallback visual
+      }
+    };
+
+    loadDispensers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <>
       <DashboardHeader
