@@ -1,10 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const backendBaseUrl =
   process.env.BACKEND_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
 
-export async function GET() {
-  const response = await fetch(`${backendBaseUrl}/api/visits/`, {
+export async function GET(request: NextRequest) {
+  const month = request.nextUrl.searchParams.get("month");
+  const endpoint = new URL(`${backendBaseUrl}/api/visits/`);
+  if (month) {
+    endpoint.searchParams.set("month", month);
+  }
+
+  const response = await fetch(endpoint.toString(), {
     cache: "no-store",
   });
 
@@ -17,4 +23,16 @@ export async function GET() {
 
   const data = await response.json();
   return NextResponse.json(data);
+}
+
+export async function POST(request: Request) {
+  const body = await request.text();
+  const response = await fetch(`${backendBaseUrl}/api/visits/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+
+  const payload = await response.json();
+  return NextResponse.json(payload, { status: response.status });
 }

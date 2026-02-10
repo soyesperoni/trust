@@ -1,92 +1,49 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 
-type CalendarVisit = {
-  day: string;
-  events: { time: string; label: string; type: "mantenimiento" | "emergencia" }[];
+type Visit = {
+  id: number;
+  client: string;
+  branch: string;
+  branch_id: number;
+  area: string;
+  area_id: number;
+  dispenser: string | null;
+  inspector: string;
+  inspector_id: number | null;
+  visited_at: string;
+  notes: string;
+};
+
+type CalendarCell = {
+  date: Date | null;
+  visits: Visit[];
   muted?: boolean;
-  isToday?: boolean;
 };
 
 const weekHeaders = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-const days: CalendarVisit[] = [
-  { day: "", events: [], muted: true },
-  { day: "", events: [], muted: true },
-  { day: "", events: [], muted: true },
-  { day: "1", events: [] },
-  {
-    day: "2",
-    events: [{ time: "09:00", label: "Plaza Vea", type: "mantenimiento" }],
-  },
-  { day: "3", events: [] },
-  { day: "4", events: [] },
-  {
-    day: "5",
-    events: [{ time: "08:30", label: "! Fuga de agua", type: "emergencia" }],
-  },
-  { day: "6", events: [] },
-  { day: "7", events: [] },
-  {
-    day: "8",
-    events: [
-      { time: "10:00", label: "Metro Sur", type: "mantenimiento" },
-      { time: "14:00", label: "Tottus Centro", type: "mantenimiento" },
-    ],
-  },
-  { day: "9", events: [] },
-  { day: "10", events: [] },
-  { day: "11", events: [] },
-  {
-    day: "12",
-    isToday: true,
-    events: [
-      {
-        time: "11:30",
-        label: "Primax Javier Prado",
-        type: "mantenimiento",
-      },
-      { time: "16:45", label: "! Falla eléctrica", type: "emergencia" },
-    ],
-  },
-  { day: "13", events: [] },
-  { day: "14", events: [] },
-  {
-    day: "15",
-    events: [{ time: "09:00", label: "Vivanda", type: "mantenimiento" }],
-  },
-  { day: "16", events: [] },
-  { day: "17", events: [] },
-  { day: "18", events: [] },
-  {
-    day: "19",
-    events: [{ time: "10:00", label: "Wong Óvalo", type: "mantenimiento" }],
-  },
-  { day: "20", events: [] },
-  { day: "21", events: [] },
-  { day: "22", events: [] },
-  {
-    day: "23",
-    events: [{ time: "06:00", label: "! Filtración", type: "emergencia" }],
-  },
-  { day: "24", events: [] },
-  { day: "25", events: [] },
-  { day: "26", events: [] },
-  {
-    day: "27",
-    events: [{ time: "15:00", label: "Makro", type: "mantenimiento" }],
-  },
-  { day: "28", events: [] },
-  { day: "29", events: [] },
-  {
-    day: "30",
-    events: [{ time: "08:00", label: "Plaza Vea Sur", type: "mantenimiento" }],
-  },
-  { day: "", events: [], muted: true },
-  { day: "", events: [], muted: true },
-];
+const monthKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+const formatMonthTitle = (date: Date) =>
+  date.toLocaleDateString("es-PE", { month: "long", year: "numeric" });
+
+const formatTime = (value: string) =>
+  new Date(value).toLocaleTimeString("es-PE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const toDateInputValue = (date: Date) => {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 10);
+};
 
 const eventStyles = {
   mantenimiento:
@@ -96,6 +53,106 @@ const eventStyles = {
 };
 
 export default function CalendarioPage() {
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadVisits = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/visits?month=${monthKey(currentMonth)}`, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error("No se pudieron cargar las visitas del calendario.");
+        }
+
+        const payload = await response.json();
+        if (!isMounted) return;
+
+        setVisits(payload.results ?? []);
+        setError(null);
+      } catch (fetchError) {
+        if (!isMounted) return;
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "No se pudieron cargar las visitas del calendario.",
+        );
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
+      }
+    };
+
+    loadVisits();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentMonth]);
+
+  const cells = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const startOffset = firstDay.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+    const mapByDay = new Map<number, Visit[]>();
+    visits.forEach((visit) => {
+      const date = new Date(visit.visited_at);
+      const day = date.getDate();
+      const current = mapByDay.get(day) ?? [];
+      current.push(visit);
+      mapByDay.set(day, current);
+    });
+
+    return Array.from({ length: totalCells }, (_, index): CalendarCell => {
+      const day = index - startOffset + 1;
+      if (day < 1 || day > daysInMonth) {
+        return { date: null, visits: [], muted: true };
+      }
+      return {
+        date: new Date(year, month, day),
+        visits: mapByDay.get(day) ?? [],
+      };
+    });
+  }, [currentMonth, visits]);
+
+  const selectedDayVisits = useMemo(() => {
+    return visits
+      .filter((visit) => {
+        const date = new Date(visit.visited_at);
+        return (
+          date.getFullYear() === selectedDate.getFullYear() &&
+          date.getMonth() === selectedDate.getMonth() &&
+          date.getDate() === selectedDate.getDate()
+        );
+      })
+      .sort((a, b) => a.visited_at.localeCompare(b.visited_at));
+  }, [selectedDate, visits]);
+
+  const stats = useMemo(() => {
+    const now = new Date();
+    const completed = visits.filter((visit) => new Date(visit.visited_at) <= now).length;
+    return {
+      completed,
+      pending: visits.length - completed,
+    };
+  }, [visits]);
+
+  const today = new Date();
+
   return (
     <>
       <DashboardHeader
@@ -115,14 +172,30 @@ export default function CalendarioPage() {
         <div className="flex-1 flex flex-col p-4 md:p-6 overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-                Noviembre 2023
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white capitalize">
+                {formatMonthTitle(currentMonth)}
               </h3>
               <div className="flex bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-1">
-                <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500" type="button">
+                <button
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500"
+                  onClick={() =>
+                    setCurrentMonth((prev) =>
+                      new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+                    )
+                  }
+                  type="button"
+                >
                   <span className="material-symbols-outlined">chevron_left</span>
                 </button>
-                <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500" type="button">
+                <button
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500"
+                  onClick={() =>
+                    setCurrentMonth((prev) =>
+                      new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+                    )
+                  }
+                  type="button"
+                >
                   <span className="material-symbols-outlined">chevron_right</span>
                 </button>
               </div>
@@ -136,15 +209,10 @@ export default function CalendarioPage() {
               </button>
               <button
                 className="px-3 py-1.5 text-sm font-medium bg-transparent border border-transparent rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+                onClick={() => setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1))}
                 type="button"
               >
-                Semana
-              </button>
-              <button
-                className="px-3 py-1.5 text-sm font-medium bg-transparent border border-transparent rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
-                type="button"
-              >
-                Día
+                Hoy
               </button>
             </div>
           </div>
@@ -161,89 +229,127 @@ export default function CalendarioPage() {
               ))}
             </div>
             <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-slate-50 dark:bg-slate-900">
-              {days.map((day, index) => (
-                <div
-                  key={`${day.day}-${index}`}
-                  className={`min-h-[100px] border p-2 relative transition-colors ${
-                    day.muted
-                      ? "bg-slate-50/50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800"
-                      : "bg-white dark:bg-[#161e27] border-slate-100 dark:border-slate-800 hover:bg-slate-50"
-                  } ${day.isToday ? "ring-2 ring-inset ring-primary/50" : ""}`}
-                >
-                  {day.day &&
-                    (day.isToday ? (
-                      <span className="w-6 h-6 flex items-center justify-center rounded-full bg-primary text-black text-sm font-bold ml-0.5 mt-0.5">
-                        {day.day}
-                      </span>
-                    ) : (
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">
-                        {day.day}
-                      </span>
-                    ))}
+              {cells.map((cell, index) => {
+                const isToday =
+                  !!cell.date &&
+                  cell.date.getFullYear() === today.getFullYear() &&
+                  cell.date.getMonth() === today.getMonth() &&
+                  cell.date.getDate() === today.getDate();
+                const isSelected =
+                  !!cell.date &&
+                  cell.date.getFullYear() === selectedDate.getFullYear() &&
+                  cell.date.getMonth() === selectedDate.getMonth() &&
+                  cell.date.getDate() === selectedDate.getDate();
 
-                  {day.events.map((event) => (
-                    <div
-                      key={`${day.day}-${event.time}-${event.label}`}
-                      className={`mt-1 p-1 rounded text-[10px] font-medium truncate cursor-pointer ${eventStyles[event.type]}`}
-                    >
-                      {event.time} - {event.label}
-                    </div>
-                  ))}
-                </div>
-              ))}
+                return (
+                  <button
+                    key={cell.date ? toDateInputValue(cell.date) : `empty-${index}`}
+                    className={`min-h-[100px] border p-2 relative transition-colors text-left ${
+                      cell.muted
+                        ? "bg-slate-50/50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800"
+                        : "bg-white dark:bg-[#161e27] border-slate-100 dark:border-slate-800 hover:bg-slate-50"
+                    } ${isToday ? "ring-2 ring-inset ring-primary/50" : ""} ${isSelected ? "outline outline-2 outline-professional-green/40" : ""}`}
+                    disabled={!cell.date}
+                    onClick={() => cell.date && setSelectedDate(cell.date)}
+                    type="button"
+                  >
+                    {cell.date &&
+                      (isToday ? (
+                        <span className="w-6 h-6 flex items-center justify-center rounded-full bg-primary text-black text-sm font-bold ml-0.5 mt-0.5">
+                          {cell.date.getDate()}
+                        </span>
+                      ) : (
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">
+                          {cell.date.getDate()}
+                        </span>
+                      ))}
+
+                    {cell.visits.slice(0, 2).map((visit) => {
+                      const type = visit.notes.toLowerCase().includes("emergencia")
+                        ? "emergencia"
+                        : "mantenimiento";
+                      return (
+                        <div
+                          key={visit.id}
+                          className={`mt-1 p-1 rounded text-[10px] font-medium truncate cursor-pointer ${eventStyles[type]}`}
+                        >
+                          {formatTime(visit.visited_at)} - {visit.branch}
+                        </div>
+                      );
+                    })}
+                    {cell.visits.length > 2 && (
+                      <div className="text-[10px] text-slate-400 mt-1">
+                        +{cell.visits.length - 2} más
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
+          {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+          {isLoading && <p className="text-sm text-slate-500 mt-3">Cargando visitas...</p>}
         </div>
 
         <aside className="w-80 bg-white dark:bg-[#161e27] border-l border-slate-200 dark:border-slate-800 flex-col shrink-0 hidden xl:flex">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="font-bold text-slate-900 dark:text-white text-lg">
-              Resumen del Día
-            </h3>
-            <p className="text-sm text-slate-500 mt-1">12 Noviembre, 2023</p>
+            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Resumen del Día</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              {selectedDate.toLocaleDateString("es-PE", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
           </div>
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm">
-              <div className="flex items-start justify-between mb-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-green-50 text-professional-green dark:bg-green-900/30 dark:text-green-300">
-                  Mantenimiento
-                </span>
-                <span className="text-xs font-semibold text-slate-400">11:30 AM</span>
-              </div>
-              <h4 className="font-bold text-slate-800 dark:text-white text-sm">
-                Primax Javier Prado
-              </h4>
-              <p className="text-xs text-slate-500 mt-1 mb-3">Av. Javier Prado Este 4500</p>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                  CR
+            {selectedDayVisits.length === 0 && (
+              <div className="text-sm text-slate-500">No hay visitas para la fecha seleccionada.</div>
+            )}
+            {selectedDayVisits.map((visit) => {
+              const emergency = visit.notes.toLowerCase().includes("emergencia");
+              return (
+                <div
+                  className={`p-4 rounded-xl shadow-sm ${
+                    emergency
+                      ? "border-l-4 border-l-primary bg-yellow-50/30 dark:bg-yellow-900/10"
+                      : "border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50"
+                  }`}
+                  key={visit.id}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                        emergency
+                          ? "bg-primary text-black"
+                          : "bg-green-50 text-professional-green dark:bg-green-900/30 dark:text-green-300"
+                      }`}
+                    >
+                      {emergency ? "Emergencia" : "Mantenimiento"}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-400">
+                      {formatTime(visit.visited_at)}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-slate-800 dark:text-white text-sm">{visit.branch}</h4>
+                  <p className="text-xs text-slate-500 mt-1 mb-3">{visit.area}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                      {visit.inspector
+                        .split(" ")
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((v) => v[0]?.toUpperCase())
+                        .join("")}
+                    </div>
+                    <span className="text-xs text-slate-600 dark:text-slate-400">{visit.inspector}</span>
+                  </div>
+                  {visit.notes && (
+                    <p className="text-xs text-slate-500 mt-2 line-clamp-2">{visit.notes}</p>
+                  )}
                 </div>
-                <span className="text-xs text-slate-600 dark:text-slate-400">Carlos Ruiz</span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl border-l-4 border-l-primary bg-yellow-50/30 dark:bg-yellow-900/10 shadow-sm">
-              <div className="flex items-start justify-between mb-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-primary text-black">
-                  Emergencia
-                </span>
-                <span className="text-xs font-semibold text-slate-400">04:45 PM</span>
-              </div>
-              <h4 className="font-bold text-slate-800 dark:text-white text-sm">Sucursal Centro #04</h4>
-              <p className="text-xs text-slate-500 mt-1 mb-3">! Falla eléctrica en tablero principal</p>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                  AG
-                </div>
-                <span className="text-xs text-slate-600 dark:text-slate-400">Ana Gómez</span>
-              </div>
-              <button
-                className="w-full mt-3 py-1.5 rounded-md bg-white border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                type="button"
-              >
-                Ver Detalles
-              </button>
-            </div>
+              );
+            })}
           </div>
 
           <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#161e27]">
@@ -252,11 +358,11 @@ export default function CalendarioPage() {
             </span>
             <div className="grid grid-cols-2 gap-3 mt-3">
               <div className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
-                <div className="text-2xl font-bold text-professional-green">24</div>
+                <div className="text-2xl font-bold text-professional-green">{stats.completed}</div>
                 <div className="text-[10px] text-slate-500 uppercase font-medium">Completadas</div>
               </div>
               <div className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
-                <div className="text-2xl font-bold text-slate-800 dark:text-white">8</div>
+                <div className="text-2xl font-bold text-slate-800 dark:text-white">{stats.pending}</div>
                 <div className="text-[10px] text-slate-500 uppercase font-medium">Pendientes</div>
               </div>
             </div>
