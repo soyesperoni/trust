@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
@@ -288,6 +289,14 @@ export default function VisitasPage() {
                     </div>
                     <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap justify-end gap-2">
                       {typeLabel === "Finalizada" ? (
+                        <Link
+                          className="text-slate-700 bg-slate-100 font-semibold text-sm px-4 py-2 hover:bg-slate-200 rounded-full transition-colors"
+                          href={`/clientes/visitas/${visit.id}/informe`}
+                        >
+                          Ver informe
+                        </Link>
+                      ) : null}
+                      {typeLabel === "Finalizada" ? (
                         <button
                           className="text-white bg-slate-900 font-semibold text-sm px-4 py-2 hover:bg-slate-700 rounded-full transition-colors"
                           onClick={() => downloadVisitReport(visit.id)}
@@ -444,13 +453,21 @@ export default function VisitasPage() {
                         </td>
                         <td className="whitespace-nowrap px-6 py-4">
                           {typeLabel === "Finalizada" ? (
-                            <button
-                              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
-                              onClick={() => downloadVisitReport(visit.id)}
-                              type="button"
-                            >
-                              Descargar PDF
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <Link
+                                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                href={`/clientes/visitas/${visit.id}/informe`}
+                              >
+                                Ver informe
+                              </Link>
+                              <button
+                                className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
+                                onClick={() => downloadVisitReport(visit.id)}
+                                type="button"
+                              >
+                                Descargar PDF
+                              </button>
+                            </div>
                           ) : (
                             <span className="text-slate-400">No disponible</span>
                           )}
