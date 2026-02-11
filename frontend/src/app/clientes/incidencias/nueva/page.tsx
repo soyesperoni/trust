@@ -108,13 +108,15 @@ export default function NuevaIncidenciaPage() {
 
   return (
     <>
-      <DashboardHeader
-        title="Nueva Incidencia"
-        description="Registra un nuevo reporte técnico."
-      />
+      <div className="hidden md:block">
+        <DashboardHeader
+          title="Nueva Incidencia"
+          description="Registra un nuevo reporte técnico."
+        />
+      </div>
 
-      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <section className="mx-auto w-full max-w-lg px-2 py-2 md:hidden">
+      <PageTransition className="flex-1 overflow-y-auto p-0 md:p-8">
+        <section className="w-full min-h-full px-4 py-4 md:hidden">
           <div className="mb-8">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-primary">Paso {mobileStep} de 3</span>
