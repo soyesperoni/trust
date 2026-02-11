@@ -153,6 +153,14 @@ def _serialize_dispenser(dispenser: Dispenser) -> dict:
         }
         if dispenser.area
         else None,
+        "products": [
+            {
+                "id": product.id,
+                "name": product.name,
+                "photo": product.photo.url if product.photo else None,
+            }
+            for product in dispenser.products.all()
+        ],
     }
 
 
@@ -161,6 +169,7 @@ def _serialize_product(product: Product) -> dict:
         "id": product.id,
         "name": product.name,
         "description": product.description,
+        "photo": product.photo.url if product.photo else None,
         "dispenser": {
             "id": product.dispenser_id,
             "identifier": product.dispenser.identifier,
@@ -420,7 +429,7 @@ def areas(request):
 
 @require_GET
 def dispensers(request):
-    queryset = Dispenser.objects.select_related("model", "area__branch__client")
+    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
     client_scope_ids = _get_client_scope_ids(request)
     branch_scope_ids = _get_branch_scope_ids(request)
     if client_scope_ids is not None:
