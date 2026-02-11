@@ -190,3 +190,19 @@ class VisitPublicReportRouteTests(TestCase):
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertIn("inline", response["Content-Disposition"])
         build_pdf_mock.assert_called_once_with(self.visit, public_report_url=None)
+
+    def test_public_report_detail_route_requires_valid_token(self):
+        response = self.client.get("/api/visits/report/public/token-invalido/")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_public_report_detail_route_returns_visit_data_without_authentication(self):
+        token = signing.dumps({"visit_id": self.visit.id}, salt="visit-report-public-link")
+
+        response = self.client.get(f"/api/visits/report/public/{token}/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["id"], self.visit.id)
+        self.assertEqual(payload["status"], Visit.Status.COMPLETED)
+        self.assertIn("dispenser_detail", payload)

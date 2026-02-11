@@ -56,9 +56,10 @@ export default function AppShell({ children }: AppShellProps) {
   const { user, isLoading } = useCurrentUser();
   const isMobileIncidentCreation = pathname === "/clientes/incidencias/nueva";
   const isMobileVisitFlow = pathname.includes("/clientes/visitas/") && pathname.endsWith("/realizar");
+  const isPublicVisitReport = pathname.startsWith("/visits/report/public/");
 
   useEffect(() => {
-    if (!pathname || pathname === "/" || isLoading) return;
+    if (!pathname || pathname === "/" || isLoading || isPublicVisitReport) return;
     if (user?.role === ACCOUNT_ADMIN_ROLE && !isAccountAdminAllowedPath(pathname)) {
       router.replace("/dashboard");
       return;
@@ -70,9 +71,9 @@ export default function AppShell({ children }: AppShellProps) {
     if (user?.role === INSPECTOR_ROLE && !isInspectorAllowedPath(pathname)) {
       router.replace("/dashboard");
     }
-  }, [isLoading, pathname, router, user?.role]);
+  }, [isLoading, isPublicVisitReport, pathname, router, user?.role]);
 
-  if (!pathname || pathname === "/") {
+  if (!pathname || pathname === "/" || isPublicVisitReport) {
     return <>{children}</>;
   }
 
