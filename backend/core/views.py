@@ -6,6 +6,7 @@ from urllib.request import urlopen
 
 from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
+from django.http.multipartparser import MultiPartParser, MultiPartParserError
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
@@ -68,14 +69,28 @@ def _get_branch_scope_ids(request):
 
 def _extract_user_data(request):
     if request.content_type and request.content_type.startswith("multipart/form-data"):
-        data = request.POST.copy()
+        if request.method == "POST":
+            data = request.POST.copy()
+            files = request.FILES
+        else:
+            try:
+                parser = MultiPartParser(
+                    request.META,
+                    BytesIO(request.body),
+                    request.upload_handlers,
+                    request.encoding,
+                )
+                data, files = parser.parse()
+                data = data.copy()
+            except (MultiPartParserError, ValueError):
+                return None, None
         if "client_ids" in data and isinstance(data.get("client_ids"), str):
             data.setlist("client_ids", [value for value in data.getlist("client_ids") if value != ""])
         if "branch_ids" in data and isinstance(data.get("branch_ids"), str):
             data.setlist("branch_ids", [value for value in data.getlist("branch_ids") if value != ""])
         if "area_ids" in data and isinstance(data.get("area_ids"), str):
             data.setlist("area_ids", [value for value in data.getlist("area_ids") if value != ""])
-        return data, request.FILES
+        return data, files
 
     try:
         return json.loads(request.body or "{}"), request.FILES
