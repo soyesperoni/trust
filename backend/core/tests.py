@@ -144,6 +144,24 @@ class VisitReportRouteTests(TestCase):
         self.assertIn(f'visita-{self.visit.id}-informe.pdf', response["Content-Disposition"])
         build_pdf_mock.assert_called_once()
 
+    def test_report_route_accepts_legacy_json_string_visit_report(self):
+        self.visit.visit_report = json.dumps(
+            {
+                "checklist": [{"status": "ok"}],
+                "comments": "Todo en orden",
+                "responsible_name": "Supervisor",
+            }
+        )
+        self.visit.save(update_fields=["visit_report"])
+
+        response = self.client.get(
+            f"/api/visits/{self.visit.id}/report",
+            HTTP_X_CURRENT_USER_EMAIL=self.inspector.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+
 
 class VisitPublicReportRouteTests(TestCase):
     def setUp(self):
