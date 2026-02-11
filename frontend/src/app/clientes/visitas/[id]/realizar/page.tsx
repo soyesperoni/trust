@@ -417,7 +417,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
 
   const startCameraStream = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
+      audio: cameraMode === "video",
       video: {
         facingMode: { ideal: "environment" },
         width: { ideal: 1280 },
@@ -452,7 +452,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
       stopCameraStream();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCameraModalOpen]);
+  }, [cameraMode, isCameraModalOpen]);
 
   const onRetakeEvidence = () => {
     if (pendingEvidence) {
@@ -472,16 +472,22 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
     closeCameraModal();
   };
 
-  const onOpenCameraModal = () => {
+  const onOpenCameraModal = async () => {
     if (evidenceFiles.length >= MAX_EVIDENCE_ITEMS) {
       setEvidenceError("Solo puedes registrar hasta 4 evidencias en total.");
       return;
     }
-    setEvidenceError(null);
-    setPendingEvidence(null);
-    setCameraMode("photo");
-    setRecordingSeconds(0);
-    setIsCameraModalOpen(true);
+
+    try {
+      await requestMediaPermissions({ requireMicrophone: true });
+      setEvidenceError(null);
+      setPendingEvidence(null);
+      setCameraMode("photo");
+      setRecordingSeconds(0);
+      setIsCameraModalOpen(true);
+    } catch {
+      setEvidenceError("No se otorgaron permisos de cámara y micrófono.");
+    }
   };
 
   const onTakePhoto = async () => {
@@ -611,6 +617,29 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
     });
   };
 
+  const requestMediaPermissions = async ({ requireMicrophone }: { requireMicrophone: boolean }) => {
+    if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Tu dispositivo no permite acceder a la cámara.");
+    }
+
+    const permissionStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+      audio: requireMicrophone,
+    });
+    permissionStream.getTracks().forEach((track) => track.stop());
+  };
+
+  const ensureStepPermissions = async (targetStep: number) => {
+    if (targetStep === 3) {
+      await requestMediaPermissions({ requireMicrophone: true });
+      return;
+    }
+
+    if (targetStep === 4) {
+      await validatePhoneLocation();
+    }
+  };
+
   const patchFlow = async (payload: Record<string, unknown>, files?: File[]) => {
     if (!visitId) return null;
     const currentUserEmail = getSessionUserEmail();
@@ -697,6 +726,23 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
 
   const onCancel = () => {
     router.push("/clientes/calendario");
+  };
+
+  const onGoToNextStep = async () => {
+    const targetStep = step + 1;
+    if (targetStep > 4) return;
+
+    try {
+      setError(null);
+      await ensureStepPermissions(targetStep);
+      setStep(targetStep);
+    } catch (permissionError) {
+      setError(
+        permissionError instanceof Error
+          ? permissionError.message
+          : "No se concedieron los permisos necesarios para continuar.",
+      );
+    }
   };
 
   const getCanvasPoint = (event: PointerEvent<HTMLCanvasElement>) => {
@@ -1076,7 +1122,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           <button
             className="rounded-xl bg-primary py-3 font-bold text-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
             disabled={(step === 1 && !startCoords) || (step === 2 && !allDispensersChecked)}
-            onClick={() => setStep((value) => value + 1)}
+            onClick={onGoToNextStep}
             type="button"
           >
             Siguiente
