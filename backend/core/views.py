@@ -17,13 +17,14 @@ from django.views.decorators.http import require_GET, require_http_methods
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.utils import ImageReader
-from reportlab.graphics.barcode import qr
-from reportlab.graphics.shapes import Drawing
-from reportlab.graphics import renderPDF
 from reportlab.pdfgen import canvas
 
 from .models import Area, Branch, Client, Dispenser, Incident, Product, User, Visit, VisitMedia
 
+
+REPORT_FONT = "Helvetica"
+REPORT_FONT_BOLD = "Helvetica-Bold"
+REPORT_FONT_ITALIC = "Helvetica-Oblique"
 
 def _serialize_user(user: User) -> dict:
     full_name = user.get_full_name().strip()
@@ -247,65 +248,25 @@ def _serialize_visit(visit: Visit) -> dict:
     }
 
 
-def _draw_round_card(pdf: canvas.Canvas, x: float, y: float, width: float, height: float, radius: float = 14):
-    pdf.setFillColor(colors.white)
-    pdf.roundRect(x, y, width, height, radius, fill=1, stroke=0)
-
-
-def _draw_report_header(pdf: canvas.Canvas, visit: Visit, generated_at: datetime, report_url: str):
+def _draw_report_header(pdf: canvas.Canvas, visit: Visit, generated_at: datetime):
     page_width, page_height = LETTER
-    card_x = 28
-    card_y = 42
-    card_w = page_width - 56
-    card_h = page_height - 100
 
-    pdf.setFillColor(colors.HexColor("#f1f5f9"))
+    pdf.setFillColor(colors.white)
     pdf.rect(0, 0, page_width, page_height, fill=1, stroke=0)
-    _draw_round_card(pdf, card_x, card_y, card_w, card_h)
-
-    trust_x = card_x + 24
-    trust_y = page_height - 98
 
     pdf.setFillColor(colors.HexColor("#facc15"))
-    pdf.roundRect(trust_x, trust_y, 120, 34, 6, fill=1, stroke=0)
-    pdf.setFillColor(colors.HexColor("#111827"))
-    pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(trust_x + 20, trust_y + 11, "trust")
-
-    qr_code = qr.QrCodeWidget(report_url)
-    qr_bounds = qr_code.getBounds()
-    qr_size = 76
-    qr_drawing = Drawing(
-        qr_size,
-        qr_size,
-        transform=[
-            qr_size / (qr_bounds[2] - qr_bounds[0]),
-            0,
-            0,
-            qr_size / (qr_bounds[3] - qr_bounds[1]),
-            0,
-            0,
-        ],
-    )
-    qr_drawing.add(qr_code)
-    qr_x = card_x + card_w - 106
-    qr_y = page_height - 142
-    pdf.setFillColor(colors.HexColor("#f8fafc"))
-    pdf.roundRect(qr_x - 8, qr_y - 8, qr_size + 16, qr_size + 16, 10, fill=1, stroke=0)
-    renderPDF.draw(qr_drawing, pdf, qr_x, qr_y)
-    pdf.setFillColor(colors.HexColor("#475569"))
-    pdf.setFont("Helvetica", 8)
-    pdf.drawCentredString(qr_x + (qr_size / 2), qr_y - 14, "Descargar informe")
+    pdf.setFont(REPORT_FONT_BOLD, 18)
+    pdf.drawString(52, page_height - 72, "trust")
 
     pdf.setFillColor(colors.HexColor("#111827"))
-    pdf.setFont("Helvetica-Bold", 18)
-    pdf.drawString(card_x + 24, page_height - 142, "Informe de Visita")
-    pdf.setFont("Helvetica", 9)
+    pdf.setFont(REPORT_FONT_BOLD, 18)
+    pdf.drawString(52, page_height - 100, "Informe de Visita")
+    pdf.setFont(REPORT_FONT, 9)
     pdf.setFillColor(colors.HexColor("#64748b"))
-    pdf.drawString(card_x + 24, page_height - 158, f"Generado: {generated_at.strftime('%d/%m/%Y %H:%M')}")
+    pdf.drawString(52, page_height - 116, f"Generado: {generated_at.strftime('%d/%m/%Y %H:%M')}")
     pdf.setFillColor(colors.HexColor("#0f172a"))
-    pdf.setFont("Helvetica-Bold", 11)
-    pdf.drawString(card_x + 24, page_height - 182, f"Visita #{visit.id} · {visit.get_status_display()}")
+    pdf.setFont(REPORT_FONT_BOLD, 11)
+    pdf.drawString(52, page_height - 140, f"Visita #{visit.id} · {visit.get_status_display()}")
 
 
 def _draw_wrapped_text(pdf: canvas.Canvas, text: str, x: float, y: float, width: float, line_height: float = 13):
@@ -351,8 +312,8 @@ def _draw_summary_grid(pdf: canvas.Canvas, visit: Visit, y_start: float):
     card_y = y_start - 110
     card_w = 506
     card_h = 96
-    pdf.setFillColor(colors.HexColor("#f8fafc"))
-    pdf.roundRect(card_x, card_y, card_w, card_h, 10, fill=1, stroke=0)
+    pdf.setFillColor(colors.white)
+    pdf.rect(card_x, card_y, card_w, card_h, fill=1, stroke=0)
 
     report = visit.visit_report or {}
     items = [
@@ -364,28 +325,28 @@ def _draw_summary_grid(pdf: canvas.Canvas, visit: Visit, y_start: float):
     col_w = 120
     x = card_x + 16
     for label, value in items:
-        pdf.setFont("Helvetica-Bold", 8)
+        pdf.setFont(REPORT_FONT_BOLD, 8)
         pdf.setFillColor(colors.HexColor("#64748b"))
         pdf.drawString(x, card_y + 66, label.upper())
-        pdf.setFont("Helvetica-Bold", 10)
+        pdf.setFont(REPORT_FONT_BOLD, 10)
         pdf.setFillColor(colors.HexColor("#0f172a"))
         pdf.drawString(x, card_y + 50, str(value)[:22])
         x += col_w
 
     inspector_name = visit.inspector.get_full_name() if visit.inspector else "Sin inspector"
-    pdf.setFont("Helvetica-Bold", 8)
+    pdf.setFont(REPORT_FONT_BOLD, 8)
     pdf.setFillColor(colors.HexColor("#64748b"))
     pdf.drawString(card_x + 16, card_y + 30, "INSPECTOR")
-    pdf.setFont("Helvetica", 10)
+    pdf.setFont(REPORT_FONT, 10)
     pdf.setFillColor(colors.HexColor("#0f172a"))
     pdf.drawString(card_x + 16, card_y + 16, inspector_name[:52])
 
     checklist = report.get("checklist") if isinstance(report.get("checklist"), list) else []
     ok_count = sum(1 for item in checklist if str(item.get("status") or "").lower() == "ok")
-    pdf.setFont("Helvetica-Bold", 8)
+    pdf.setFont(REPORT_FONT_BOLD, 8)
     pdf.setFillColor(colors.HexColor("#64748b"))
     pdf.drawString(card_x + 290, card_y + 30, "DOSIFICADORES VERIFICADOS")
-    pdf.setFont("Helvetica-Bold", 10)
+    pdf.setFont(REPORT_FONT_BOLD, 10)
     pdf.setFillColor(colors.HexColor("#166534"))
     pdf.drawString(card_x + 290, card_y + 16, f"OK: {ok_count}/{len(checklist)}")
 
@@ -397,8 +358,8 @@ def _draw_location_map(pdf: canvas.Canvas, visit: Visit, y_start: int):
     map_x, map_y = 52, y_start - 210
     map_width, map_height = page_width - 104, 180
 
-    pdf.setFillColor(colors.HexColor("#f8fafc"))
-    pdf.roundRect(map_x, map_y, map_width, map_height, 12, fill=1, stroke=0)
+    pdf.setFillColor(colors.white)
+    pdf.rect(map_x, map_y, map_width, map_height, fill=1, stroke=0)
 
     start_lat = visit.start_latitude
     start_lon = visit.start_longitude
@@ -406,7 +367,7 @@ def _draw_location_map(pdf: canvas.Canvas, visit: Visit, y_start: int):
     end_lon = visit.end_longitude
     if None in (start_lat, start_lon, end_lat, end_lon):
         pdf.setFillColor(colors.HexColor("#64748b"))
-        pdf.setFont("Helvetica", 10)
+        pdf.setFont(REPORT_FONT, 10)
         pdf.drawString(map_x + 16, map_y + 88, "No hay coordenadas suficientes para generar el mapa.")
         return map_y - 20
 
@@ -416,7 +377,7 @@ def _draw_location_map(pdf: canvas.Canvas, visit: Visit, y_start: int):
         pdf.drawImage(image, map_x, map_y, width=map_width, height=map_height, mask="auto")
     except Exception:
         pdf.setFillColor(colors.HexColor("#e2e8f0"))
-        pdf.roundRect(map_x, map_y, map_width, map_height, 12, fill=1, stroke=0)
+        pdf.rect(map_x, map_y, map_width, map_height, fill=1, stroke=0)
 
     distance_factor = max(abs(start_lat - end_lat), abs(start_lon - end_lon), 0.0006)
 
@@ -440,9 +401,9 @@ def _draw_location_map(pdf: canvas.Canvas, visit: Visit, y_start: int):
     pdf.circle(end_x, end_y, 5, stroke=0, fill=1)
 
     pdf.setFillColor(colors.white)
-    pdf.roundRect(map_x + 12, map_y + map_height - 34, 198, 24, 8, fill=1, stroke=0)
+    pdf.rect(map_x + 12, map_y + map_height - 34, 198, 24, fill=1, stroke=0)
     pdf.setFillColor(colors.HexColor("#0f172a"))
-    pdf.setFont("Helvetica", 9)
+    pdf.setFont(REPORT_FONT, 9)
     pdf.drawString(map_x + 18, map_y + map_height - 20, f"Inicio: {start_lat:.6f}, {start_lon:.6f}")
     pdf.drawString(map_x + 16, map_y + 12, "● Verde: inicio · ● Rojo: final")
     return map_y - 20
@@ -454,7 +415,7 @@ def _draw_report_images(pdf: canvas.Canvas, visit: Visit, y_start: int):
         return y_start
 
     pdf.setFillColor(colors.HexColor("#111827"))
-    pdf.setFont("Helvetica-Bold", 11)
+    pdf.setFont(REPORT_FONT_BOLD, 11)
     pdf.drawString(52, y_start, "Evidencias fotográficas")
     y = y_start - 12
     x = 52
@@ -467,7 +428,7 @@ def _draw_report_images(pdf: canvas.Canvas, visit: Visit, y_start: int):
         height = 112
 
         pdf.setFillColor(colors.HexColor("#f8fafc"))
-        pdf.roundRect(x, y - height, width, height, 12, fill=1, stroke=0)
+        pdf.rect(x, y - height, width, height, fill=1, stroke=0)
 
         try:
             image_data = item.file.read() if hasattr(item.file, "read") else default_storage.open(item.file.name, "rb").read()
@@ -475,14 +436,14 @@ def _draw_report_images(pdf: canvas.Canvas, visit: Visit, y_start: int):
             pdf.drawImage(image, x + 1, y - height + 1, width=width - 2, height=height - 2, preserveAspectRatio=True, mask="auto")
         except Exception:
             pdf.setFillColor(colors.HexColor("#e2e8f0"))
-            pdf.roundRect(x + 1, y - height + 1, width - 2, height - 2, 10, fill=1, stroke=0)
+            pdf.rect(x + 1, y - height + 1, width - 2, height - 2, fill=1, stroke=0)
             pdf.setFillColor(colors.HexColor("#64748b"))
-            pdf.setFont("Helvetica", 9)
+            pdf.setFont(REPORT_FONT, 9)
             pdf.drawString(x + 12, y - 58, "No se pudo cargar la imagen")
 
         pdf.setStrokeColor(colors.HexColor("#e2e8f0"))
         pdf.setLineWidth(1)
-        pdf.roundRect(x, y - height, width, height, 12, fill=0, stroke=1)
+        pdf.rect(x, y - height, width, height, fill=0, stroke=1)
         x += 252
 
     return y - 136
@@ -495,30 +456,26 @@ def _draw_signoff(pdf: canvas.Canvas, visit: Visit, y_start: float):
 
     if y_start < 210:
         pdf.showPage()
-        report_url = f"/api/visits/{visit.id}/report"
-        _draw_report_header(pdf, visit, timezone.localtime(), report_url)
+        _draw_report_header(pdf, visit, timezone.localtime())
         y_start = 630
 
     card_x = 52
     card_y = y_start - 118
     card_w = 506
     card_h = 100
-    pdf.setFillColor(colors.HexColor("#f8fafc"))
-    pdf.roundRect(card_x, card_y, card_w, card_h, 10, fill=1, stroke=0)
+    pdf.setFillColor(colors.white)
+    pdf.rect(card_x, card_y, card_w, card_h, fill=1, stroke=0)
     pdf.setFillColor(colors.HexColor("#111827"))
-    pdf.setFont("Helvetica-Bold", 11)
+    pdf.setFont(REPORT_FONT_BOLD, 11)
     pdf.drawString(card_x + 16, card_y + 76, "Firma de conformidad")
-    pdf.setFont("Helvetica", 10)
-    pdf.setFillColor(colors.HexColor("#334155"))
-    pdf.drawString(card_x + 16, card_y + 60, f"Representante de área: {responsible_name[:70]}")
 
-    line_y = card_y + 30
+    line_y = card_y + 34
+    line_x_start = card_x + 140
+    line_x_end = card_x + card_w - 140
+    line_center_x = (line_x_start + line_x_end) / 2
     pdf.setStrokeColor(colors.HexColor("#0f172a"))
     pdf.setLineWidth(1)
-    pdf.line(card_x + 300, line_y, card_x + card_w - 24, line_y)
-    pdf.setFillColor(colors.HexColor("#64748b"))
-    pdf.setFont("Helvetica-Bold", 8)
-    pdf.drawCentredString(card_x + 392, line_y - 11, "REPRESENTANTE DE ÁREA")
+    pdf.line(line_x_start, line_y, line_x_end, line_y)
 
     if signature_data.startswith("data:image") and "," in signature_data:
         try:
@@ -526,51 +483,48 @@ def _draw_signoff(pdf: canvas.Canvas, visit: Visit, y_start: float):
             image = ImageReader(BytesIO(base64.b64decode(encoded)))
             pdf.drawImage(
                 image,
-                card_x + 314,
+                line_x_start + 12,
                 line_y + 2,
-                width=170,
+                width=(line_x_end - line_x_start) - 24,
                 height=34,
                 mask="auto",
                 preserveAspectRatio=True,
                 anchor="sw",
             )
         except Exception:
-            pdf.setFont("Helvetica-Oblique", 9)
+            pdf.setFont(REPORT_FONT_ITALIC, 9)
             pdf.setFillColor(colors.HexColor("#64748b"))
-            pdf.drawString(card_x + 312, line_y + 12, "No se pudo renderizar la firma del representante.")
+            pdf.drawCentredString(line_center_x, line_y + 12, "No se pudo renderizar la firma del representante.")
     else:
-        pdf.setFont("Helvetica-Oblique", 9)
+        pdf.setFont(REPORT_FONT_ITALIC, 9)
         pdf.setFillColor(colors.HexColor("#64748b"))
-        pdf.drawString(card_x + 312, line_y + 12, "Firma no registrada")
+        pdf.drawCentredString(line_center_x, line_y + 12, "Firma no registrada")
+
+    pdf.setFillColor(colors.HexColor("#64748b"))
+    pdf.setFont(REPORT_FONT_BOLD, 8)
+    pdf.drawCentredString(line_center_x, line_y - 11, "REPRESENTANTE DE ÁREA")
 
     pdf.setFillColor(colors.HexColor("#111827"))
-    pdf.setFont("Helvetica-Bold", 10)
-    pdf.drawString(card_x + 16, card_y + 22, f"Responsable: {responsible_name[:70]}")
+    pdf.setFont(REPORT_FONT_BOLD, 10)
+    pdf.drawCentredString(line_center_x, card_y + 18, responsible_name[:70])
 
     return card_y - 20
 
 
 def _draw_report_footer(pdf: canvas.Canvas, generated_at: datetime):
     page_width, _ = LETTER
-    current_year = generated_at.year
     footer_y = 26
-    pdf.setFillColor(colors.HexColor("#facc15"))
-    pdf.roundRect(28, footer_y, page_width - 56, 24, 8, fill=1, stroke=0)
-    pdf.setFillColor(colors.black)
-    pdf.setFont("Helvetica-Bold", 8)
-    footer_text = (
-        f"trust · informe generado por trust by Supplymax de Panamá · todos los derechos reservados · "
-        f"{current_year} · {generated_at.strftime('%d/%m/%Y %H:%M')}"
-    )
-    pdf.drawCentredString(page_width / 2, footer_y + 8, footer_text)
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(REPORT_FONT, 8)
+    footer_text = f"informe generado por trust by Supplymax de Panamá {generated_at.strftime('%d/%m/%Y %H:%M')}"
+    pdf.drawCentredString(page_width / 2, footer_y, footer_text)
 
 
 def _build_visit_pdf(visit: Visit) -> bytes:
     output = BytesIO()
     pdf = canvas.Canvas(output, pagesize=LETTER)
     generated_at = timezone.localtime()
-    report_url = f"https://app.trust.com/api/visits/{visit.id}/report"
-    _draw_report_header(pdf, visit, generated_at, report_url)
+    _draw_report_header(pdf, visit, generated_at)
     report = visit.visit_report or {}
 
     y = 586
@@ -578,11 +532,11 @@ def _build_visit_pdf(visit: Visit) -> bytes:
 
     y = _draw_location_map(pdf, visit, y)
 
-    pdf.setFont("Helvetica-Bold", 11)
+    pdf.setFont(REPORT_FONT_BOLD, 11)
     pdf.setFillColor(colors.HexColor("#111827"))
     pdf.drawString(52, y, "Observaciones")
     y -= 14
-    pdf.setFont("Helvetica", 10)
+    pdf.setFont(REPORT_FONT, 10)
     comments = str(report.get("comments") or visit.notes or "Sin observaciones.")
     y = _draw_wrapped_text(pdf, comments[:800], 52, y, 500)
     y -= 8
