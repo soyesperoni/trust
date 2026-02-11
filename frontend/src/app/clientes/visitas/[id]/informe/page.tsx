@@ -29,6 +29,8 @@ type Visit = {
   dispenser: string | null;
   inspector: string;
   visited_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
   notes: string;
   status?: string;
   start_latitude?: number | null;
@@ -58,7 +60,7 @@ type Dispenser = {
   products: DispenserProduct[];
 };
 
-const DEFAULT_BACKEND_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+const DEFAULT_BACKEND_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_BASE_URL?.replace(/\/$/, "") ?? "";
 
 type MapFocus = "start" | "end";
 
@@ -68,13 +70,24 @@ const toAbsoluteMediaUrl = (fileUrl: string | null | undefined) => {
     return fileUrl;
   }
 
+  const runtimeBaseUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : DEFAULT_BACKEND_BASE_URL;
+  const fallbackBaseUrl = runtimeBaseUrl || DEFAULT_BACKEND_BASE_URL || "https://trust.supplymax.net";
+
   if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
     try {
       const parsedUrl = new URL(fileUrl);
       const isLocalBackendHost = ["localhost", "127.0.0.1"].includes(parsedUrl.hostname);
 
-      if (isLocalBackendHost && typeof window !== "undefined") {
-        return `${window.location.origin}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+      if (isLocalBackendHost && runtimeBaseUrl) {
+        return `${runtimeBaseUrl}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+      }
+
+      if (typeof window !== "undefined" && window.location.protocol === "https:" && parsedUrl.protocol === "http:") {
+        parsedUrl.protocol = "https:";
+        return parsedUrl.toString();
       }
 
       return fileUrl;
@@ -83,7 +96,11 @@ const toAbsoluteMediaUrl = (fileUrl: string | null | undefined) => {
     }
   }
 
-  return `${DEFAULT_BACKEND_BASE_URL}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
+  try {
+    return new URL(fileUrl, `${fallbackBaseUrl}/`).toString();
+  } catch {
+    return `${fallbackBaseUrl}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
+  }
 };
 
 export default function VisitaInformePage({ params }: { params: Promise<{ id: string }> }) {
@@ -182,11 +199,29 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
     });
   }, [visit?.visited_at]);
 
+  const formatDateTime = (value?: string | null, dateOnly = false) => {
+    if (!value) return "No registrado";
+    const parsedDate = new Date(value);
+    if (Number.isNaN(parsedDate.getTime())) return "No registrado";
+
+    return parsedDate.toLocaleString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      ...(dateOnly
+        ? {}
+        : {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+    });
+  };
+
   const reportComments = visit?.visit_report?.comments || visit?.notes || "Sin observaciones.";
   const responsible = visit?.visit_report?.responsible_name || "No registrado";
   const responsibleSignature = toAbsoluteMediaUrl(visit?.visit_report?.responsible_signature);
   const media = visit?.media ?? [];
-  const imageMedia = media.filter((entry) => entry.type === "image" && Boolean(entry.file));
+  const imageMedia = media.filter((entry) => ["image", "photo"].includes(entry.type) && Boolean(entry.file));
   const videoMedia = media.filter((entry) => entry.type === "video" && Boolean(entry.file));
 
   const mapCoordinates = useMemo(() => {
@@ -307,6 +342,26 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]">
                 <span className="text-xs font-semibold uppercase text-slate-500">Área</span>
                 <p className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{visit.area}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]">
+                <span className="text-xs font-semibold uppercase text-slate-500">Inspector</span>
+                <p className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{visit.inspector || "Sin inspector"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]">
+                <span className="text-xs font-semibold uppercase text-slate-500">Cliente</span>
+                <p className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{visit.client || "Sin cliente"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]">
+                <span className="text-xs font-semibold uppercase text-slate-500">Día</span>
+                <p className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{formatDateTime(visit.visited_at, true)}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]">
+                <span className="text-xs font-semibold uppercase text-slate-500">Hora inicio</span>
+                <p className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{formatDateTime(visit.started_at)}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]">
+                <span className="text-xs font-semibold uppercase text-slate-500">Hora final</span>
+                <p className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{formatDateTime(visit.completed_at)}</p>
               </div>
             </div>
           </article>
