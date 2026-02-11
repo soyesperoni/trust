@@ -1,9 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
+import { getSessionUserEmail } from "../../../lib/session";
+
+type Client = { id: number; name: string };
+type Branch = { id: number; name: string; client: { id: number; name: string } };
+type Area = { id: number; name: string; branch: { id: number; name: string; client: string } };
+
+type Priority = "low" | "medium" | "high";
 
 const inputClassName =
   "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all";
@@ -12,11 +19,92 @@ const labelClassName =
 
 export default function NuevaIncidenciaPage() {
   const [mobileStep, setMobileStep] = useState(1);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [clientId, setClientId] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [areaId, setAreaId] = useState("");
+  const [reportTime, setReportTime] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<Priority>("medium");
+
   const progressValue = useMemo(() => {
     if (mobileStep === 1) return 33;
     if (mobileStep === 2) return 66;
     return 100;
   }, [mobileStep]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      try {
+        const currentUserEmail = getSessionUserEmail();
+        const [clientsResponse, branchesResponse, areasResponse] = await Promise.all([
+          fetch("/api/clients", {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
+          fetch("/api/branches", {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
+          fetch("/api/areas", {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
+        ]);
+
+        if (!clientsResponse.ok || !branchesResponse.ok || !areasResponse.ok) {
+          throw new Error("No se pudieron cargar los datos de ubicación.");
+        }
+
+        const [clientsPayload, branchesPayload, areasPayload] = await Promise.all([
+          clientsResponse.json(),
+          branchesResponse.json(),
+          areasResponse.json(),
+        ]);
+
+        if (!isMounted) return;
+
+        setClients(clientsPayload.results ?? []);
+        setBranches(branchesPayload.results ?? []);
+        setAreas(areasPayload.results ?? []);
+        setLoadError(null);
+      } catch (error) {
+        if (!isMounted) return;
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar los datos de ubicación.",
+        );
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredBranches = useMemo(
+    () => branches.filter((branch) => (clientId ? String(branch.client.id) === clientId : true)),
+    [branches, clientId],
+  );
+
+  const filteredAreas = useMemo(
+    () => areas.filter((area) => (branchId ? String(area.branch.id) === branchId : true)),
+    [areas, branchId],
+  );
+
+  const canGoNext =
+    (mobileStep === 1 && clientId && branchId) ||
+    (mobileStep === 2 && areaId && description.trim()) ||
+    mobileStep === 3;
 
   return (
     <>
@@ -30,41 +118,63 @@ export default function NuevaIncidenciaPage() {
           <div className="mb-8">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-primary">Paso {mobileStep} de 3</span>
-              <span className="text-xs font-medium text-slate-500">{progressValue}%</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{progressValue}%</span>
             </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
               <div className="h-1.5 rounded-full bg-primary" style={{ width: `${progressValue}%` }}></div>
             </div>
           </div>
 
+          {loadError ? (
+            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
+              {loadError}
+            </div>
+          ) : null}
+
           {mobileStep === 1 && (
             <div className="space-y-6">
               <div>
-                <h1 className="mb-2 text-3xl font-bold text-slate-900">Seleccionar ubicación</h1>
-                <p className="text-base text-slate-500">Identifica dónde ocurrió el incidente para asignarlo correctamente.</p>
+                <h1 className="mb-2 text-3xl font-bold text-slate-900 dark:text-white">Seleccionar ubicación</h1>
+                <p className="text-base text-slate-500 dark:text-slate-400">Identifica dónde ocurrió el incidente para asignarlo correctamente.</p>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Cliente</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Cliente</label>
                 <div className="relative">
-                  <select className="block w-full appearance-none rounded-xl border border-slate-300 bg-white py-3.5 pl-4 pr-10 text-base text-slate-900 shadow-sm focus:border-primary focus:ring-primary">
-                    <option>Seleccionar cliente</option>
-                    <option>Cliente Corporativo A</option>
-                    <option>Retail Group B</option>
-                    <option>Logística C</option>
+                  <select
+                    className="block w-full appearance-none rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 py-3.5 pl-4 pr-10 text-base text-slate-900 dark:text-slate-100 shadow-sm focus:border-primary focus:ring-primary"
+                    onChange={(event) => {
+                      setClientId(event.target.value);
+                      setBranchId("");
+                      setAreaId("");
+                    }}
+                    value={clientId}
+                  >
+                    <option value="">Seleccionar cliente</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
+                    ))}
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-icons">expand_more</span></div>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-symbols-outlined">expand_more</span></div>
                 </div>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Sucursal</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Sucursal</label>
                 <div className="relative">
-                  <select className="block w-full appearance-none rounded-xl border border-slate-300 bg-white py-3.5 pl-4 pr-10 text-base text-slate-900 shadow-sm focus:border-primary focus:ring-primary">
-                    <option>Seleccionar sucursal</option>
-                    <option>Sucursal Norte</option>
-                    <option>Sucursal Centro</option>
-                    <option>Bodega Principal</option>
+                  <select
+                    className="block w-full appearance-none rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 py-3.5 pl-4 pr-10 text-base text-slate-900 dark:text-slate-100 shadow-sm focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={!clientId}
+                    onChange={(event) => {
+                      setBranchId(event.target.value);
+                      setAreaId("");
+                    }}
+                    value={branchId}
+                  >
+                    <option value="">Seleccionar sucursal</option>
+                    {filteredBranches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>{branch.name}</option>
+                    ))}
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-icons">expand_more</span></div>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-symbols-outlined">expand_more</span></div>
                 </div>
               </div>
             </div>
@@ -73,28 +183,46 @@ export default function NuevaIncidenciaPage() {
           {mobileStep === 2 && (
             <div className="space-y-6">
               <div>
-                <h1 className="mb-2 text-3xl font-bold text-slate-900">Detalles del reporte</h1>
-                <p className="text-base text-slate-500">Proporciona información específica sobre lo sucedido.</p>
+                <h1 className="mb-2 text-3xl font-bold text-slate-900 dark:text-white">Detalles del reporte</h1>
+                <p className="text-base text-slate-500 dark:text-slate-400">Proporciona información específica sobre lo sucedido.</p>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Área</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Área</label>
                 <div className="relative">
-                  <select className="block w-full appearance-none rounded-xl border border-slate-300 bg-white py-3.5 pl-4 pr-10 text-base text-slate-900 shadow-sm focus:border-primary focus:ring-primary">
-                    <option>Seleccionar área</option><option>Recepción</option><option>Pasillos</option><option>Estacionamiento</option><option>Baños</option>
+                  <select
+                    className="block w-full appearance-none rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 py-3.5 pl-4 pr-10 text-base text-slate-900 dark:text-slate-100 shadow-sm focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={!branchId}
+                    onChange={(event) => setAreaId(event.target.value)}
+                    value={areaId}
+                  >
+                    <option value="">Seleccionar área</option>
+                    {filteredAreas.map((area) => (
+                      <option key={area.id} value={area.id}>{area.name}</option>
+                    ))}
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-icons">expand_more</span></div>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-symbols-outlined">expand_more</span></div>
                 </div>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Hora del reporte</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Hora del reporte</label>
                 <div className="relative">
-                  <input className="block w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-4 pr-10 text-base text-slate-900 shadow-sm focus:border-primary focus:ring-primary" type="time" />
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-icons">schedule</span></div>
+                  <input
+                    className="block w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 py-3.5 pl-4 pr-10 text-base text-slate-900 dark:text-slate-100 shadow-sm focus:border-primary focus:ring-primary"
+                    onChange={(event) => setReportTime(event.target.value)}
+                    type="time"
+                    value={reportTime}
+                  />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-symbols-outlined">schedule</span></div>
                 </div>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Descripción</label>
-                <textarea className="block min-h-[140px] w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-base text-slate-900 shadow-sm focus:border-primary focus:ring-primary" placeholder="Escribe los detalles aquí..."></textarea>
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Descripción</label>
+                <textarea
+                  className="block min-h-[140px] w-full resize-none rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3.5 text-base text-slate-900 dark:text-slate-100 shadow-sm focus:border-primary focus:ring-primary"
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Escribe los detalles aquí..."
+                  value={description}
+                ></textarea>
               </div>
             </div>
           )}
@@ -102,36 +230,47 @@ export default function NuevaIncidenciaPage() {
           {mobileStep === 3 && (
             <div className="space-y-6">
               <div>
-                <h1 className="mb-2 text-3xl font-bold text-slate-900">Urgencia y Evidencias</h1>
-                <p className="text-base text-slate-500">Indica la prioridad y adjunta fotos como respaldo.</p>
+                <h1 className="mb-2 text-3xl font-bold text-slate-900 dark:text-white">Urgencia y Evidencias</h1>
+                <p className="text-base text-slate-500 dark:text-slate-400">Indica la prioridad y adjunta fotos como respaldo.</p>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Urgencia</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Urgencia</label>
                 <div className="relative">
-                  <select className="block w-full appearance-none rounded-xl border border-slate-300 bg-white py-3.5 pl-4 pr-10 text-base text-slate-900 shadow-sm focus:border-primary focus:ring-primary">
-                    <option>Seleccionar urgencia</option><option>Baja</option><option>Media</option><option>Alta</option><option>Crítica</option>
+                  <select
+                    className="block w-full appearance-none rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 py-3.5 pl-4 pr-10 text-base text-slate-900 dark:text-slate-100 shadow-sm focus:border-primary focus:ring-primary"
+                    onChange={(event) => setPriority(event.target.value as Priority)}
+                    value={priority}
+                  >
+                    <option value="low">Baja</option>
+                    <option value="medium">Media</option>
+                    <option value="high">Alta</option>
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-icons">expand_more</span></div>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-symbols-outlined">expand_more</span></div>
                 </div>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Evidencias</label>
-                <div className="group mt-1 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 px-6 pb-8 pt-8 transition-all hover:bg-slate-50 active:border-primary">
-                  <div className="mb-3 rounded-full bg-slate-100 p-3 transition-transform duration-200 group-hover:scale-110"><span className="material-icons text-3xl text-slate-500">add_a_photo</span></div>
-                  <span className="mb-1 text-base font-semibold text-primary">Elegir archivos</span>
-                  <p className="text-center text-xs text-slate-500">Toma una foto o selecciona de la galería<br />(JPG, PNG máx. 10MB)</p>
-                  <input className="sr-only" type="file" />
-                </div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Evidencias</label>
+                <label className="group mt-1 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 px-6 pb-8 pt-8 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 active:border-primary">
+                  <div className="mb-3 rounded-full bg-slate-100 dark:bg-slate-800 p-3 transition-transform duration-200 group-hover:scale-110"><span className="material-symbols-outlined text-3xl text-slate-500">add_photo_alternate</span></div>
+                  <span className="mb-1 text-base font-semibold text-primary">Elegir desde biblioteca</span>
+                  <p className="text-center text-xs text-slate-500 dark:text-slate-400">Selecciona imágenes o videos del dispositivo<br />(JPG, PNG, MP4 máx. 10MB)</p>
+                  <input accept="image/*,video/*" className="sr-only" multiple type="file" />
+                </label>
               </div>
             </div>
           )}
 
           <div className="mt-8 space-y-4 pb-4">
-            <button className="flex w-full items-center justify-center rounded-xl bg-primary py-4 text-base font-bold text-black shadow-md transition-transform active:scale-[0.98]" onClick={() => setMobileStep((prev) => (prev < 3 ? prev + 1 : prev))} type="button">
+            <button
+              className="flex w-full items-center justify-center rounded-xl bg-primary py-4 text-base font-bold text-black shadow-md transition-transform enabled:active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={!canGoNext}
+              onClick={() => setMobileStep((prev) => (prev < 3 ? prev + 1 : prev))}
+              type="button"
+            >
               {mobileStep < 3 ? "Siguiente" : "Finalizar y Guardar"}
-              <span className="material-icons ml-2 text-sm">{mobileStep < 3 ? "arrow_forward" : "check"}</span>
+              <span className="material-symbols-outlined ml-2 text-sm">{mobileStep < 3 ? "arrow_forward" : "check"}</span>
             </button>
-            <button className="block w-full py-2 text-center text-sm font-medium text-slate-500" onClick={() => setMobileStep((prev) => (prev > 1 ? prev - 1 : prev))} type="button">
+            <button className="block w-full py-2 text-center text-sm font-medium text-slate-500 dark:text-slate-400" onClick={() => setMobileStep((prev) => (prev > 1 ? prev - 1 : prev))} type="button">
               {mobileStep === 1 ? "Cancelar" : "Atrás"}
             </button>
           </div>
@@ -170,11 +309,17 @@ export default function NuevaIncidenciaPage() {
                       <select
                         className={`${inputClassName} appearance-none cursor-pointer`}
                         id="cliente"
+                        onChange={(event) => {
+                          setClientId(event.target.value);
+                          setBranchId("");
+                          setAreaId("");
+                        }}
+                        value={clientId}
                       >
                         <option value="">Seleccionar Cliente</option>
-                        <option value="1">Supermercados Metro</option>
-                        <option value="2">Gasolineras Primax</option>
-                        <option value="3">Hotel Fiesta</option>
+                        {clients.map((client) => (
+                          <option key={client.id} value={client.id}>{client.name}</option>
+                        ))}
                       </select>
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined">
                         expand_more
@@ -187,11 +332,19 @@ export default function NuevaIncidenciaPage() {
                     </label>
                     <div className="relative">
                       <select
-                        className={`${inputClassName} appearance-none cursor-pointer opacity-70`}
-                        disabled
+                        className={`${inputClassName} appearance-none cursor-pointer disabled:opacity-70`}
+                        disabled={!clientId}
                         id="sucursal"
+                        onChange={(event) => {
+                          setBranchId(event.target.value);
+                          setAreaId("");
+                        }}
+                        value={branchId}
                       >
-                        <option value="">Seleccione Cliente primero</option>
+                        <option value="">Seleccione Sucursal</option>
+                        {filteredBranches.map((branch) => (
+                          <option key={branch.id} value={branch.id}>{branch.name}</option>
+                        ))}
                       </select>
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined">
                         expand_more
@@ -204,132 +357,22 @@ export default function NuevaIncidenciaPage() {
                     </label>
                     <div className="relative">
                       <select
-                        className={`${inputClassName} appearance-none cursor-pointer opacity-70`}
-                        disabled
+                        className={`${inputClassName} appearance-none cursor-pointer disabled:opacity-70`}
+                        disabled={!branchId}
                         id="area"
+                        onChange={(event) => setAreaId(event.target.value)}
+                        value={areaId}
                       >
-                        <option value="">Seleccione Sucursal primero</option>
+                        <option value="">Seleccione Área</option>
+                        {filteredAreas.map((area) => (
+                          <option key={area.id} value={area.id}>{area.name}</option>
+                        ))}
                       </select>
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined">
                         expand_more
                       </span>
                     </div>
                   </div>
-                  <div>
-                    <label className={labelClassName} htmlFor="dosificador">
-                      Dosificador (Opcional)
-                    </label>
-                    <div className="relative">
-                      <select
-                        className={`${inputClassName} appearance-none cursor-pointer opacity-70`}
-                        disabled
-                        id="dosificador"
-                      >
-                        <option value="">Seleccione Área primero</option>
-                      </select>
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined">
-                        expand_more
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label className={labelClassName}>Prioridad</label>
-                  <div className="grid grid-cols-3 gap-4">
-                    <label className="cursor-pointer">
-                      <input
-                        className="peer sr-only"
-                        name="prioridad"
-                        type="radio"
-                        value="low"
-                      />
-                      <div className="flex items-center justify-center gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 peer-checked:bg-yellow-50 peer-checked:border-yellow-500 peer-checked:text-yellow-700 dark:peer-checked:bg-yellow-900/20 dark:peer-checked:text-yellow-400 transition-all">
-                        <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
-                        <span className="font-medium text-sm">Baja</span>
-                      </div>
-                    </label>
-                    <label className="cursor-pointer">
-                      <input
-                        className="peer sr-only"
-                        name="prioridad"
-                        type="radio"
-                        value="medium"
-                      />
-                      <div className="flex items-center justify-center gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 peer-checked:bg-yellow-50 peer-checked:border-yellow-500 peer-checked:text-yellow-700 dark:peer-checked:bg-yellow-900/20 dark:peer-checked:text-yellow-400 transition-all">
-                        <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
-                        <span className="font-medium text-sm">Media</span>
-                      </div>
-                    </label>
-                    <label className="cursor-pointer">
-                      <input
-                        className="peer sr-only"
-                        name="prioridad"
-                        type="radio"
-                        value="high"
-                      />
-                      <div className="flex items-center justify-center gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 peer-checked:bg-red-50 peer-checked:border-red-500 peer-checked:text-red-700 dark:peer-checked:bg-red-900/20 dark:peer-checked:text-red-400 transition-all">
-                        <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                        <span className="font-medium text-sm">Alta</span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-                <div>
-                  <label className={labelClassName} htmlFor="descripcion">
-                    Descripción del Problema
-                  </label>
-                  <textarea
-                    className={`${inputClassName} min-h-[120px] resize-y`}
-                    id="descripcion"
-                    placeholder="Describa detalladamente el problema observado..."
-                  ></textarea>
-                </div>
-                <div>
-                  <label className={labelClassName}>Evidencia (Foto o Video)</label>
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 dark:border-slate-700 border-dashed rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group">
-                    <div className="space-y-1 text-center">
-                      <div className="mx-auto h-12 w-12 text-slate-400 group-hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined text-[48px]">
-                          cloud_upload
-                        </span>
-                      </div>
-                      <div className="flex text-sm text-slate-600 dark:text-slate-400 justify-center">
-                        <label
-                          className="relative cursor-pointer bg-transparent rounded-md font-medium text-primary hover:text-yellow-600 focus-within:outline-none"
-                          htmlFor="file-upload"
-                        >
-                          <span>Subir un archivo</span>
-                          <input
-                            className="sr-only"
-                            id="file-upload"
-                            name="file-upload"
-                            type="file"
-                          />
-                        </label>
-                        <p className="pl-1">o arrastrar y soltar</p>
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-500">
-                        PNG, JPG, MP4 hasta 10MB
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
-                  <button
-                    className="px-5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                    type="button"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    className="px-5 py-2.5 rounded-lg bg-professional-green hover:bg-yellow-700 text-white font-medium shadow-sm transition-colors flex items-center gap-2"
-                    type="submit"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">
-                      send
-                    </span>
-                    Reportar Incidencia
-                  </button>
                 </div>
               </form>
             </div>
