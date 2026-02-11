@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-import { GENERAL_ADMIN_ROLE } from "../../lib/permissions";
+import { GENERAL_ADMIN_ROLE, INSPECTOR_ROLE } from "../../lib/permissions";
 import { getSessionUserEmail } from "../../lib/session";
 
 type Visit = {
@@ -21,6 +21,7 @@ type Visit = {
   inspector_id: number | null;
   visited_at: string;
   notes: string;
+  status: string;
 };
 
 type CalendarCell = {
@@ -342,6 +343,14 @@ export default function CalendarioPage() {
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-300">Área: {visit.area}</p>
                     <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Inspector: {visit.inspector}</p>
+                    {user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
+                      <Link
+                        href={`/clientes/visitas/${visit.id}/realizar`}
+                        className="mt-3 inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-black"
+                      >
+                        Iniciar visita
+                      </Link>
+                    )}
                   </article>
                 );
               })
@@ -487,6 +496,14 @@ export default function CalendarioPage() {
                     <span className="text-xs text-slate-600 dark:text-slate-400">{visit.inspector}</span>
                   </div>
                   {visit.notes && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{visit.notes}</p>}
+                  {user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
+                    <Link
+                      href={`/clientes/visitas/${visit.id}/realizar`}
+                      className="mt-3 inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-black"
+                    >
+                      Iniciar visita
+                    </Link>
+                  )}
                 </div>
               );
             })}

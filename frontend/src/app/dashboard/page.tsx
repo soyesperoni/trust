@@ -27,6 +27,7 @@ type Visit = {
   visited_at: string;
   inspector: string;
   notes: string;
+  status?: string;
 };
 
 export default function DashboardPage() {
@@ -261,6 +262,14 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <p className="text-sm text-slate-600 dark:text-slate-300">Inspector asignado: {visit.inspector}</p>
+                      {user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
+                        <Link
+                          href={`/clientes/visitas/${visit.id}/realizar`}
+                          className="mt-3 inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-black"
+                        >
+                          Iniciar visita
+                        </Link>
+                      )}
                     </article>
                   );
                 })}
