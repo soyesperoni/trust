@@ -64,9 +64,25 @@ type MapFocus = "start" | "end";
 
 const toAbsoluteMediaUrl = (fileUrl: string | null | undefined) => {
   if (!fileUrl) return null;
-  if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://") || fileUrl.startsWith("data:")) {
+  if (fileUrl.startsWith("data:")) {
     return fileUrl;
   }
+
+  if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+    try {
+      const parsedUrl = new URL(fileUrl);
+      const isLocalBackendHost = ["localhost", "127.0.0.1"].includes(parsedUrl.hostname);
+
+      if (isLocalBackendHost && typeof window !== "undefined") {
+        return `${window.location.origin}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+      }
+
+      return fileUrl;
+    } catch {
+      return fileUrl;
+    }
+  }
+
   return `${DEFAULT_BACKEND_BASE_URL}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
 };
 
