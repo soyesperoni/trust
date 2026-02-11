@@ -186,49 +186,46 @@ export default function VisitasPage() {
         description="Registros recientes de inspecciones y mantenimientos."
       />
 
-      <PageTransition className="flex flex-1 flex-col overflow-y-auto">
-        <section className="md:hidden flex-1 overflow-y-auto">
-          <div className="px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100">
-            <div className="flex items-center gap-3 bg-slate-100 rounded-full px-4 py-2.5 shadow-sm">
-              <span className="material-symbols-outlined text-slate-500">search</span>
-              <input
-                className="bg-transparent border-none focus:ring-0 p-0 text-slate-700 w-full placeholder-slate-500 text-base"
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar historial..."
-                type="text"
-                value={searchTerm}
-              />
-              <button className="flex items-center justify-center text-slate-600" type="button">
-                <span className="material-symbols-outlined">filter_list</span>
+      <div className="md:hidden px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100">
+        <div className="flex items-center gap-3 bg-slate-100 rounded-full px-4 py-2.5 shadow-sm">
+          <span className="material-symbols-outlined text-slate-500">search</span>
+          <input
+            className="bg-transparent border-none focus:ring-0 p-0 text-slate-700 w-full placeholder-slate-500 text-base"
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Buscar historial..."
+            type="text"
+            value={searchTerm}
+          />
+          <button className="flex items-center justify-center text-slate-600" type="button">
+            <span className="material-symbols-outlined">filter_list</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="md:hidden pl-4 pr-0 py-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 pr-4">
+          {mobileFilters.map((filter) => {
+            const isActive = activeFilter === filter.value;
+            return (
+              <button
+                key={filter.value}
+                className={`px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap border transition-colors ${
+                  isActive
+                    ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                    : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                }`}
+                onClick={() => setActiveFilter(filter.value)}
+                type="button"
+              >
+                {filter.label}
               </button>
-            </div>
-          </div>
+            );
+          })}
+        </div>
+      </div>
 
-          <div className="pl-4 pr-0 py-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="flex gap-2 pr-4">
-              {mobileFilters.map((filter) => {
-                const isActive = activeFilter === filter.value;
-                return (
-                  <button
-                    key={filter.value}
-                    className={`px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap border transition-colors ${
-                      isActive
-                        ? "bg-slate-900 text-white border-slate-900 shadow-sm"
-                        : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                    }`}
-                    onClick={() => setActiveFilter(filter.value)}
-                    type="button"
-                  >
-                    {filter.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <main className="flex-1 px-4 pb-32 pt-2">
-            <div className="space-y-4">
-              {filteredVisits.map((visit) => {
+      <section className="md:hidden flex-1 px-4 pb-32 pt-2 space-y-4 overflow-y-auto">
+        {filteredVisits.map((visit) => {
                 const typeLabel = visitType(visit.notes);
                 const formatted = formatDate(visit.visited_at);
                 const mobileStatusStyle =
@@ -273,16 +270,16 @@ export default function VisitasPage() {
                     </div>
                   </article>
                 );
-              })}
+        })}
 
-              {filteredVisits.length === 0 ? (
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-sm text-slate-500 text-center">
-                  {emptyMessage}
-                </div>
-              ) : null}
-            </div>
-          </main>
-        </section>
+        {filteredVisits.length === 0 ? (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-sm text-slate-500 text-center">
+            {emptyMessage}
+          </div>
+        ) : null}
+      </section>
+
+      <PageTransition className="hidden flex-1 flex-col overflow-y-auto md:flex">
 
         <div className="hidden shrink-0 px-4 pb-2 pt-6 md:block md:px-8">
           <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27] lg:flex-row">
