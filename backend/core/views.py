@@ -270,7 +270,7 @@ def _draw_card(pdf: canvas.Canvas, x: float, y: float, width: float, height: flo
     pdf.roundRect(x, y, width, height, REPORT_CARD_RADIUS, fill=1, stroke=1)
 
 
-def _draw_report_header(pdf: canvas.Canvas, visit: Visit, generated_at: datetime):
+def _draw_report_header(pdf: canvas.Canvas, visit: Visit, generated_at: datetime, public_url: str | None = None):
     page_width, page_height = LETTER
     _draw_page_background(pdf)
 
@@ -289,7 +289,7 @@ def _draw_report_header(pdf: canvas.Canvas, visit: Visit, generated_at: datetime
     pdf.setFont(REPORT_FONT, 10)
     pdf.drawString(header_x, header_y - 2, f"Generado: {generated_at.strftime('%d/%m/%Y %H:%M')}")
 
-    chip_x = page_width - 230
+    chip_x = page_width - 282
     chip_y = header_y + 8
     chip_w = 194
     chip_h = 34
@@ -298,6 +298,25 @@ def _draw_report_header(pdf: canvas.Canvas, visit: Visit, generated_at: datetime
     pdf.setFillColor(colors.HexColor("#0f172a"))
     pdf.setFont(REPORT_FONT_BOLD, 11)
     pdf.drawCentredString(chip_x + chip_w / 2, chip_y + 12, f"Visita #{visit.id} · {visit.get_status_display()}")
+
+    if public_url:
+        qr_code = qr.QrCodeWidget(public_url)
+        bounds = qr_code.getBounds()
+        qr_size = 108
+        qr_drawing = Drawing(
+            qr_size,
+            qr_size,
+            transform=[qr_size / (bounds[2] - bounds[0]), 0, 0, qr_size / (bounds[3] - bounds[1]), 0, 0],
+        )
+        qr_drawing.add(qr_code)
+
+        qr_x = page_width - REPORT_PAGE_PADDING - qr_size
+        qr_y = page_height - REPORT_PAGE_PADDING - qr_size
+        renderPDF.draw(qr_drawing, pdf, qr_x, qr_y)
+
+        pdf.setFillColor(colors.HexColor("#64748b"))
+        pdf.setFont(REPORT_FONT, 8)
+        pdf.drawCentredString(qr_x + (qr_size / 2), qr_y - 12, "Escanea para abrir el informe web")
 
 
 
@@ -371,45 +390,6 @@ def _get_visit_from_public_token(token: str) -> Visit | None:
         return None
 
     return visit
-
-
-def _draw_public_access_qr(pdf: canvas.Canvas, public_url: str, y_start: float):
-    card_x = 52
-    card_y = y_start - 118
-    card_w = 506
-    card_h = 108
-
-    pdf.setFillColor(colors.white)
-    pdf.rect(card_x, card_y, card_w, card_h, fill=1, stroke=0)
-
-    pdf.setFillColor(colors.HexColor("#111827"))
-    pdf.setFont(REPORT_FONT_BOLD, 11)
-    pdf.drawString(card_x + 16, card_y + 84, "Acceso público al informe")
-
-    pdf.setFillColor(colors.HexColor("#64748b"))
-    pdf.setFont(REPORT_FONT, 9)
-    pdf.drawString(card_x + 16, card_y + 68, "Escanea este QR para ver o descargar el PDF sin iniciar sesión.")
-
-    qr_code = qr.QrCodeWidget(public_url)
-    bounds = qr_code.getBounds()
-    qr_size = 72
-    qr_drawing = Drawing(
-        qr_size,
-        qr_size,
-        transform=[qr_size / (bounds[2] - bounds[0]), 0, 0, qr_size / (bounds[3] - bounds[1]), 0, 0],
-    )
-    qr_drawing.add(qr_code)
-    renderPDF.draw(qr_drawing, pdf, card_x + 16, card_y + 10)
-
-    url_x = card_x + 102
-    available_width = card_w - 120
-    pdf.setFillColor(colors.HexColor("#0f172a"))
-    pdf.setFont(REPORT_FONT_BOLD, 8)
-    pdf.drawString(url_x, card_y + 48, "URL PÚBLICA")
-    pdf.setFont(REPORT_FONT, 8)
-    _draw_wrapped_text(pdf, public_url, url_x, card_y + 34, available_width, line_height=10)
-
-    return card_y - 20
 
 
 def _draw_summary_grid(pdf: canvas.Canvas, visit: Visit, y_start: float):
@@ -580,17 +560,13 @@ def _draw_signoff(pdf: canvas.Canvas, visit: Visit, y_start: float):
     signature_data = str(report.get("responsible_signature") or "")
 
     card_x = REPORT_PAGE_PADDING
-    card_h = 128
+    card_h = 140
     card_y = y_start - card_h
     _draw_card(pdf, card_x, card_y, 540, card_h)
 
-    pdf.setFillColor(colors.HexColor("#0f172a"))
-    pdf.setFont(REPORT_FONT_BOLD, 12)
-    pdf.drawString(card_x + 16, card_y + card_h - 24, "Firma de conformidad")
-
-    line_y = card_y + 44
-    line_x_start = card_x + 148
-    line_x_end = card_x + 392
+    line_y = card_y + 42
+    line_x_start = card_x + 110
+    line_x_end = card_x + 430
     line_center_x = (line_x_start + line_x_end) / 2
     pdf.setStrokeColor(colors.HexColor("#0f172a"))
     pdf.setLineWidth(1)
@@ -605,7 +581,7 @@ def _draw_signoff(pdf: canvas.Canvas, visit: Visit, y_start: float):
                 line_x_start + 8,
                 line_y + 4,
                 width=(line_x_end - line_x_start) - 16,
-                height=34,
+                height=48,
                 mask="auto",
                 preserveAspectRatio=True,
                 anchor="sw",
@@ -614,46 +590,12 @@ def _draw_signoff(pdf: canvas.Canvas, visit: Visit, y_start: float):
             pass
 
     pdf.setFillColor(colors.HexColor("#64748b"))
-    pdf.setFont(REPORT_FONT_BOLD, 9)
-    pdf.drawCentredString(line_center_x, line_y - 14, "REPRESENTANTE DE ÁREA")
-
-    pdf.setFillColor(colors.HexColor("#0f172a"))
-    pdf.setFont(REPORT_FONT_BOLD, 11)
-    pdf.drawCentredString(line_center_x, card_y + 18, responsible_name[:70])
-
-    return card_y - 18
-
-
-def _draw_public_access_qr(pdf: canvas.Canvas, public_url: str, y_start: float):
-    card_x = REPORT_PAGE_PADDING
-    card_h = 130
-    card_y = y_start - card_h
-    _draw_card(pdf, card_x, card_y, 540, card_h)
+    pdf.setFont(REPORT_FONT_BOLD, 10)
+    pdf.drawCentredString(line_center_x, line_y - 16, "REPRESENTANTE DE ÁREA")
 
     pdf.setFillColor(colors.HexColor("#0f172a"))
     pdf.setFont(REPORT_FONT_BOLD, 12)
-    pdf.drawString(card_x + 16, card_y + card_h - 24, "Acceso público al informe")
-
-    pdf.setFillColor(colors.HexColor("#64748b"))
-    pdf.setFont(REPORT_FONT, 9)
-    pdf.drawString(card_x + 16, card_y + card_h - 40, "Escanea para abrir el informe web (fotos y videos) sin iniciar sesión.")
-
-    qr_code = qr.QrCodeWidget(public_url)
-    bounds = qr_code.getBounds()
-    qr_size = 72
-    qr_drawing = Drawing(
-        qr_size,
-        qr_size,
-        transform=[qr_size / (bounds[2] - bounds[0]), 0, 0, qr_size / (bounds[3] - bounds[1]), 0, 0],
-    )
-    qr_drawing.add(qr_code)
-    renderPDF.draw(qr_drawing, pdf, card_x + 16, card_y + 16)
-
-    pdf.setFillColor(colors.HexColor("#0f172a"))
-    pdf.setFont(REPORT_FONT_BOLD, 8)
-    pdf.drawString(card_x + 102, card_y + 72, "URL PÚBLICA")
-    pdf.setFont(REPORT_FONT, 8)
-    _draw_wrapped_text(pdf, public_url, card_x + 102, card_y + 58, 420, line_height=10)
+    pdf.drawCentredString(line_center_x, card_y + 14, responsible_name[:70])
 
     return card_y - 18
 
@@ -672,13 +614,11 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
     pdf = canvas.Canvas(output, pagesize=LETTER)
     generated_at = timezone.localtime()
 
-    _draw_report_header(pdf, visit, generated_at)
+    _draw_report_header(pdf, visit, generated_at, public_report_url)
     y = 676
     y = _draw_summary_grid(pdf, visit, y)
     y = _draw_observations(pdf, visit, y)
-    y = _draw_signoff(pdf, visit, y)
-    if public_report_url:
-        y = _draw_public_access_qr(pdf, public_report_url, y)
+    _draw_signoff(pdf, visit, 182)
 
     _draw_report_footer(pdf, generated_at)
     pdf.showPage()
