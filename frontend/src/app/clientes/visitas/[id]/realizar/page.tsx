@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useCurrentUser } from "../../../../hooks/useCurrentUser";
@@ -19,18 +19,18 @@ type Visit = {
     comments?: string;
     location_verified?: boolean;
     responsible_name?: string;
+    responsible_signature?: string;
   } | null;
 };
 
 type ChecklistItem = { id: string; label: string; location: string; checked: boolean };
 
-const defaultChecklist: ChecklistItem[] = [
-  { id: "soap-1", label: "Dosificador Jabón #1", location: "Entrada Principal", checked: false },
-  { id: "gel-1", label: "Dosificador Gel #1", location: "Mostrador Atención", checked: true },
-  { id: "soap-2", label: "Dosificador Jabón #2", location: "Baños Hombres", checked: false },
-  { id: "paper-1", label: "Toallas Papel #1", location: "Baños Hombres", checked: false },
-  { id: "soap-3", label: "Dosificador Jabón #3", location: "Baños Mujeres", checked: false },
-];
+type Dispenser = {
+  id: number;
+  identifier: string;
+  model: { id: number; name: string };
+  area: { id: number; name: string; branch: string } | null;
+};
 
 export default function RealizarVisitaPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -43,10 +43,14 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
 
   const [startCoords, setStartCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [endCoords, setEndCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [checklist, setChecklist] = useState<ChecklistItem[]>(defaultChecklist);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [comments, setComments] = useState("");
   const [locationVerified, setLocationVerified] = useState(false);
   const [responsibleName, setResponsibleName] = useState("");
+  const [responsibleSignature, setResponsibleSignature] = useState("");
+  const [isDrawingSignature, setIsDrawingSignature] = useState(false);
+  const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastPointerPosition = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     params.then((resolved) => setVisitId(Number(resolved.id)));
@@ -76,12 +80,31 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           return;
         }
         setVisit(found);
-        if (found.visit_report?.checklist?.length) {
-          setChecklist(found.visit_report.checklist);
+        const dispensersResponse = await fetch("/api/dispensers", {
+          cache: "no-store",
+          headers: { "x-current-user-email": currentUserEmail },
+        });
+        if (!dispensersResponse.ok) {
+          throw new Error("No se pudo cargar el detalle de dosificadores para esta visita.");
         }
+
+        const dispensersPayload = await dispensersResponse.json();
+        const dispensersInArea: Dispenser[] = (dispensersPayload.results ?? []).filter(
+          (dispenser: Dispenser) => dispenser.area?.id === found.area_id,
+        );
+        const checkedById = new Map((found.visit_report?.checklist ?? []).map((item) => [item.id, item.checked]));
+        const realChecklist = dispensersInArea.map((dispenser) => ({
+          id: `dispenser-${dispenser.id}`,
+          label: `${dispenser.identifier} (${dispenser.model.name})`,
+          location: dispenser.area?.name ?? found.area,
+          checked: checkedById.get(`dispenser-${dispenser.id}`) ?? false,
+        }));
+
+        setChecklist(realChecklist);
         setComments(found.visit_report?.comments ?? "");
         setLocationVerified(Boolean(found.visit_report?.location_verified));
         setResponsibleName(found.visit_report?.responsible_name ?? "");
+        setResponsibleSignature(found.visit_report?.responsible_signature ?? "");
       } catch (fetchError) {
         if (!isMounted) return;
         setError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar la visita.");
@@ -96,6 +119,30 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
       isMounted = false;
     };
   }, [visitId]);
+
+  useEffect(() => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#f8fafc";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.strokeStyle = "#0f172a";
+    context.lineWidth = 2;
+
+    if (!responsibleSignature) return;
+
+    const image = new Image();
+    image.onload = () => {
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    };
+    image.src = responsibleSignature;
+  }, [responsibleSignature]);
 
   useEffect(() => {
     if (isLoadingUser) return;
@@ -156,6 +203,9 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
 
   const onFinishVisit = async () => {
     try {
+      if (!responsibleSignature) {
+        throw new Error("Debes registrar la firma del responsable para finalizar.");
+      }
       const coords = await validatePhoneLocation();
       setEndCoords(coords);
       await patchFlow({
@@ -167,6 +217,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           comments,
           location_verified: locationVerified,
           responsible_name: responsibleName,
+          responsible_signature: responsibleSignature,
         },
       });
       router.push("/clientes/visitas");
@@ -182,6 +233,55 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
       // no-op: redirect anyways
     }
     router.push("/clientes/calendario");
+  };
+
+  const getCanvasPoint = (event: PointerEvent<HTMLCanvasElement>) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return null;
+    const rectangle = canvas.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rectangle.left) / rectangle.width) * canvas.width,
+      y: ((event.clientY - rectangle.top) / rectangle.height) * canvas.height,
+    };
+  };
+
+  const onSignaturePointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    canvas.setPointerCapture(event.pointerId);
+    const point = getCanvasPoint(event);
+    if (!point) return;
+    lastPointerPosition.current = point;
+    setIsDrawingSignature(true);
+  };
+
+  const onSignaturePointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingSignature) return;
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    const point = getCanvasPoint(event);
+    const previousPoint = lastPointerPosition.current;
+    if (!context || !point || !previousPoint) return;
+
+    context.beginPath();
+    context.moveTo(previousPoint.x, previousPoint.y);
+    context.lineTo(point.x, point.y);
+    context.stroke();
+    lastPointerPosition.current = point;
+  };
+
+  const onSignaturePointerUp = () => {
+    if (!isDrawingSignature) return;
+    setIsDrawingSignature(false);
+    lastPointerPosition.current = null;
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    setResponsibleSignature(canvas.toDataURL("image/png"));
+  };
+
+  const onClearSignature = () => {
+    setResponsibleSignature("");
   };
 
   if (loadingVisit || isLoadingUser) {
@@ -280,7 +380,25 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
             <h1 className="mb-2 text-3xl font-bold text-slate-900">Finalizar Inspección</h1>
             <p className="text-base text-slate-500">Firma del responsable del área.</p>
           </div>
-          <div className="h-48 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50"></div>
+          <div className="space-y-2">
+            <canvas
+              className="h-48 w-full touch-none rounded-xl border-2 border-dashed border-slate-300 bg-slate-50"
+              height={192}
+              onPointerDown={onSignaturePointerDown}
+              onPointerMove={onSignaturePointerMove}
+              onPointerUp={onSignaturePointerUp}
+              onPointerLeave={onSignaturePointerUp}
+              ref={signatureCanvasRef}
+              width={420}
+            />
+            <button
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+              onClick={onClearSignature}
+              type="button"
+            >
+              Limpiar firma
+            </button>
+          </div>
           <input
             className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
             onChange={(event) => setResponsibleName(event.target.value)}
