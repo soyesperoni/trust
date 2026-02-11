@@ -456,7 +456,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   }
 
   return (
-    <section className="mx-auto flex h-full w-full max-w-lg flex-col px-6 py-8 md:hidden">
+    <section className="mx-auto flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden px-4 py-5 md:hidden">
       <div className="mb-8">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-primary">Paso {step} de 4</span>
@@ -469,28 +469,32 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
 
       {error ? <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
 
-      {step === 1 && (
-        <div className="flex flex-1 flex-col gap-6">
+      <div className="flex-1 overflow-y-auto pb-4">
+        {step === 1 && (
+        <div className="flex flex-1 flex-col gap-4">
           <div>
-            <h1 className="mb-2 text-3xl font-bold text-slate-900">Iniciar Visita</h1>
-            <p className="text-base text-slate-500">Verificando ubicación actual para comenzar la inspección.</p>
+            <h1 className="mb-1 text-2xl font-bold text-slate-900">Iniciar Visita</h1>
+            <p className="text-sm text-slate-500">Valida tu ubicación para comenzar la inspección.</p>
           </div>
-          <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+          <article className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+            <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Hora</span>
               <span className="text-sm font-semibold text-slate-900">
                 {new Date(visit.visited_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
               </span>
-              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600">Programada</span>
             </div>
-            <p className="text-sm text-slate-500">Cliente: <span className="font-semibold text-slate-900">{visit.client}</span></p>
-            <p className="text-sm text-slate-500">Sucursal: <span className="font-semibold text-slate-900">{visit.branch}</span></p>
-            <p className="text-sm text-slate-500">Área: <span className="font-semibold text-slate-900">{visit.area}</span></p>
+            <dl className="grid grid-cols-[80px_1fr] items-start gap-y-1 text-sm">
+              <dt className="text-slate-500">Cliente</dt>
+              <dd className="truncate font-semibold text-slate-900">{visit.client}</dd>
+              <dt className="text-slate-500">Sucursal</dt>
+              <dd className="truncate font-semibold text-slate-900">{visit.branch}</dd>
+              <dt className="text-slate-500">Área</dt>
+              <dd className="truncate font-semibold text-slate-900">{visit.area}</dd>
+            </dl>
           </article>
-          <article className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-            <div className="h-52 w-full bg-slate-100" ref={mapContainerRef}></div>
-            <div className="space-y-3 p-4">
-              <h2 className="text-base font-semibold text-slate-900">Confirmar ubicación</h2>
-              <p className="text-sm text-slate-500">Pulsa en validar ubicación para registrar el punto amarillo en el mapa.</p>
+          <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="h-48 w-full bg-slate-100" ref={mapContainerRef}></div>
+            <div className="space-y-3 p-3">
               <button
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold"
                 onClick={onStartVisit}
@@ -624,8 +628,9 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           {endCoords ? <p className="text-xs text-slate-500">Fin: {endCoords.latitude}, {endCoords.longitude}</p> : null}
         </div>
       )}
+      </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 pb-safe">
+      <div className="sticky bottom-0 mt-2 grid grid-cols-2 gap-3 border-t border-slate-200 bg-white/95 py-3 pb-safe backdrop-blur">
         <button
           className="rounded-xl border border-slate-300 bg-white py-3 font-semibold"
           onClick={() => (step === 1 ? onCancel() : setStep((value) => value - 1))}
