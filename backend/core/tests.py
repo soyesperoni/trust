@@ -110,3 +110,35 @@ class VisitMobileFlowTests(TestCase):
         self.assertEqual(self.visit.end_longitude, -77.040001)
         self.assertEqual(self.visit.visit_report["responsible_name"], "Juan")
         create_media_mock.assert_called_once()
+
+
+class VisitReportRouteTests(TestCase):
+    def setUp(self):
+        self.client_entity = Client.objects.create(name="Cliente", code="CL-1")
+        self.branch = Branch.objects.create(client=self.client_entity, name="Sucursal")
+        self.area = Area.objects.create(branch=self.branch, name="Área")
+        self.inspector = User.objects.create_user(
+            username="inspector2",
+            email="inspector2@test.com",
+            password="secret",
+            role=User.Role.INSPECTOR,
+        )
+        self.visit = Visit.objects.create(
+            area=self.area,
+            inspector=self.inspector,
+            status=Visit.Status.COMPLETED,
+            started_at=timezone.now(),
+            completed_at=timezone.now(),
+        )
+
+    @patch("core.views._build_visit_pdf", return_value=b"%PDF-1.4 test")
+    def test_legacy_report_route_maps_to_pdf_view(self, build_pdf_mock):
+        response = self.client.get(
+            f"/api/visits/{self.visit.id}/report",
+            HTTP_X_CURRENT_USER_EMAIL=self.inspector.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn(f'visita-{self.visit.id}-informe.pdf', response["Content-Disposition"])
+        build_pdf_mock.assert_called_once()
