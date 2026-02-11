@@ -119,6 +119,44 @@ export default function NuevaIncidenciaPage() {
     [areas, branchId],
   );
 
+
+  const requestCameraPermission = async () => {
+    if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Tu dispositivo no permite acceder a la cámara.");
+    }
+
+    const permissionStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false,
+    });
+    permissionStream.getTracks().forEach((track) => track.stop());
+  };
+
+  const requestLocationPermission = async () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      throw new Error("Tu dispositivo no permite geolocalización.");
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        () => resolve(),
+        () => reject(new Error("Debes conceder permiso de ubicación para continuar.")),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      );
+    });
+  };
+
+  const ensureStepPermissions = async (targetStep: number) => {
+    if (targetStep === 2) {
+      await requestLocationPermission();
+      return;
+    }
+
+    if (targetStep === 3) {
+      await requestCameraPermission();
+    }
+  };
+
   const canGoNext =
     (mobileStep === 1 && clientId && branchId) ||
     (mobileStep === 2 && areaId && description.trim()) ||
@@ -176,14 +214,24 @@ export default function NuevaIncidenciaPage() {
     };
   }, []);
 
-  const onOpenCamera = () => {
+  const onOpenCamera = async () => {
     if (evidenceFiles.length >= MAX_EVIDENCE_ITEMS) {
       setEvidenceError("Solo puedes registrar hasta 4 evidencias.");
       return;
     }
-    setEvidenceError(null);
-    setPendingEvidence(null);
-    setIsCameraModalOpen(true);
+
+    try {
+      await requestCameraPermission();
+      setEvidenceError(null);
+      setPendingEvidence(null);
+      setIsCameraModalOpen(true);
+    } catch (permissionError) {
+      setEvidenceError(
+        permissionError instanceof Error
+          ? permissionError.message
+          : "Debes conceder permisos de cámara para adjuntar evidencias.",
+      );
+    }
   };
 
   const onTakePhoto = async () => {
@@ -253,6 +301,27 @@ export default function NuevaIncidenciaPage() {
       return prev.filter((_, itemIndex) => itemIndex !== index);
     });
     setEvidenceError(null);
+  };
+
+
+  const onNextStep = async () => {
+    if (mobileStep < 3) {
+      const targetStep = mobileStep + 1;
+      try {
+        await ensureStepPermissions(targetStep);
+        setLoadError(null);
+        setMobileStep(targetStep);
+      } catch (permissionError) {
+        setLoadError(
+          permissionError instanceof Error
+            ? permissionError.message
+            : "No se concedieron los permisos necesarios para continuar.",
+        );
+      }
+      return;
+    }
+
+    router.push("/clientes/incidencias");
   };
 
   return (
@@ -495,13 +564,7 @@ export default function NuevaIncidenciaPage() {
             <button
               className="rounded-xl bg-primary py-3 font-bold text-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
               disabled={!canGoNext}
-              onClick={() => {
-                if (mobileStep < 3) {
-                  setMobileStep((prev) => prev + 1);
-                  return;
-                }
-                router.push("/clientes/incidencias");
-              }}
+              onClick={onNextStep}
               type="button"
             >
               {mobileStep < 3 ? "Siguiente" : "Finalizar incidencia"}
