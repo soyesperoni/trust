@@ -32,9 +32,6 @@ REPORT_FONT_BOLD = "Helvetica-Bold"
 REPORT_FONT_ITALIC = "Helvetica-Oblique"
 REPORT_PUBLIC_LINK_SALT = "visit-report-public-link"
 REPORT_PUBLIC_LINK_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
-REPORT_PAGE_PADDING = 36
-REPORT_CARD_RADIUS = 14
-
 
 def _serialize_user(user: User) -> dict:
     full_name = user.get_full_name().strip()
@@ -350,6 +347,45 @@ def _build_public_report_url(request, visit: Visit) -> str:
     return request.build_absolute_uri(path)
 
 
+def _draw_public_access_qr(pdf: canvas.Canvas, public_url: str, y_start: float):
+    card_x = 52
+    card_y = y_start - 118
+    card_w = 506
+    card_h = 108
+
+    pdf.setFillColor(colors.white)
+    pdf.rect(card_x, card_y, card_w, card_h, fill=1, stroke=0)
+
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(REPORT_FONT_BOLD, 11)
+    pdf.drawString(card_x + 16, card_y + 84, "Acceso público al informe")
+
+    pdf.setFillColor(colors.HexColor("#64748b"))
+    pdf.setFont(REPORT_FONT, 9)
+    pdf.drawString(card_x + 16, card_y + 68, "Escanea este QR para ver o descargar el PDF sin iniciar sesión.")
+
+    qr_code = qr.QrCodeWidget(public_url)
+    bounds = qr_code.getBounds()
+    qr_size = 72
+    qr_drawing = Drawing(
+        qr_size,
+        qr_size,
+        transform=[qr_size / (bounds[2] - bounds[0]), 0, 0, qr_size / (bounds[3] - bounds[1]), 0, 0],
+    )
+    qr_drawing.add(qr_code)
+    renderPDF.draw(qr_drawing, pdf, card_x + 16, card_y + 10)
+
+    url_x = card_x + 102
+    available_width = card_w - 120
+    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.setFont(REPORT_FONT_BOLD, 8)
+    pdf.drawString(url_x, card_y + 48, "URL PÚBLICA")
+    pdf.setFont(REPORT_FONT, 8)
+    _draw_wrapped_text(pdf, public_url, url_x, card_y + 34, available_width, line_height=10)
+
+    return card_y - 20
+
+
 def _draw_summary_grid(pdf: canvas.Canvas, visit: Visit, y_start: float):
     card_x = REPORT_PAGE_PADDING
     card_y = y_start - 122
@@ -625,11 +661,6 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
 
     y = _draw_signoff(pdf, visit, y)
     if public_report_url:
-        if y < 190:
-            _draw_report_footer(pdf, generated_at)
-            pdf.showPage()
-            _draw_report_header(pdf, visit, generated_at)
-            y = 676
         y = _draw_public_access_qr(pdf, public_report_url, y)
 
     _draw_report_footer(pdf, generated_at)
