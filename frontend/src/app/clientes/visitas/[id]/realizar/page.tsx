@@ -57,6 +57,7 @@ type ChecklistDispenser = {
   identifier: string;
   location: string;
   checked: boolean;
+  model: { name: string; photo: string | null };
   products: DispenserProduct[];
 };
 
@@ -154,6 +155,10 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           identifier: dispenser.identifier,
           location: dispenser.area?.name ?? found.area,
           checked: checkedById.get(`dispenser-${dispenser.id}`) ?? false,
+          model: {
+            name: dispenser.model.name,
+            photo: dispenser.model.photo,
+          },
           products: dispenser.products ?? [],
         }));
 
@@ -535,6 +540,24 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
                 />
               </div>
               <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5">
+                  {dispenser.model.photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt={`Foto del modelo ${dispenser.model.name}`}
+                      className="h-12 w-12 rounded-lg border border-slate-200 object-cover"
+                      src={dispenser.model.photo}
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                      Sin foto
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-slate-500">Modelo del dosificador</p>
+                    <p className="text-sm font-semibold text-slate-800">{dispenser.model.name}</p>
+                  </div>
+                </div>
                 {dispenser.products.length > 0 ? (
                   dispenser.products.map((product) => (
                     <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5" key={product.id}>
