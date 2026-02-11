@@ -148,10 +148,24 @@ export default function DashboardPage() {
 
   const mobileCards = useMemo(
     () => [
-      { label: "Sucursales", value: stats?.branches ?? 0, icon: "storefront", iconStyle: "bg-blue-100 text-blue-600" },
-      { label: "Pendientes", value: stats?.pending_visits ?? 0, icon: "pending_actions", iconStyle: "bg-orange-100 text-orange-600" },
-      { label: "Incidencias", value: stats?.incidents ?? 0, icon: "report_problem", iconStyle: "bg-red-100 text-red-600" },
-      { label: "Completadas", value: (stats?.visits ?? 0) - (stats?.pending_visits ?? 0), icon: "check_circle", iconStyle: "bg-green-100 text-green-600" },
+      {
+        label: "Visitas pendientes",
+        value: stats?.pending_visits ?? 0,
+        icon: "pending_actions",
+        iconStyle: "bg-orange-100 text-orange-600",
+      },
+      {
+        label: "Incidencias",
+        value: stats?.incidents ?? 0,
+        icon: "report_problem",
+        iconStyle: "bg-red-100 text-red-600",
+      },
+      {
+        label: "Visitas completadas",
+        value: Math.max(0, (stats?.visits ?? 0) - (stats?.pending_visits ?? 0)),
+        icon: "check_circle",
+        iconStyle: "bg-green-100 text-green-600",
+      },
     ],
     [stats],
   );
