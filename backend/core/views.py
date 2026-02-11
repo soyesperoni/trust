@@ -266,11 +266,11 @@ def _draw_report_header(pdf: canvas.Canvas, visit: Visit, generated_at: datetime
     trust_x = card_x + 24
     trust_y = page_height - 98
 
-    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.setFillColor(colors.HexColor("#facc15"))
     pdf.roundRect(trust_x, trust_y, 120, 34, 6, fill=1, stroke=0)
-    pdf.setFillColor(colors.white)
+    pdf.setFillColor(colors.HexColor("#111827"))
     pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(trust_x + 18, trust_y + 11, "TRUST")
+    pdf.drawString(trust_x + 20, trust_y + 11, "trust")
 
     qr_code = qr.QrCodeWidget(report_url)
     qr_bounds = qr_code.getBounds()
@@ -298,8 +298,8 @@ def _draw_report_header(pdf: canvas.Canvas, visit: Visit, generated_at: datetime
     pdf.drawCentredString(qr_x + (qr_size / 2), qr_y - 14, "Descargar informe")
 
     pdf.setFillColor(colors.HexColor("#111827"))
-    pdf.setFont("Helvetica-Bold", 19)
-    pdf.drawString(card_x + 24, page_height - 142, "Informe de visita técnica")
+    pdf.setFont("Helvetica-Bold", 18)
+    pdf.drawString(card_x + 24, page_height - 142, "Informe de Visita")
     pdf.setFont("Helvetica", 9)
     pdf.setFillColor(colors.HexColor("#64748b"))
     pdf.drawString(card_x + 24, page_height - 158, f"Generado: {generated_at.strftime('%d/%m/%Y %H:%M')}")
@@ -449,35 +449,43 @@ def _draw_location_map(pdf: canvas.Canvas, visit: Visit, y_start: int):
 
 
 def _draw_report_images(pdf: canvas.Canvas, visit: Visit, y_start: int):
-    images = [item for item in visit.media.all() if item.media_type == VisitMedia.MediaType.PHOTO][:3]
+    images = [item for item in visit.media.all() if item.media_type == VisitMedia.MediaType.PHOTO][:4]
     if not images:
         return y_start
 
     pdf.setFillColor(colors.HexColor("#111827"))
     pdf.setFont("Helvetica-Bold", 11)
     pdf.drawString(52, y_start, "Evidencias fotográficas")
-    y = y_start - 8
+    y = y_start - 12
     x = 52
 
     for index, item in enumerate(images):
         if index and index % 2 == 0:
             x = 52
-            y -= 118
+            y -= 128
         width = 240
-        height = 105
+        height = 112
+
+        pdf.setFillColor(colors.HexColor("#f8fafc"))
+        pdf.roundRect(x, y - height, width, height, 12, fill=1, stroke=0)
+
         try:
             image_data = item.file.read() if hasattr(item.file, "read") else default_storage.open(item.file.name, "rb").read()
             image = ImageReader(BytesIO(image_data))
-            pdf.drawImage(image, x, y - height, width=width, height=height, preserveAspectRatio=True, mask="auto")
+            pdf.drawImage(image, x + 1, y - height + 1, width=width - 2, height=height - 2, preserveAspectRatio=True, mask="auto")
         except Exception:
             pdf.setFillColor(colors.HexColor("#e2e8f0"))
-            pdf.rect(x, y - height, width, height, fill=1, stroke=0)
+            pdf.roundRect(x + 1, y - height + 1, width - 2, height - 2, 10, fill=1, stroke=0)
             pdf.setFillColor(colors.HexColor("#64748b"))
             pdf.setFont("Helvetica", 9)
-            pdf.drawString(x + 12, y - 52, "No se pudo cargar la imagen")
+            pdf.drawString(x + 12, y - 58, "No se pudo cargar la imagen")
+
+        pdf.setStrokeColor(colors.HexColor("#e2e8f0"))
+        pdf.setLineWidth(1)
+        pdf.roundRect(x, y - height, width, height, 12, fill=0, stroke=1)
         x += 252
 
-    return y - 130
+    return y - 136
 
 
 def _draw_signoff(pdf: canvas.Canvas, visit: Visit, y_start: float):
@@ -504,22 +512,40 @@ def _draw_signoff(pdf: canvas.Canvas, visit: Visit, y_start: float):
     pdf.setFillColor(colors.HexColor("#334155"))
     pdf.drawString(card_x + 16, card_y + 60, f"Representante de área: {responsible_name[:70]}")
 
-    pdf.setStrokeColor(colors.HexColor("#cbd5e1"))
-    pdf.roundRect(card_x + 16, card_y + 16, card_w - 32, 34, 8, fill=0, stroke=1)
+    line_y = card_y + 30
+    pdf.setStrokeColor(colors.HexColor("#0f172a"))
+    pdf.setLineWidth(1)
+    pdf.line(card_x + 300, line_y, card_x + card_w - 24, line_y)
+    pdf.setFillColor(colors.HexColor("#64748b"))
+    pdf.setFont("Helvetica-Bold", 8)
+    pdf.drawCentredString(card_x + 392, line_y - 11, "REPRESENTANTE DE ÁREA")
 
     if signature_data.startswith("data:image") and "," in signature_data:
         try:
             encoded = signature_data.split(",", 1)[1]
             image = ImageReader(BytesIO(base64.b64decode(encoded)))
-            pdf.drawImage(image, card_x + 22, card_y + 18, width=200, height=28, mask="auto", preserveAspectRatio=True)
+            pdf.drawImage(
+                image,
+                card_x + 314,
+                line_y + 2,
+                width=170,
+                height=34,
+                mask="auto",
+                preserveAspectRatio=True,
+                anchor="sw",
+            )
         except Exception:
             pdf.setFont("Helvetica-Oblique", 9)
             pdf.setFillColor(colors.HexColor("#64748b"))
-            pdf.drawString(card_x + 24, card_y + 28, "No se pudo renderizar la firma del representante.")
+            pdf.drawString(card_x + 312, line_y + 12, "No se pudo renderizar la firma del representante.")
     else:
         pdf.setFont("Helvetica-Oblique", 9)
         pdf.setFillColor(colors.HexColor("#64748b"))
-        pdf.drawString(card_x + 24, card_y + 28, "Firma no registrada")
+        pdf.drawString(card_x + 312, line_y + 12, "Firma no registrada")
+
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawString(card_x + 16, card_y + 22, f"Responsable: {responsible_name[:70]}")
 
     return card_y - 20
 
