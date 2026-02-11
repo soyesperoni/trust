@@ -11,15 +11,40 @@ export async function GET(request: NextRequest, { params }: Params) {
   const { id } = await params;
   const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
 
-  const response = await fetch(`${backendBaseUrl}/api/visits/${id}/report.pdf`, {
-    method: "GET",
-    headers: {
-      "X-Current-User-Email": currentUserEmail,
-    },
-  });
+  const requestHeaders = {
+    "X-Current-User-Email": currentUserEmail,
+    Accept: "application/pdf",
+  };
+
+  // Backward compatibility: older backends expose /report and newer ones /report.pdf.
+  const candidateUrls = [
+    `${backendBaseUrl}/api/visits/${id}/report.pdf`,
+    `${backendBaseUrl}/api/visits/${id}/report`,
+  ];
+
+  let response: Response | null = null;
+  for (const candidateUrl of candidateUrls) {
+    const candidateResponse = await fetch(candidateUrl, {
+      method: "GET",
+      headers: requestHeaders,
+    });
+    response = candidateResponse;
+    if (candidateResponse.ok || candidateResponse.status !== 404) {
+      break;
+    }
+  }
+
+  if (!response) {
+    return NextResponse.json(
+      { error: "No se pudo generar el informe." },
+      { status: 500 },
+    );
+  }
 
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({ error: "No se pudo generar el informe." }));
+    const payload = await response
+      .json()
+      .catch(() => ({ error: "No se pudo generar el informe." }));
     return NextResponse.json(payload, { status: response.status });
   }
 
