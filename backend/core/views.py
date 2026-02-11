@@ -1,11 +1,19 @@
 import json
 from datetime import datetime
+from io import BytesIO
 from typing import Any
+from urllib.request import urlopen
 
-from django.http import JsonResponse
+from django.core.files.storage import default_storage
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfgen import canvas
 
 from .models import Area, Branch, Client, Dispenser, Incident, Product, User, Visit, VisitMedia
 
@@ -207,7 +215,184 @@ def _serialize_visit(visit: Visit) -> dict:
         "end_latitude": visit.end_latitude,
         "end_longitude": visit.end_longitude,
         "visit_report": visit.visit_report,
+        "media": [
+            {
+                "id": medium.id,
+                "type": medium.media_type,
+                "file": medium.file.url if medium.file else None,
+            }
+            for medium in visit.media.all()
+        ],
     }
+
+
+def _draw_report_header(pdf: canvas.Canvas):
+    page_width, page_height = LETTER
+    trust_x = 40
+    trust_y = page_height - 56
+
+    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.roundRect(trust_x, trust_y, 120, 34, 6, fill=1, stroke=0)
+    pdf.setFillColor(colors.white)
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(trust_x + 18, trust_y + 11, "TRUST")
+
+    try:
+        diversey_logo = ImageReader(urlopen("https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Diversey_logo.svg/512px-Diversey_logo.svg.png"))
+        pdf.drawImage(diversey_logo, page_width - 170, page_height - 70, width=130, height=42, preserveAspectRatio=True, mask="auto")
+    except Exception:
+        pdf.setFillColor(colors.HexColor("#1f2937"))
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawRightString(page_width - 40, page_height - 48, "Diversey")
+
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(40, page_height - 92, "Informe de visita técnica")
+
+
+def _draw_location_map(pdf: canvas.Canvas, visit: Visit, y_start: int):
+    page_width, _ = LETTER
+    map_x, map_y = 40, y_start - 170
+    map_width, map_height = page_width - 80, 150
+
+    pdf.setFillColor(colors.HexColor("#f8fafc"))
+    pdf.rect(map_x, map_y, map_width, map_height, fill=1, stroke=0)
+    pdf.setStrokeColor(colors.HexColor("#cbd5e1"))
+    pdf.rect(map_x, map_y, map_width, map_height, fill=0, stroke=1)
+
+    start_lat = visit.start_latitude
+    start_lon = visit.start_longitude
+    end_lat = visit.end_latitude
+    end_lon = visit.end_longitude
+    if None in (start_lat, start_lon, end_lat, end_lon):
+        pdf.setFillColor(colors.HexColor("#64748b"))
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(map_x + 12, map_y + 70, "No hay coordenadas suficientes para dibujar el trayecto.")
+        return map_y - 20
+
+    mid_lat = (start_lat + end_lat) / 2
+    mid_lon = (start_lon + end_lon) / 2
+    span_lat = max(abs(start_lat - end_lat), 0.0005)
+    span_lon = max(abs(start_lon - end_lon), 0.0005)
+
+    def project(lat: float, lon: float):
+        normalized_x = 0.5 + ((lon - mid_lon) / span_lon) * 0.35
+        normalized_y = 0.5 + ((lat - mid_lat) / span_lat) * 0.35
+        x = map_x + max(0.07, min(0.93, normalized_x)) * map_width
+        y = map_y + max(0.1, min(0.9, normalized_y)) * map_height
+        return x, y
+
+    start_x, start_y = project(start_lat, start_lon)
+    end_x, end_y = project(end_lat, end_lon)
+
+    pdf.setStrokeColor(colors.HexColor("#2563eb"))
+    pdf.setLineWidth(2)
+    pdf.line(start_x, start_y, end_x, end_y)
+
+    pdf.setFillColor(colors.HexColor("#16a34a"))
+    pdf.circle(start_x, start_y, 5, stroke=0, fill=1)
+    pdf.setFillColor(colors.HexColor("#dc2626"))
+    pdf.circle(end_x, end_y, 5, stroke=0, fill=1)
+
+    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.setFont("Helvetica", 9)
+    pdf.drawString(map_x + 12, map_y + map_height - 16, f"Inicio: {start_lat:.6f}, {start_lon:.6f}")
+    pdf.drawString(map_x + 12, map_y + map_height - 30, f"Final: {end_lat:.6f}, {end_lon:.6f}")
+    pdf.drawString(map_x + 12, map_y + 10, "● Verde: inicio · ● Rojo: final")
+    return map_y - 20
+
+
+def _draw_report_images(pdf: canvas.Canvas, visit: Visit, y_start: int):
+    images = [item for item in visit.media.all() if item.media_type == VisitMedia.MediaType.PHOTO][:3]
+    if not images:
+        return y_start
+
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(40, y_start, "Evidencias fotográficas")
+    y = y_start - 8
+    x = 40
+
+    for index, item in enumerate(images):
+        if index and index % 2 == 0:
+            x = 40
+            y -= 118
+        width = 250
+        height = 105
+        try:
+            image_data = item.file.read() if hasattr(item.file, "read") else default_storage.open(item.file.name, "rb").read()
+            image = ImageReader(BytesIO(image_data))
+            pdf.drawImage(image, x, y - height, width=width, height=height, preserveAspectRatio=True, mask="auto")
+        except Exception:
+            pdf.setFillColor(colors.HexColor("#e2e8f0"))
+            pdf.rect(x, y - height, width, height, fill=1, stroke=0)
+            pdf.setFillColor(colors.HexColor("#64748b"))
+            pdf.setFont("Helvetica", 9)
+            pdf.drawString(x + 12, y - 52, "No se pudo cargar la imagen")
+        x += 262
+
+    return y - 130
+
+
+def _build_visit_pdf(visit: Visit) -> bytes:
+    output = BytesIO()
+    pdf = canvas.Canvas(output, pagesize=LETTER)
+    _draw_report_header(pdf)
+    report = visit.visit_report or {}
+
+    y = 640
+    pdf.setFont("Helvetica", 10)
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.drawString(40, y, f"Visita ID: {visit.id} · Estado: {visit.get_status_display()}")
+    y -= 16
+    pdf.drawString(40, y, f"Cliente: {visit.area.branch.client.name} · Sucursal: {visit.area.branch.name}")
+    y -= 16
+    pdf.drawString(40, y, f"Área: {visit.area.name} · Dosificador: {visit.dispenser.identifier if visit.dispenser else 'N/A'}")
+    y -= 16
+    inspector_name = visit.inspector.get_full_name() if visit.inspector else "Sin inspector"
+    pdf.drawString(40, y, f"Inspector: {inspector_name}")
+    y -= 24
+
+    y = _draw_location_map(pdf, visit, y)
+
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(40, y, "Observaciones")
+    y -= 14
+    pdf.setFont("Helvetica", 10)
+    comments = str(report.get("comments") or visit.notes or "Sin observaciones.")
+    pdf.drawString(40, y, comments[:110])
+    y -= 20
+
+    checklist = report.get("checklist") if isinstance(report.get("checklist"), list) else []
+    ok_count = sum(1 for item in checklist if str(item.get("status") or "").lower() == "ok")
+    pdf.drawString(40, y, f"Dosificadores verificados OK: {ok_count}/{len(checklist)}")
+    y -= 20
+
+    y = _draw_report_images(pdf, visit, y)
+
+    responsible_name = str(report.get("responsible_name") or "No registrado")
+    responsible_signature = str(report.get("responsible_signature") or "")
+    inspector_signature = str(report.get("inspector_signature") or "")
+
+    if y < 160:
+        pdf.showPage()
+        _draw_report_header(pdf)
+        y = 640
+
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(40, y, "Firmas")
+    y -= 22
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(40, y, f"Responsable de área: {responsible_name}")
+    y -= 14
+    pdf.drawString(40, y, f"Firma responsable: {responsible_signature[:90] or 'No registrada'}")
+    y -= 14
+    pdf.drawString(40, y, f"Firma inspector: {inspector_signature[:90] or 'No registrada'}")
+
+    pdf.showPage()
+    pdf.save()
+    output.seek(0)
+    return output.getvalue()
 
 
 def _parse_optional_float(value: Any):
@@ -571,7 +756,11 @@ def visit_mobile_flow(request, visit_id: int):
     if data is None:
         return JsonResponse({"error": "Formato JSON inválido."}, status=400)
 
-    action = str(data.get("action") or "").strip()
+    action = str(data.get("action") or "").strip().lower()
+    if action in {"iniciar", "inicio"}:
+        action = "start"
+    elif action in {"finalizar", "finish", "finalize", "complete_visit"}:
+        action = "complete"
 
     if action == "start":
         if visit.status != Visit.Status.SCHEDULED:
@@ -642,6 +831,28 @@ def visit_mobile_flow(request, visit_id: int):
 
 
     return JsonResponse({"error": "Acción no válida."}, status=400)
+
+
+@require_GET
+def visit_report_pdf(request, visit_id: int):
+    current_user = _get_current_user(request)
+    if not current_user:
+        return JsonResponse({"error": "Usuario no autenticado."}, status=401)
+
+    try:
+        visit = Visit.objects.select_related(
+            "area__branch__client", "inspector", "dispenser"
+        ).prefetch_related("media").get(pk=visit_id)
+    except Visit.DoesNotExist:
+        return JsonResponse({"error": "Visita no encontrada."}, status=404)
+
+    if visit.status != Visit.Status.COMPLETED:
+        return JsonResponse({"error": "Solo puedes descargar informe de visitas finalizadas."}, status=400)
+
+    pdf_content = _build_visit_pdf(visit)
+    response = HttpResponse(pdf_content, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="visita-{visit.id}-informe.pdf"'
+    return response
 
 
 @require_GET

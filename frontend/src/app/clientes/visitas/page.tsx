@@ -138,6 +138,34 @@ export default function VisitasPage() {
     return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=17/${latitude}/${longitude}`;
   };
 
+
+  const downloadVisitReport = async (visitId: number) => {
+    try {
+      const currentUserEmail = getSessionUserEmail();
+      const response = await fetch(`/api/visits/${visitId}/report`, {
+        method: "GET",
+        headers: { "x-current-user-email": currentUserEmail },
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "No se pudo descargar el informe." }));
+        throw new Error(payload.error ?? "No se pudo descargar el informe.");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `visita-${visitId}-informe.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : "No se pudo descargar el informe.");
+    }
+  };
+
   const typeStyles: Record<string, string> = {
     Mantenimiento:
       "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-100 dark:border-yellow-900/50",
@@ -258,7 +286,16 @@ export default function VisitasPage() {
                       <span className="material-symbols-outlined text-[18px] text-slate-400 dark:text-slate-500">schedule</span>
                       <span>{formatted.date} · {formatted.time}</span>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap justify-end gap-2">
+                      {typeLabel === "Finalizada" ? (
+                        <button
+                          className="text-white bg-slate-900 font-semibold text-sm px-4 py-2 hover:bg-slate-700 rounded-full transition-colors"
+                          onClick={() => downloadVisitReport(visit.id)}
+                          type="button"
+                        >
+                          Descargar PDF
+                        </button>
+                      ) : null}
                       {buildOpenStreetMapLink(visit) ? (
                         <a
                           className="text-primary font-semibold text-sm px-4 py-2 hover:bg-yellow-50 rounded-full transition-colors"
@@ -344,6 +381,7 @@ export default function VisitasPage() {
                     <th className="px-6 py-4">Inspector</th>
                     <th className="px-6 py-4">Tipo</th>
                     <th className="px-6 py-4">Ubicación</th>
+                    <th className="px-6 py-4">Informe</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
@@ -404,26 +442,39 @@ export default function VisitasPage() {
                             <span className="text-slate-400">Sin ubicación</span>
                           )}
                         </td>
+                        <td className="whitespace-nowrap px-6 py-4">
+                          {typeLabel === "Finalizada" ? (
+                            <button
+                              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
+                              onClick={() => downloadVisitReport(visit.id)}
+                              type="button"
+                            >
+                              Descargar PDF
+                            </button>
+                          ) : (
+                            <span className="text-slate-400">No disponible</span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                   {error && !isLoading && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-red-500">
+                      <td colSpan={8} className="px-6 py-8 text-center text-red-500">
                         {error}
                       </td>
                     </tr>
                   )}
                   {isLoading && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                      <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
                         Cargando visitas...
                       </td>
                     </tr>
                   )}
                   {!error && !isLoading && visits.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                      <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
                         No hay visitas registradas.
                       </td>
                     </tr>
