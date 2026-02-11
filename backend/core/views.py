@@ -282,8 +282,8 @@ def _draw_report_header(pdf: canvas.Canvas, visit: Visit, generated_at: datetime
     pdf.drawString(header_x, header_y + 48, "trust")
 
     pdf.setFillColor(colors.HexColor("#0f172a"))
-    pdf.setFont(REPORT_FONT_BOLD, 27)
-    pdf.drawString(header_x, header_y + 16, "Informe de Visita")
+    pdf.setFont(REPORT_FONT_BOLD, 24)
+    pdf.drawString(header_x, header_y + 16, "Comprobante de Visita")
 
     pdf.setFillColor(colors.HexColor("#64748b"))
     pdf.setFont(REPORT_FONT, 10)
@@ -345,8 +345,32 @@ def _build_public_report_token(visit: Visit) -> str:
 
 def _build_public_report_url(request, visit: Visit) -> str:
     token = _build_public_report_token(visit)
-    path = f"/api/visits/report/public/{token}.pdf"
+    path = f"/visits/report/public/{token}"
     return request.build_absolute_uri(path)
+
+
+def _get_visit_from_public_token(token: str) -> Visit | None:
+    try:
+        payload = signing.loads(
+            token,
+            salt=REPORT_PUBLIC_LINK_SALT,
+            max_age=REPORT_PUBLIC_LINK_MAX_AGE_SECONDS,
+        )
+        visit_id = int(payload.get("visit_id"))
+    except (BadSignature, SignatureExpired, TypeError, ValueError):
+        return None
+
+    try:
+        visit = Visit.objects.select_related(
+            "area__branch__client", "inspector", "dispenser"
+        ).prefetch_related("media").get(pk=visit_id)
+    except Visit.DoesNotExist:
+        return None
+
+    if visit.status != Visit.Status.COMPLETED:
+        return None
+
+    return visit
 
 
 def _draw_public_access_qr(pdf: canvas.Canvas, public_url: str, y_start: float):
@@ -612,7 +636,7 @@ def _draw_public_access_qr(pdf: canvas.Canvas, public_url: str, y_start: float):
 
     pdf.setFillColor(colors.HexColor("#64748b"))
     pdf.setFont(REPORT_FONT, 9)
-    pdf.drawString(card_x + 16, card_y + card_h - 40, "Escanea para abrir o descargar este mismo PDF.")
+    pdf.drawString(card_x + 16, card_y + card_h - 40, "Escanea para abrir el informe web (fotos y videos) sin iniciar sesión.")
 
     qr_code = qr.QrCodeWidget(public_url)
     bounds = qr_code.getBounds()
@@ -651,16 +675,7 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
     _draw_report_header(pdf, visit, generated_at)
     y = 676
     y = _draw_summary_grid(pdf, visit, y)
-    y = _draw_location_map(pdf, visit, y)
     y = _draw_observations(pdf, visit, y)
-    y = _draw_report_images(pdf, visit, y)
-
-    if y < 250:
-        _draw_report_footer(pdf, generated_at)
-        pdf.showPage()
-        _draw_report_header(pdf, visit, generated_at)
-        y = 676
-
     y = _draw_signoff(pdf, visit, y)
     if public_report_url:
         y = _draw_public_access_qr(pdf, public_report_url, y)
@@ -1140,30 +1155,22 @@ def visit_report_pdf(request, visit_id: int):
 
 @require_GET
 def visit_report_public_pdf(request, token: str):
-    try:
-        payload = signing.loads(
-            token,
-            salt=REPORT_PUBLIC_LINK_SALT,
-            max_age=REPORT_PUBLIC_LINK_MAX_AGE_SECONDS,
-        )
-        visit_id = int(payload.get("visit_id"))
-    except (BadSignature, SignatureExpired, TypeError, ValueError):
+    visit = _get_visit_from_public_token(token)
+    if visit is None:
         return JsonResponse({"error": "El enlace público del informe es inválido o expiró."}, status=404)
-
-    try:
-        visit = Visit.objects.select_related(
-            "area__branch__client", "inspector", "dispenser"
-        ).prefetch_related("media").get(pk=visit_id)
-    except Visit.DoesNotExist:
-        return JsonResponse({"error": "Visita no encontrada."}, status=404)
-
-    if visit.status != Visit.Status.COMPLETED:
-        return JsonResponse({"error": "Solo puedes descargar informe de visitas finalizadas."}, status=400)
 
     pdf_content = _build_visit_pdf(visit, public_report_url=None)
     response = HttpResponse(pdf_content, content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="visita-{visit.id}-informe.pdf"'
     return response
+
+
+@require_GET
+def visit_report_public_detail(request, token: str):
+    visit = _get_visit_from_public_token(token)
+    if visit is None:
+        return JsonResponse({"error": "El enlace público del informe es inválido o expiró."}, status=404)
+    return JsonResponse(_serialize_visit(visit))
 
 
 @require_GET

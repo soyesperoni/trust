@@ -14,6 +14,7 @@ from .views import (
     users,
     visits,
     visit_mobile_flow,
+    visit_report_public_detail,
     visit_report_pdf,
     visit_report_public_pdf,
 )
@@ -31,6 +32,7 @@ urlpatterns = [
     path("visits/<int:visit_id>/mobile-flow/", visit_mobile_flow, name="visit_mobile_flow"),
     path("visits/<int:visit_id>/report", visit_report_pdf, name="visit_report_pdf_legacy"),
     path("visits/<int:visit_id>/report.pdf", visit_report_pdf, name="visit_report_pdf"),
+    path("visits/report/public/<str:token>/", visit_report_public_detail, name="visit_report_public_detail"),
     path("visits/report/public/<str:token>.pdf", visit_report_public_pdf, name="visit_report_public_pdf"),
     path("incidents/", incidents, name="incidents"),
     path("users/", users, name="users"),
