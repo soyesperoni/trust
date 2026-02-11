@@ -186,17 +186,17 @@ export default function VisitasPage() {
         description="Registros recientes de inspecciones y mantenimientos."
       />
 
-      <div className="md:hidden px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100">
-        <div className="flex items-center gap-3 bg-slate-100 rounded-full px-4 py-2.5 shadow-sm">
-          <span className="material-symbols-outlined text-slate-500">search</span>
+      <div className="md:hidden px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 dark:bg-[#161e27]/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5 shadow-sm">
+          <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">search</span>
           <input
-            className="bg-transparent border-none focus:ring-0 p-0 text-slate-700 w-full placeholder-slate-500 text-base"
+            className="bg-transparent border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-200 w-full placeholder-slate-500 dark:placeholder-slate-400 text-base"
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Buscar historial..."
             type="text"
             value={searchTerm}
           />
-          <button className="flex items-center justify-center text-slate-600" type="button">
+          <button className="flex items-center justify-center text-slate-600 dark:text-slate-300" type="button">
             <span className="material-symbols-outlined">filter_list</span>
           </button>
         </div>
@@ -212,7 +212,7 @@ export default function VisitasPage() {
                 className={`px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap border transition-colors ${
                   isActive
                     ? "bg-slate-900 text-white border-slate-900 shadow-sm"
-                    : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
                 }`}
                 onClick={() => setActiveFilter(filter.value)}
                 type="button"
@@ -238,14 +238,14 @@ export default function VisitasPage() {
                 return (
                   <article
                     key={visit.id}
-                    className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden active:bg-slate-50 transition-colors"
+                    className="bg-white dark:bg-[#161e27] rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 relative overflow-hidden active:bg-slate-50 dark:active:bg-slate-800 transition-colors"
                   >
                     <div className="flex justify-between items-start mb-2 gap-2">
                       <div>
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                           ID #VIS-{visit.id}
                         </span>
-                        <h3 className="text-lg font-bold text-slate-900 leading-tight mt-0.5">
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight mt-0.5">
                           {visit.client}
                         </h3>
                       </div>
@@ -255,12 +255,12 @@ export default function VisitasPage() {
                         {typeLabel}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-sm text-slate-600 mt-2">
-                      <span className="material-symbols-outlined text-[18px] text-slate-400">store</span>
+                    <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300 mt-2">
+                      <span className="material-symbols-outlined text-[18px] text-slate-400 dark:text-slate-500">store</span>
                       <span>{visit.branch}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-sm text-slate-600 mt-1">
-                      <span className="material-symbols-outlined text-[18px] text-slate-400">schedule</span>
+                    <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300 mt-1">
+                      <span className="material-symbols-outlined text-[18px] text-slate-400 dark:text-slate-500">schedule</span>
                       <span>{formatted.date} · {formatted.time}</span>
                     </div>
                     <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
@@ -273,7 +273,7 @@ export default function VisitasPage() {
         })}
 
         {filteredVisits.length === 0 ? (
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-sm text-slate-500 text-center">
+          <div className="bg-white dark:bg-[#161e27] rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400 text-center">
             {emptyMessage}
           </div>
         ) : null}
