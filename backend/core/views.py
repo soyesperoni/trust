@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from typing import Any
 
 from django.http import JsonResponse
 from django.utils import timezone
@@ -187,7 +188,31 @@ def _serialize_visit(visit: Visit) -> dict:
         "inspector_id": inspector_id,
         "visited_at": visit.visited_at.isoformat(),
         "notes": visit.notes,
+        "status": visit.status,
+        "status_label": visit.get_status_display(),
+        "started_at": visit.started_at.isoformat() if visit.started_at else None,
+        "completed_at": visit.completed_at.isoformat() if visit.completed_at else None,
+        "start_latitude": visit.start_latitude,
+        "start_longitude": visit.start_longitude,
+        "end_latitude": visit.end_latitude,
+        "end_longitude": visit.end_longitude,
+        "visit_report": visit.visit_report,
     }
+
+
+def _parse_optional_float(value: Any):
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_visit_report(value: Any):
+    if isinstance(value, dict):
+        return value
+    return None
 
 
 def _serialize_incident(incident: Incident) -> dict:
@@ -494,6 +519,7 @@ def visits(request):
         "dispenser": dispenser,
         "inspector": inspector,
         "notes": notes,
+        "status": Visit.Status.SCHEDULED,
     }
     if visited_at:
         create_kwargs["visited_at"] = visited_at
@@ -501,6 +527,75 @@ def visits(request):
     visit = Visit.objects.create(**create_kwargs)
 
     return JsonResponse(_serialize_visit(visit), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["PATCH"])
+def visit_mobile_flow(request, visit_id: int):
+    current_user = _get_current_user(request)
+    if not current_user or current_user.role != User.Role.INSPECTOR:
+        return JsonResponse({"error": "Solo un inspector puede realizar visitas programadas."}, status=403)
+
+    try:
+        visit = Visit.objects.select_related("inspector").get(pk=visit_id)
+    except Visit.DoesNotExist:
+        return JsonResponse({"error": "Visita no encontrada."}, status=404)
+
+    if visit.inspector_id and visit.inspector_id != current_user.id:
+        return JsonResponse({"error": "Esta visita está asignada a otro inspector."}, status=403)
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    action = str(data.get("action") or "").strip()
+
+    if action == "start":
+        if visit.status != Visit.Status.SCHEDULED:
+            return JsonResponse({"error": "Solo puedes iniciar visitas programadas."}, status=400)
+
+        start_latitude = _parse_optional_float(data.get("start_latitude"))
+        start_longitude = _parse_optional_float(data.get("start_longitude"))
+        if start_latitude is None or start_longitude is None:
+            return JsonResponse({"error": "Debes validar tu ubicación para iniciar la visita."}, status=400)
+
+        visit.status = Visit.Status.IN_PROGRESS
+        visit.started_at = timezone.now()
+        visit.start_latitude = start_latitude
+        visit.start_longitude = start_longitude
+        visit.inspector = current_user
+        visit.save(update_fields=["status", "started_at", "start_latitude", "start_longitude", "inspector"])
+        return JsonResponse(_serialize_visit(visit))
+
+    if action == "complete":
+        if visit.status not in {Visit.Status.IN_PROGRESS, Visit.Status.SCHEDULED}:
+            return JsonResponse({"error": "La visita no se puede finalizar en su estado actual."}, status=400)
+
+        end_latitude = _parse_optional_float(data.get("end_latitude"))
+        end_longitude = _parse_optional_float(data.get("end_longitude"))
+        if end_latitude is None or end_longitude is None:
+            return JsonResponse({"error": "Debes validar tu ubicación para finalizar la visita."}, status=400)
+
+        report = _normalize_visit_report(data.get("visit_report"))
+        if report is None:
+            return JsonResponse({"error": "El informe de la visita es inválido."}, status=400)
+
+        visit.status = Visit.Status.COMPLETED
+        visit.completed_at = timezone.now()
+        visit.end_latitude = end_latitude
+        visit.end_longitude = end_longitude
+        visit.visit_report = report
+        visit.save(update_fields=["status", "completed_at", "end_latitude", "end_longitude", "visit_report"])
+        return JsonResponse(_serialize_visit(visit))
+
+    if action == "cancel":
+        if visit.status == Visit.Status.COMPLETED:
+            return JsonResponse({"error": "No se puede cancelar una visita finalizada."}, status=400)
+        visit.status = Visit.Status.CANCELLED
+        visit.save(update_fields=["status"])
+        return JsonResponse(_serialize_visit(visit))
+
+    return JsonResponse({"error": "Acción no válida."}, status=400)
 
 
 @require_GET

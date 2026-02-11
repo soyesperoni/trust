@@ -95,6 +95,12 @@ class Product(models.Model):
 
 
 class Visit(models.Model):
+    class Status(models.TextChoices):
+        SCHEDULED = "scheduled", _("Programada")
+        IN_PROGRESS = "in_progress", _("En progreso")
+        COMPLETED = "completed", _("Finalizada")
+        CANCELLED = "cancelled", _("Cancelada")
+
     area = models.ForeignKey(Area, on_delete=models.CASCADE, related_name="visits")
     dispenser = models.ForeignKey(
         Dispenser,
@@ -112,6 +118,18 @@ class Visit(models.Model):
     )
     visited_at = models.DateTimeField(default=timezone.now)
     notes = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.SCHEDULED,
+    )
+    started_at = models.DateTimeField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+    start_latitude = models.FloatField(blank=True, null=True)
+    start_longitude = models.FloatField(blank=True, null=True)
+    end_latitude = models.FloatField(blank=True, null=True)
+    end_longitude = models.FloatField(blank=True, null=True)
+    visit_report = models.JSONField(blank=True, null=True)
 
     class Meta:
         ordering = ["-visited_at"]

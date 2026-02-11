@@ -1,0 +1,324 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { useCurrentUser } from "../../../../hooks/useCurrentUser";
+import { INSPECTOR_ROLE } from "../../../../lib/permissions";
+import { getSessionUserEmail } from "../../../../lib/session";
+
+type Visit = {
+  id: number;
+  client: string;
+  branch: string;
+  area: string;
+  visited_at: string;
+  status: string;
+  visit_report: {
+    checklist?: { id: string; label: string; location: string; checked: boolean }[];
+    comments?: string;
+    location_verified?: boolean;
+    responsible_name?: string;
+  } | null;
+};
+
+type ChecklistItem = { id: string; label: string; location: string; checked: boolean };
+
+const defaultChecklist: ChecklistItem[] = [
+  { id: "soap-1", label: "Dosificador Jabón #1", location: "Entrada Principal", checked: false },
+  { id: "gel-1", label: "Dosificador Gel #1", location: "Mostrador Atención", checked: true },
+  { id: "soap-2", label: "Dosificador Jabón #2", location: "Baños Hombres", checked: false },
+  { id: "paper-1", label: "Toallas Papel #1", location: "Baños Hombres", checked: false },
+  { id: "soap-3", label: "Dosificador Jabón #3", location: "Baños Mujeres", checked: false },
+];
+
+export default function RealizarVisitaPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
+  const { user, isLoading: isLoadingUser } = useCurrentUser();
+  const [visitId, setVisitId] = useState<number | null>(null);
+  const [visit, setVisit] = useState<Visit | null>(null);
+  const [loadingVisit, setLoadingVisit] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState(1);
+
+  const [startCoords, setStartCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [endCoords, setEndCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(defaultChecklist);
+  const [comments, setComments] = useState("");
+  const [locationVerified, setLocationVerified] = useState(false);
+  const [responsibleName, setResponsibleName] = useState("");
+
+  useEffect(() => {
+    params.then((resolved) => setVisitId(Number(resolved.id)));
+  }, [params]);
+
+  useEffect(() => {
+    if (!visitId) return;
+    let isMounted = true;
+
+    const loadVisit = async () => {
+      try {
+        setLoadingVisit(true);
+        const currentUserEmail = getSessionUserEmail();
+        const response = await fetch("/api/visits", {
+          cache: "no-store",
+          headers: { "x-current-user-email": currentUserEmail },
+        });
+        if (!response.ok) {
+          throw new Error("No se pudo cargar la visita.");
+        }
+
+        const payload = await response.json();
+        if (!isMounted) return;
+        const found = (payload.results ?? []).find((item: Visit) => item.id === visitId) ?? null;
+        if (!found) {
+          setError("Visita no encontrada.");
+          return;
+        }
+        setVisit(found);
+        if (found.visit_report?.checklist?.length) {
+          setChecklist(found.visit_report.checklist);
+        }
+        setComments(found.visit_report?.comments ?? "");
+        setLocationVerified(Boolean(found.visit_report?.location_verified));
+        setResponsibleName(found.visit_report?.responsible_name ?? "");
+      } catch (fetchError) {
+        if (!isMounted) return;
+        setError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar la visita.");
+      } finally {
+        if (!isMounted) return;
+        setLoadingVisit(false);
+      }
+    };
+
+    loadVisit();
+    return () => {
+      isMounted = false;
+    };
+  }, [visitId]);
+
+  useEffect(() => {
+    if (isLoadingUser) return;
+    if (user?.role !== INSPECTOR_ROLE) {
+      router.replace("/dashboard");
+    }
+  }, [isLoadingUser, router, user?.role]);
+
+  const progress = useMemo(() => step * 25, [step]);
+
+  const validatePhoneLocation = async () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      throw new Error("Tu dispositivo no permite geolocalización.");
+    }
+
+    return new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) =>
+          resolve({
+            latitude: Number(position.coords.latitude.toFixed(6)),
+            longitude: Number(position.coords.longitude.toFixed(6)),
+          }),
+        () => reject(new Error("No pudimos obtener tu ubicación actual.")),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      );
+    });
+  };
+
+  const patchFlow = async (payload: Record<string, unknown>) => {
+    if (!visitId) return null;
+    const currentUserEmail = getSessionUserEmail();
+    const response = await fetch(`/api/visits/${visitId}/mobile-flow`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-current-user-email": currentUserEmail,
+      },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json();
+    if (!response.ok) {
+      throw new Error(body.error ?? "No se pudo actualizar la visita.");
+    }
+    setVisit(body);
+    return body;
+  };
+
+  const onStartVisit = async () => {
+    try {
+      const coords = await validatePhoneLocation();
+      setStartCoords(coords);
+      await patchFlow({ action: "start", start_latitude: coords.latitude, start_longitude: coords.longitude });
+      setError(null);
+    } catch (flowError) {
+      setError(flowError instanceof Error ? flowError.message : "No se pudo iniciar la visita.");
+    }
+  };
+
+  const onFinishVisit = async () => {
+    try {
+      const coords = await validatePhoneLocation();
+      setEndCoords(coords);
+      await patchFlow({
+        action: "complete",
+        end_latitude: coords.latitude,
+        end_longitude: coords.longitude,
+        visit_report: {
+          checklist,
+          comments,
+          location_verified: locationVerified,
+          responsible_name: responsibleName,
+        },
+      });
+      router.push("/clientes/visitas");
+    } catch (flowError) {
+      setError(flowError instanceof Error ? flowError.message : "No se pudo finalizar la visita.");
+    }
+  };
+
+  const onCancel = async () => {
+    try {
+      await patchFlow({ action: "cancel" });
+    } catch {
+      // no-op: redirect anyways
+    }
+    router.push("/clientes/calendario");
+  };
+
+  if (loadingVisit || isLoadingUser) {
+    return <div className="flex h-full items-center justify-center p-6 text-sm text-slate-500">Cargando visita...</div>;
+  }
+
+  if (!visit) {
+    return <div className="p-6 text-sm text-red-500">{error ?? "No se encontró la visita."}</div>;
+  }
+
+  return (
+    <section className="mx-auto flex h-full w-full max-w-lg flex-col px-6 py-8 md:hidden">
+      <div className="mb-8">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-primary">Paso {step} de 4</span>
+          <span className="text-xs font-medium text-slate-500">{progress}%</span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+          <div className="h-1.5 rounded-full bg-primary" style={{ width: `${progress}%` }}></div>
+        </div>
+      </div>
+
+      {error ? <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
+
+      {step === 1 && (
+        <div className="flex flex-1 flex-col gap-6">
+          <div>
+            <h1 className="mb-2 text-3xl font-bold text-slate-900">Iniciar Visita</h1>
+            <p className="text-base text-slate-500">Verificando ubicación actual para comenzar la inspección.</p>
+          </div>
+          <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+              <span className="text-sm font-semibold text-slate-900">
+                {new Date(visit.visited_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600">Programada</span>
+            </div>
+            <p className="text-sm text-slate-500">Cliente: <span className="font-semibold text-slate-900">{visit.client}</span></p>
+            <p className="text-sm text-slate-500">Sucursal: <span className="font-semibold text-slate-900">{visit.branch}</span></p>
+            <p className="text-sm text-slate-500">Área: <span className="font-semibold text-slate-900">{visit.area}</span></p>
+          </article>
+          <button className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold" onClick={onStartVisit} type="button">
+            Validar ubicación del teléfono
+          </button>
+          {startCoords ? <p className="text-xs text-slate-500">Inicio: {startCoords.latitude}, {startCoords.longitude}</p> : null}
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
+          <div>
+            <h1 className="mb-2 text-3xl font-bold text-slate-900">Revisión de Dosificadores</h1>
+            <p className="text-base text-slate-500">Marca cada elemento verificado en el área.</p>
+          </div>
+          {checklist.map((item) => (
+            <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4" key={item.id}>
+              <div>
+                <p className="font-semibold text-slate-900">{item.label}</p>
+                <p className="text-xs text-slate-500">{item.location}</p>
+              </div>
+              <input
+                checked={item.checked}
+                onChange={(event) =>
+                  setChecklist((prev) => prev.map((current) => (current.id === item.id ? { ...current, checked: event.target.checked } : current)))
+                }
+                type="checkbox"
+              />
+            </label>
+          ))}
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="flex flex-1 flex-col gap-6">
+          <div>
+            <h1 className="mb-2 text-3xl font-bold text-slate-900">Hallazgos y Evidencias</h1>
+            <p className="text-base text-slate-500">Añade comentarios adicionales y fotos de la visita.</p>
+          </div>
+          <textarea
+            className="h-36 w-full rounded-xl border border-slate-300 bg-white p-4"
+            onChange={(event) => setComments(event.target.value)}
+            placeholder="Describe los hallazgos encontrados..."
+            value={comments}
+          />
+          <label className="cursor-pointer rounded-xl border-2 border-dashed border-slate-300 p-5 text-center text-sm text-primary">Elegir archivos (demo)</label>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input checked={locationVerified} onChange={(event) => setLocationVerified(event.target.checked)} type="checkbox" />
+            Confirmo que me encuentro físicamente en el sitio de la inspección.
+          </label>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="flex flex-1 flex-col gap-6">
+          <div>
+            <h1 className="mb-2 text-3xl font-bold text-slate-900">Finalizar Inspección</h1>
+            <p className="text-base text-slate-500">Firma del responsable del área.</p>
+          </div>
+          <div className="h-48 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50"></div>
+          <input
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+            onChange={(event) => setResponsibleName(event.target.value)}
+            placeholder="Nombre del responsable"
+            type="text"
+            value={responsibleName}
+          />
+          {endCoords ? <p className="text-xs text-slate-500">Fin: {endCoords.latitude}, {endCoords.longitude}</p> : null}
+        </div>
+      )}
+
+      <div className="mt-8 grid grid-cols-2 gap-3 pb-safe">
+        <button
+          className="rounded-xl border border-slate-300 bg-white py-3 font-semibold"
+          onClick={() => (step === 1 ? onCancel() : setStep((value) => value - 1))}
+          type="button"
+        >
+          {step === 1 ? "Cancelar" : "Atrás"}
+        </button>
+        {step < 4 ? (
+          <button
+            className="rounded-xl bg-primary py-3 font-bold text-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            disabled={step === 1 && !startCoords}
+            onClick={() => setStep((value) => value + 1)}
+            type="button"
+          >
+            Siguiente
+          </button>
+        ) : (
+          <button
+            className="rounded-xl bg-primary py-3 font-bold text-black"
+            onClick={onFinishVisit}
+            type="button"
+          >
+            Finalizar y enviar visita
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}

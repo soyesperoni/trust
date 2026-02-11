@@ -55,6 +55,7 @@ export default function AppShell({ children }: AppShellProps) {
   const router = useRouter();
   const { user, isLoading } = useCurrentUser();
   const isMobileIncidentCreation = pathname === "/clientes/incidencias/nueva";
+  const isMobileVisitFlow = pathname.includes("/clientes/visitas/") && pathname.endsWith("/realizar");
 
   useEffect(() => {
     if (!pathname || pathname === "/" || isLoading) return;
@@ -84,13 +85,13 @@ export default function AppShell({ children }: AppShellProps) {
 
         <main
           className={`flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative ${
-            isMobileIncidentCreation ? "pb-0" : "pb-24 md:pb-0"
+            isMobileIncidentCreation || isMobileVisitFlow ? "pb-0" : "pb-24 md:pb-0"
           }`}
         >
           {children}
         </main>
       </div>
-      <div className={isMobileIncidentCreation ? "hidden md:block" : "block"}>
+      <div className={isMobileIncidentCreation || isMobileVisitFlow ? "hidden md:block" : "block"}>
         <MobileBottomNav activePath={activePath} />
       </div>
     </div>

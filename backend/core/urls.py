@@ -13,6 +13,7 @@ from .views import (
     user_detail,
     users,
     visits,
+    visit_mobile_flow,
 )
 
 urlpatterns = [
@@ -25,6 +26,7 @@ urlpatterns = [
     path("dispensers/", dispensers, name="dispensers"),
     path("products/", products, name="products"),
     path("visits/", visits, name="visits"),
+    path("visits/<int:visit_id>/mobile-flow/", visit_mobile_flow, name="visit_mobile_flow"),
     path("incidents/", incidents, name="incidents"),
     path("users/", users, name="users"),
     path("users/<int:user_id>/", user_detail, name="user_detail"),
