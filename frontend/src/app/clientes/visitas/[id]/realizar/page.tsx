@@ -7,6 +7,26 @@ import { useCurrentUser } from "../../../../hooks/useCurrentUser";
 import { INSPECTOR_ROLE } from "../../../../lib/permissions";
 import { getSessionUserEmail } from "../../../../lib/session";
 
+declare global {
+  interface Window {
+    google?: {
+      maps?: {
+        Map: new (element: HTMLElement, options?: Record<string, unknown>) => {
+          panTo: (location: { lat: number; lng: number }) => void;
+          setZoom: (zoom: number) => void;
+        };
+        Marker: new (options?: Record<string, unknown>) => {
+          setPosition: (location: { lat: number; lng: number }) => void;
+          setMap: (map: unknown) => void;
+        };
+        SymbolPath: {
+          CIRCLE: unknown;
+        };
+      };
+    };
+  }
+}
+
 type Visit = {
   id: number;
   client: string;
@@ -72,6 +92,11 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   const [isSubmitting, setIsSubmitting] = useState(false);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastPointerPosition = useRef<{ x: number; y: number } | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const googleMapRef = useRef<{ panTo: (location: { lat: number; lng: number }) => void; setZoom: (zoom: number) => void } | null>(null);
+  const startMarkerRef = useRef<{ setPosition: (location: { lat: number; lng: number }) => void; setMap: (map: unknown) => void } | null>(null);
+  const [isGoogleMapsReady, setIsGoogleMapsReady] = useState(false);
+  const [googleMapsError, setGoogleMapsError] = useState<string | null>(null);
 
   useEffect(() => {
     params.then((resolved) => setVisitId(Number(resolved.id)));
@@ -187,6 +212,75 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   }, [isLoadingUser, router, user?.role]);
 
   const progress = useMemo(() => step * 25, [step]);
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (!googleMapsApiKey) {
+      setGoogleMapsError("Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para visualizar el mapa.");
+      return;
+    }
+
+    if (window.google?.maps) {
+      setIsGoogleMapsReady(true);
+      return;
+    }
+
+    const existingScript = document.getElementById("google-maps-script");
+    if (existingScript) {
+      existingScript.addEventListener("load", () => setIsGoogleMapsReady(true));
+      existingScript.addEventListener("error", () => setGoogleMapsError("No se pudo cargar Google Maps."));
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "google-maps-script";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setIsGoogleMapsReady(true);
+    script.onerror = () => setGoogleMapsError("No se pudo cargar Google Maps.");
+    document.head.appendChild(script);
+  }, [googleMapsApiKey]);
+
+  useEffect(() => {
+    if (step !== 1 || !isGoogleMapsReady || !mapContainerRef.current || !window.google?.maps) return;
+
+    if (!googleMapRef.current) {
+      googleMapRef.current = new window.google.maps.Map(mapContainerRef.current, {
+        center: { lat: -12.046374, lng: -77.042793 },
+        zoom: 14,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
+    }
+
+    if (startCoords) {
+      const point = { lat: startCoords.latitude, lng: startCoords.longitude };
+      if (!startMarkerRef.current) {
+        startMarkerRef.current = new window.google.maps.Marker({
+          map: googleMapRef.current,
+          position: point,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#FACC15",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 2,
+          },
+        });
+      } else {
+        startMarkerRef.current.setPosition(point);
+        startMarkerRef.current.setMap(googleMapRef.current);
+      }
+
+      googleMapRef.current.panTo(point);
+      googleMapRef.current.setZoom(17);
+    }
+  }, [isGoogleMapsReady, startCoords, step]);
 
   const validatePhoneLocation = async () => {
     if (typeof window === "undefined" || !navigator.geolocation) {
@@ -382,10 +476,22 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
             <p className="text-sm text-slate-500">Sucursal: <span className="font-semibold text-slate-900">{visit.branch}</span></p>
             <p className="text-sm text-slate-500">Área: <span className="font-semibold text-slate-900">{visit.area}</span></p>
           </article>
-          <button className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold" onClick={onStartVisit} type="button">
-            Validar ubicación del teléfono
-          </button>
-          {startCoords ? <p className="text-xs text-slate-500">Inicio: {startCoords.latitude}, {startCoords.longitude}</p> : null}
+          <article className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+            <div className="h-52 w-full bg-slate-100" ref={mapContainerRef}></div>
+            <div className="space-y-3 p-4">
+              <h2 className="text-base font-semibold text-slate-900">Confirmar ubicación</h2>
+              <p className="text-sm text-slate-500">Pulsa en validar ubicación para registrar el punto amarillo en el mapa.</p>
+              <button
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold"
+                onClick={onStartVisit}
+                type="button"
+              >
+                Validar ubicación
+              </button>
+              {googleMapsError ? <p className="text-xs text-amber-600">{googleMapsError}</p> : null}
+              {startCoords ? <p className="text-xs text-slate-500">Inicio: {startCoords.latitude}, {startCoords.longitude}</p> : null}
+            </div>
+          </article>
         </div>
       )}
 
