@@ -16,20 +16,22 @@ type Visit = {
   visited_at: string;
   status: string;
   visit_report: {
-    checklist?: { id: string; label: string; location: string; checked: boolean }[];
+    checklist?: { id: string; label: string; location: string; checked: boolean; photo?: string | null }[];
     comments?: string;
     location_verified?: boolean;
     responsible_name?: string;
     responsible_signature?: string;
+    start_location?: { latitude: number | null; longitude: number | null };
+    end_location?: { latitude: number | null; longitude: number | null };
   } | null;
 };
 
-type ChecklistItem = { id: string; label: string; location: string; checked: boolean };
+type ChecklistItem = { id: string; label: string; location: string; checked: boolean; photo: string | null };
 
 type Dispenser = {
   id: number;
   identifier: string;
-  model: { id: number; name: string };
+  model: { id: number; name: string; photo: string | null };
   area: { id: number; name: string; branch: string } | null;
 };
 
@@ -97,7 +99,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
         );
         const checkedById = new Map<string, boolean>(
           (found.visit_report?.checklist ?? []).map(
-            (item: ChecklistItem): [string, boolean] => [item.id, item.checked],
+            (item: { id: string; checked: boolean }): [string, boolean] => [item.id, item.checked],
           ),
         );
         const realChecklist: ChecklistItem[] = dispensersInArea.map((dispenser) => ({
@@ -105,6 +107,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           label: `${dispenser.identifier} (${dispenser.model.name})`,
           location: dispenser.area?.name ?? found.area,
           checked: checkedById.get(`dispenser-${dispenser.id}`) ?? false,
+          photo: dispenser.model.photo,
         }));
 
         setChecklist(realChecklist);
@@ -368,10 +371,20 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
             <p className="text-base text-slate-500">Marca cada elemento verificado en el área.</p>
           </div>
           {checklist.map((item) => (
-            <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4" key={item.id}>
-              <div>
-                <p className="font-semibold text-slate-900">{item.label}</p>
-                <p className="text-xs text-slate-500">{item.location}</p>
+            <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4" key={item.id}>
+              <div className="flex items-center gap-3">
+                {item.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img alt={`Foto del modelo ${item.label}`} className="h-14 w-14 rounded-lg border border-slate-200 object-cover" src={item.photo} />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-slate-200 bg-white text-[10px] text-slate-400">
+                    Sin foto
+                  </div>
+                )}
+                <div>
+                  <p className="font-semibold text-slate-900">{item.label}</p>
+                  <p className="text-xs text-slate-500">{item.location}</p>
+                </div>
               </div>
               <input
                 checked={item.checked}
@@ -480,7 +493,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
             onClick={onFinishVisit}
             type="button"
           >
-            {isSubmitting ? "Enviando visita..." : "Finalizar y enviar visita"}
+            {isSubmitting ? "Finalizando visita..." : "Finalizar visita"}
           </button>
         )}
       </div>
