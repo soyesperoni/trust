@@ -202,11 +202,11 @@ export default function DashboardPage() {
           )}
 
           <div className="md:hidden">
-            <div className="mb-4 flex gap-3 overflow-x-auto pb-2">
+            <div className="mb-4 grid grid-cols-2 gap-3">
               {mobileCards.map((item) => (
                 <article
                   key={item.label}
-                  className="flex min-w-[130px] flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/80"
+                  className="flex h-full w-full flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/80"
                 >
                   <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-full ${item.iconStyle}`}>
                     <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
