@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import BrandLogo from "../../../../components/BrandLogo";
 import { getSessionUserEmail } from "../../../../lib/session";
 
 type VisitMedia = {
@@ -121,6 +122,14 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
   const reportComments = visit?.visit_report?.comments || visit?.notes || "Sin observaciones.";
   const responsible = visit?.visit_report?.responsible_name || "No registrado";
   const media = visit?.media ?? [];
+  const imageMedia = media.filter((entry) => entry.type === "image");
+  const videoMedia = media.filter((entry) => entry.type === "video");
+  const mapLatitude = visit?.start_latitude ?? visit?.end_latitude;
+  const mapLongitude = visit?.start_longitude ?? visit?.end_longitude;
+  const mapUrl =
+    mapLatitude != null && mapLongitude != null
+      ? `https://www.openstreetmap.org/export/embed.html?layer=mapnik&marker=${mapLatitude},${mapLongitude}`
+      : null;
 
   const downloadVisitReport = async () => {
     if (!visitId) return;
@@ -160,7 +169,7 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <section className="mx-auto w-full max-w-5xl p-4 md:p-8">
+    <section className="mx-auto w-full max-w-6xl p-4 md:p-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 md:mb-6">
         <Link
           className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
@@ -179,15 +188,10 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
         </button>
       </div>
 
-      <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card dark:border-slate-800 dark:bg-[#161e27]">
+      <article className="max-h-[calc(100vh-170px)] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-card dark:border-slate-800 dark:bg-[#161e27]">
         <header className="border-b border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-[#161e27] md:p-8">
           <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-black p-2 shadow-lg">
-                <span className="material-symbols-outlined text-[26px] text-primary">shield</span>
-              </div>
-              <span className="text-3xl font-bold lowercase tracking-tight text-slate-900 dark:text-white">trust</span>
-            </div>
+            <BrandLogo size="xl" />
             <span className="text-xl font-bold text-slate-800 dark:text-white">{visit.client}</span>
           </div>
           <h1 className="mb-2 text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">Informe de Visita Técnica</h1>
@@ -234,19 +238,35 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
             <span className="material-symbols-outlined text-slate-400">pin_drop</span>
             Ubicación de la visita
           </h2>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-[#0f172a]">
-            <div className="grid gap-2 text-xs font-mono text-slate-600 dark:text-slate-300">
-              <span>
-                Inicio: {visit.start_latitude ?? "--"}, {visit.start_longitude ?? "--"}
-              </span>
-              <span>
-                Final: {visit.end_latitude ?? "--"}, {visit.end_longitude ?? "--"}
-              </span>
+          <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+            <div className="relative min-h-52 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-[#0f172a]">
+              {mapUrl ? (
+                <iframe
+                  className="h-full min-h-52 w-full"
+                  loading="lazy"
+                  src={mapUrl}
+                  title="Mapa de ubicación de visita"
+                />
+              ) : (
+                <div className="flex h-full min-h-52 items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+                  No hay coordenadas para mostrar el mapa.
+                </div>
+              )}
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-[#0f172a]">
+              <div className="grid gap-2 text-xs font-mono text-slate-600 dark:text-slate-300">
+                <span>
+                  Inicio: {visit.start_latitude ?? "--"}, {visit.start_longitude ?? "--"}
+                </span>
+                <span>
+                  Final: {visit.end_latitude ?? "--"}, {visit.end_longitude ?? "--"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-8 border-b border-slate-200 p-6 md:grid-cols-2 md:p-8 dark:border-slate-800">
+        <div className="grid gap-8 border-b border-slate-200 p-6 lg:grid-cols-2 md:p-8 dark:border-slate-800">
           <div>
             <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
               <span className="material-symbols-outlined text-slate-400">description</span>
@@ -276,14 +296,12 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
             <span className="material-symbols-outlined text-slate-400">photo_camera</span>
             Evidencias fotográficas
           </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {media.filter((entry) => entry.type === "image").length > 0 ? (
-              media
-                .filter((entry) => entry.type === "image")
-                .map((entry, index) => (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {imageMedia.length > 0 ? (
+              imageMedia.map((entry, index) => (
                   <div
                     key={entry.id}
-                    className="group relative h-64 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700"
+                    className="group relative h-56 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700"
                   >
                     {entry.file ? (
                       <img alt={`Evidencia ${index + 1}`} className="h-full w-full object-cover" src={entry.file} />
@@ -303,6 +321,38 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
               </div>
             )}
           </div>
+        </div>
+
+        <div className="border-b border-slate-200 p-6 md:p-8 dark:border-slate-800">
+          <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+            <span className="material-symbols-outlined text-slate-400">videocam</span>
+            Evidencias en video
+          </h2>
+          {videoMedia.length > 0 ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {videoMedia.map((entry, index) => (
+                <div
+                  key={entry.id}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900"
+                >
+                  {entry.file ? (
+                    <video className="h-64 w-full bg-black object-cover" controls preload="metadata" src={entry.file} />
+                  ) : (
+                    <div className="flex h-64 items-center justify-center">
+                      <span className="material-symbols-outlined text-4xl text-slate-400">movie</span>
+                    </div>
+                  )}
+                  <div className="border-t border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300">
+                    Video #{index + 1}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400">
+              No hay videos registrados.
+            </div>
+          )}
         </div>
 
         <footer className="bg-slate-50 p-6 text-center text-xs text-slate-400 dark:bg-[#1a232e]">
