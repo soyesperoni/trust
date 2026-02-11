@@ -16,6 +16,10 @@ type Visit = {
   visited_at: string;
   notes: string;
   status?: string;
+  start_latitude?: number | null;
+  start_longitude?: number | null;
+  end_latitude?: number | null;
+  end_longitude?: number | null;
 };
 
 type User = {
@@ -126,6 +130,13 @@ export default function VisitasPage() {
   const visitType = (status?: string) => (status === "completed" ? "Finalizada" : "Programada");
 
   const mapVisitTypeToFilter = (typeLabel: string) => (typeLabel === "Programada" ? "programada" as const : "finalizada" as const);
+
+  const buildOpenStreetMapLink = (visit: Visit) => {
+    const latitude = visit.end_latitude ?? visit.start_latitude;
+    const longitude = visit.end_longitude ?? visit.start_longitude;
+    if (latitude == null || longitude == null) return null;
+    return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=17/${latitude}/${longitude}`;
+  };
 
   const typeStyles: Record<string, string> = {
     Mantenimiento:
@@ -248,9 +259,20 @@ export default function VisitasPage() {
                       <span>{formatted.date} · {formatted.time}</span>
                     </div>
                     <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                      <button className="text-primary font-semibold text-sm px-4 py-2 hover:bg-yellow-50 rounded-full transition-colors" type="button">
-                        Ver detalles
-                      </button>
+                      {buildOpenStreetMapLink(visit) ? (
+                        <a
+                          className="text-primary font-semibold text-sm px-4 py-2 hover:bg-yellow-50 rounded-full transition-colors"
+                          href={buildOpenStreetMapLink(visit) ?? "#"}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Ver ubicación
+                        </a>
+                      ) : (
+                        <button className="text-slate-400 font-semibold text-sm px-4 py-2" disabled type="button">
+                          Sin ubicación
+                        </button>
+                      )}
                     </div>
                   </article>
                 );
@@ -321,6 +343,7 @@ export default function VisitasPage() {
                     <th className="px-6 py-4">Dosificador</th>
                     <th className="px-6 py-4">Inspector</th>
                     <th className="px-6 py-4">Tipo</th>
+                    <th className="px-6 py-4">Ubicación</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
@@ -367,26 +390,40 @@ export default function VisitasPage() {
                             {typeLabel}
                           </span>
                         </td>
+                        <td className="whitespace-nowrap px-6 py-4">
+                          {buildOpenStreetMapLink(visit) ? (
+                            <a
+                              className="text-primary font-semibold hover:underline"
+                              href={buildOpenStreetMapLink(visit) ?? "#"}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              Ver mapa OSM
+                            </a>
+                          ) : (
+                            <span className="text-slate-400">Sin ubicación</span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                   {error && !isLoading && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-red-500">
+                      <td colSpan={7} className="px-6 py-8 text-center text-red-500">
                         {error}
                       </td>
                     </tr>
                   )}
                   {isLoading && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
                         Cargando visitas...
                       </td>
                     </tr>
                   )}
                   {!error && !isLoading && visits.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
                         No hay visitas registradas.
                       </td>
                     </tr>

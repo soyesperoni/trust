@@ -9,18 +9,16 @@ import { getSessionUserEmail } from "../../../../lib/session";
 
 declare global {
   interface Window {
-    google?: {
-      maps?: {
-        Map: new (element: HTMLElement, options?: Record<string, unknown>) => {
-          panTo: (location: { lat: number; lng: number }) => void;
-          setZoom: (zoom: number) => void;
-        };
-        Marker: new (options?: Record<string, unknown>) => {
-          setPosition: (location: { lat: number; lng: number }) => void;
-          setMap: (map: unknown) => void;
-        };
-        SymbolPath: {
-          CIRCLE: unknown;
+    L?: {
+      map: (element: HTMLElement) => {
+        setView: (coords: [number, number], zoom: number) => void;
+        remove: () => void;
+      };
+      tileLayer: (urlTemplate: string, options?: Record<string, unknown>) => { addTo: (map: unknown) => void };
+      marker: (coords: [number, number]) => {
+        addTo: (map: unknown) => {
+          bindPopup: (content: string) => { openPopup: () => void };
+          setLatLng: (coords: [number, number]) => void;
         };
       };
     };
@@ -93,10 +91,10 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastPointerPosition = useRef<{ x: number; y: number } | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const googleMapRef = useRef<{ panTo: (location: { lat: number; lng: number }) => void; setZoom: (zoom: number) => void } | null>(null);
-  const startMarkerRef = useRef<{ setPosition: (location: { lat: number; lng: number }) => void; setMap: (map: unknown) => void } | null>(null);
-  const [isGoogleMapsReady, setIsGoogleMapsReady] = useState(false);
-  const [googleMapsError, setGoogleMapsError] = useState<string | null>(null);
+  const leafletMapRef = useRef<{ setView: (coords: [number, number], zoom: number) => void; remove: () => void } | null>(null);
+  const locationMarkerRef = useRef<{ setLatLng: (coords: [number, number]) => void } | null>(null);
+  const [isLeafletReady, setIsLeafletReady] = useState(false);
+  const [leafletError, setLeafletError] = useState<string | null>(null);
 
   useEffect(() => {
     params.then((resolved) => setVisitId(Number(resolved.id)));
@@ -212,75 +210,87 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   }, [isLoadingUser, router, user?.role]);
 
   const progress = useMemo(() => step * 25, [step]);
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (!googleMapsApiKey) {
-      setGoogleMapsError("Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para visualizar el mapa.");
+    const onLeafletReady = () => setIsLeafletReady(true);
+    const onLeafletError = () => setLeafletError("No se pudo cargar el mapa (Leaflet).");
+
+    const existingStyle = document.getElementById("leaflet-css");
+    if (!existingStyle) {
+      const style = document.createElement("link");
+      style.id = "leaflet-css";
+      style.rel = "stylesheet";
+      style.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      style.crossOrigin = "";
+      document.head.appendChild(style);
+    }
+
+    if (window.L) {
+      setIsLeafletReady(true);
       return;
     }
 
-    if (window.google?.maps) {
-      setIsGoogleMapsReady(true);
-      return;
-    }
-
-    const existingScript = document.getElementById("google-maps-script");
+    const existingScript = document.getElementById("leaflet-script");
     if (existingScript) {
-      existingScript.addEventListener("load", () => setIsGoogleMapsReady(true));
-      existingScript.addEventListener("error", () => setGoogleMapsError("No se pudo cargar Google Maps."));
-      return;
+      existingScript.addEventListener("load", onLeafletReady);
+      existingScript.addEventListener("error", onLeafletError);
+      return () => {
+        existingScript.removeEventListener("load", onLeafletReady);
+        existingScript.removeEventListener("error", onLeafletError);
+      };
     }
 
     const script = document.createElement("script");
-    script.id = "google-maps-script";
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}`;
+    script.id = "leaflet-script";
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
     script.async = true;
     script.defer = true;
-    script.onload = () => setIsGoogleMapsReady(true);
-    script.onerror = () => setGoogleMapsError("No se pudo cargar Google Maps.");
+    script.crossOrigin = "";
+    script.onload = onLeafletReady;
+    script.onerror = onLeafletError;
     document.head.appendChild(script);
-  }, [googleMapsApiKey]);
+
+    return () => {
+      script.removeEventListener("load", onLeafletReady);
+      script.removeEventListener("error", onLeafletError);
+    };
+  }, []);
 
   useEffect(() => {
-    if (step !== 1 || !isGoogleMapsReady || !mapContainerRef.current || !window.google?.maps) return;
+    if (step !== 1 || !isLeafletReady || !mapContainerRef.current || !window.L) return;
 
-    if (!googleMapRef.current) {
-      googleMapRef.current = new window.google.maps.Map(mapContainerRef.current, {
-        center: { lat: -12.046374, lng: -77.042793 },
-        zoom: 14,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-      });
+    if (!leafletMapRef.current) {
+      leafletMapRef.current = window.L.map(mapContainerRef.current);
+      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(leafletMapRef.current);
+      leafletMapRef.current.setView([-12.046374, -77.042793], 14);
     }
 
     if (startCoords) {
-      const point = { lat: startCoords.latitude, lng: startCoords.longitude };
-      if (!startMarkerRef.current) {
-        startMarkerRef.current = new window.google.maps.Marker({
-          map: googleMapRef.current,
-          position: point,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: "#FACC15",
-            fillOpacity: 1,
-            strokeColor: "#FFFFFF",
-            strokeWeight: 2,
-          },
-        });
+      const point: [number, number] = [startCoords.latitude, startCoords.longitude];
+      if (!locationMarkerRef.current) {
+        const marker = window.L.marker(point).addTo(leafletMapRef.current);
+        marker.bindPopup("Mi ubicación").openPopup();
+        locationMarkerRef.current = marker;
       } else {
-        startMarkerRef.current.setPosition(point);
-        startMarkerRef.current.setMap(googleMapRef.current);
+        locationMarkerRef.current.setLatLng(point);
       }
 
-      googleMapRef.current.panTo(point);
-      googleMapRef.current.setZoom(17);
+      leafletMapRef.current.setView(point, 17);
     }
-  }, [isGoogleMapsReady, startCoords, step]);
+  }, [isLeafletReady, startCoords, step]);
+
+  useEffect(() => {
+    return () => {
+      leafletMapRef.current?.remove();
+      leafletMapRef.current = null;
+      locationMarkerRef.current = null;
+    };
+  }, []);
 
   const validatePhoneLocation = async () => {
     if (typeof window === "undefined" || !navigator.geolocation) {
@@ -488,7 +498,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
               >
                 Validar ubicación
               </button>
-              {googleMapsError ? <p className="text-xs text-amber-600">{googleMapsError}</p> : null}
+              {leafletError ? <p className="text-xs text-amber-600">{leafletError}</p> : null}
               {startCoords ? <p className="text-xs text-slate-500">Inicio: {startCoords.latitude}, {startCoords.longitude}</p> : null}
             </div>
           </article>
