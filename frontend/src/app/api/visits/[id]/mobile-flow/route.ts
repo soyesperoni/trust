@@ -9,13 +9,14 @@ type Params = {
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   const { id } = await params;
-  const body = await request.text();
   const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
+  const contentType = request.headers.get("content-type") ?? "application/json";
+  const body = await request.arrayBuffer();
 
   const response = await fetch(`${backendBaseUrl}/api/visits/${id}/mobile-flow/`, {
     method: "PATCH",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": contentType,
       "X-Current-User-Email": currentUserEmail,
     },
     body,

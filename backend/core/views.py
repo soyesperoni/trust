@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
-from .models import Area, Branch, Client, Dispenser, Incident, Product, User, Visit
+from .models import Area, Branch, Client, Dispenser, Incident, Product, User, Visit, VisitMedia
 
 
 def _serialize_user(user: User) -> dict:
@@ -210,9 +210,22 @@ def _parse_optional_float(value: Any):
 
 
 def _normalize_visit_report(value: Any):
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return None
     if isinstance(value, dict):
         return value
     return None
+
+
+def _is_truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "si", "sí"}
+    return bool(value)
 
 
 def _serialize_incident(incident: Incident) -> dict:
@@ -568,8 +581,10 @@ def visit_mobile_flow(request, visit_id: int):
         return JsonResponse(_serialize_visit(visit))
 
     if action == "complete":
-        if visit.status not in {Visit.Status.IN_PROGRESS, Visit.Status.SCHEDULED}:
+        if visit.status != Visit.Status.IN_PROGRESS:
             return JsonResponse({"error": "La visita no se puede finalizar en su estado actual."}, status=400)
+        if not visit.started_at:
+            return JsonResponse({"error": "Debes iniciar la visita antes de finalizarla."}, status=400)
 
         end_latitude = _parse_optional_float(data.get("end_latitude"))
         end_longitude = _parse_optional_float(data.get("end_longitude"))
@@ -580,12 +595,32 @@ def visit_mobile_flow(request, visit_id: int):
         if report is None:
             return JsonResponse({"error": "El informe de la visita es inválido."}, status=400)
 
+        if not _is_truthy(report.get("location_verified")):
+            return JsonResponse({"error": "Debes confirmar que te encuentras físicamente en el sitio."}, status=400)
+
+        responsible_name = str(report.get("responsible_name") or "").strip()
+        responsible_signature = str(report.get("responsible_signature") or "").strip()
+        if not responsible_name or not responsible_signature:
+            return JsonResponse({"error": "Debes registrar nombre y firma del responsable para finalizar."}, status=400)
+
         visit.status = Visit.Status.COMPLETED
         visit.completed_at = timezone.now()
         visit.end_latitude = end_latitude
         visit.end_longitude = end_longitude
         visit.visit_report = report
         visit.save(update_fields=["status", "completed_at", "end_latitude", "end_longitude", "visit_report"])
+
+        evidence_files = files.getlist("evidence_files") if files else []
+        for evidence in evidence_files:
+            content_type = str(getattr(evidence, "content_type", "") or "")
+            if content_type.startswith("image/"):
+                media_type = VisitMedia.MediaType.PHOTO
+            elif content_type.startswith("video/"):
+                media_type = VisitMedia.MediaType.VIDEO
+            else:
+                media_type = VisitMedia.MediaType.OTHER
+            VisitMedia.objects.create(visit=visit, media_type=media_type, file=evidence)
+
         return JsonResponse(_serialize_visit(visit))
 
     if action == "cancel":

@@ -12,6 +12,7 @@ type Visit = {
   client: string;
   branch: string;
   area: string;
+  area_id: number;
   visited_at: string;
   status: string;
   visit_report: {
@@ -49,6 +50,8 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   const [responsibleName, setResponsibleName] = useState("");
   const [responsibleSignature, setResponsibleSignature] = useState("");
   const [isDrawingSignature, setIsDrawingSignature] = useState(false);
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastPointerPosition = useRef<{ x: number; y: number } | null>(null);
 
@@ -175,17 +178,37 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
     });
   };
 
-  const patchFlow = async (payload: Record<string, unknown>) => {
+  const patchFlow = async (payload: Record<string, unknown>, files?: File[]) => {
     if (!visitId) return null;
     const currentUserEmail = getSessionUserEmail();
-    const response = await fetch(`/api/visits/${visitId}/mobile-flow`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "x-current-user-email": currentUserEmail,
-      },
-      body: JSON.stringify(payload),
-    });
+    const hasFiles = Boolean(files && files.length > 0);
+    let response: Response;
+
+    if (hasFiles) {
+      const formData = new FormData();
+      formData.append("action", String(payload.action ?? ""));
+      formData.append("end_latitude", String(payload.end_latitude ?? ""));
+      formData.append("end_longitude", String(payload.end_longitude ?? ""));
+      formData.append("visit_report", JSON.stringify(payload.visit_report ?? {}));
+      files?.forEach((file) => formData.append("evidence_files", file));
+
+      response = await fetch(`/api/visits/${visitId}/mobile-flow`, {
+        method: "PATCH",
+        headers: {
+          "x-current-user-email": currentUserEmail,
+        },
+        body: formData,
+      });
+    } else {
+      response = await fetch(`/api/visits/${visitId}/mobile-flow`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-current-user-email": currentUserEmail,
+        },
+        body: JSON.stringify(payload),
+      });
+    }
     const body = await response.json();
     if (!response.ok) {
       throw new Error(body.error ?? "No se pudo actualizar la visita.");
@@ -210,6 +233,13 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
       if (!responsibleSignature) {
         throw new Error("Debes registrar la firma del responsable para finalizar.");
       }
+      if (!responsibleName.trim()) {
+        throw new Error("Debes registrar el nombre del responsable para finalizar.");
+      }
+      if (!locationVerified) {
+        throw new Error("Debes confirmar tu ubicación en sitio para finalizar la visita.");
+      }
+      setIsSubmitting(true);
       const coords = await validatePhoneLocation();
       setEndCoords(coords);
       await patchFlow({
@@ -223,10 +253,12 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           responsible_name: responsibleName,
           responsible_signature: responsibleSignature,
         },
-      });
+      }, evidenceFiles);
       router.push("/clientes/visitas");
     } catch (flowError) {
       setError(flowError instanceof Error ? flowError.message : "No se pudo finalizar la visita.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -370,7 +402,22 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
             placeholder="Describe los hallazgos encontrados..."
             value={comments}
           />
-          <label className="cursor-pointer rounded-xl border-2 border-dashed border-slate-300 p-5 text-center text-sm text-primary">Elegir archivos (demo)</label>
+          <label className="cursor-pointer rounded-xl border-2 border-dashed border-slate-300 p-5 text-center text-sm text-primary">
+            <input
+              accept="image/*,video/*"
+              className="hidden"
+              multiple
+              onChange={(event) => setEvidenceFiles(Array.from(event.target.files ?? []))}
+              type="file"
+            />
+            {evidenceFiles.length > 0 ? `${evidenceFiles.length} archivo(s) seleccionados` : "Añadir evidencia (opcional)"}
+          </label>
+          {isSubmitting && evidenceFiles.length > 0 ? (
+            <p className="flex items-center gap-2 text-xs text-slate-500">
+              <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+              Subiendo archivos...
+            </p>
+          ) : null}
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input checked={locationVerified} onChange={(event) => setLocationVerified(event.target.checked)} type="checkbox" />
             Confirmo que me encuentro físicamente en el sitio de la inspección.
@@ -433,11 +480,12 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           </button>
         ) : (
           <button
-            className="rounded-xl bg-primary py-3 font-bold text-black"
+            className="rounded-xl bg-primary py-3 font-bold text-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            disabled={isSubmitting}
             onClick={onFinishVisit}
             type="button"
           >
-            Finalizar y enviar visita
+            {isSubmitting ? "Enviando visita..." : "Finalizar y enviar visita"}
           </button>
         )}
       </div>
