@@ -572,16 +572,15 @@ def visit_mobile_flow(request, visit_id: int):
         if start_latitude is None or start_longitude is None:
             return JsonResponse({"error": "Debes validar tu ubicación para iniciar la visita."}, status=400)
 
-        visit.status = Visit.Status.IN_PROGRESS
         visit.started_at = timezone.now()
         visit.start_latitude = start_latitude
         visit.start_longitude = start_longitude
         visit.inspector = current_user
-        visit.save(update_fields=["status", "started_at", "start_latitude", "start_longitude", "inspector"])
+        visit.save(update_fields=["started_at", "start_latitude", "start_longitude", "inspector"])
         return JsonResponse(_serialize_visit(visit))
 
     if action == "complete":
-        if visit.status != Visit.Status.IN_PROGRESS:
+        if visit.status != Visit.Status.SCHEDULED:
             return JsonResponse({"error": "La visita no se puede finalizar en su estado actual."}, status=400)
         if not visit.started_at:
             return JsonResponse({"error": "Debes iniciar la visita antes de finalizarla."}, status=400)
@@ -623,12 +622,6 @@ def visit_mobile_flow(request, visit_id: int):
 
         return JsonResponse(_serialize_visit(visit))
 
-    if action == "cancel":
-        if visit.status == Visit.Status.COMPLETED:
-            return JsonResponse({"error": "No se puede cancelar una visita finalizada."}, status=400)
-        visit.status = Visit.Status.CANCELLED
-        visit.save(update_fields=["status"])
-        return JsonResponse(_serialize_visit(visit))
 
     return JsonResponse({"error": "Acción no válida."}, status=400)
 

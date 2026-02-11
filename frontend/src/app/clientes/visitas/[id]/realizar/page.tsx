@@ -262,12 +262,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
     }
   };
 
-  const onCancel = async () => {
-    try {
-      await patchFlow({ action: "cancel" });
-    } catch {
-      // no-op: redirect anyways
-    }
+  const onCancel = () => {
     router.push("/clientes/calendario");
   };
 
