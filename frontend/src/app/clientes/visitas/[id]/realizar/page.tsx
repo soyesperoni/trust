@@ -119,6 +119,8 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   const videoChunksRef = useRef<Blob[]>([]);
   const recordingStartedAtRef = useRef<number | null>(null);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const evidencePreviewsRef = useRef<EvidencePreview[]>([]);
+  const pendingEvidenceRef = useRef<EvidencePreview | null>(null);
 
   const allDispensersChecked = useMemo(
     () => checklistDispensers.length === 0 || checklistDispensers.every((dispenser) => dispenser.checked),
@@ -334,13 +336,21 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   }, []);
 
   useEffect(() => {
+    evidencePreviewsRef.current = evidencePreviews;
+  }, [evidencePreviews]);
+
+  useEffect(() => {
+    pendingEvidenceRef.current = pendingEvidence;
+  }, [pendingEvidence]);
+
+  useEffect(() => {
     return () => {
-      evidencePreviews.forEach((item) => URL.revokeObjectURL(item.previewUrl));
-      if (pendingEvidence) {
-        URL.revokeObjectURL(pendingEvidence.previewUrl);
+      evidencePreviewsRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      if (pendingEvidenceRef.current) {
+        URL.revokeObjectURL(pendingEvidenceRef.current.previewUrl);
       }
     };
-  }, [evidencePreviews, pendingEvidence]);
+  }, []);
 
   const stopRecordingTimer = () => {
     if (recordingTimerRef.current) {
@@ -900,14 +910,20 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
               : `Añadir evidencia (${evidenceFiles.length}/${MAX_EVIDENCE_ITEMS})`}
           </button>
           {evidencePreviews.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               {evidencePreviews.map((item, index) => (
                 <article className="relative overflow-hidden rounded-xl border border-slate-200" key={`${item.file.name}-${index}`}>
                   {item.type === "image" ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img alt={`Evidencia ${index + 1}`} className="h-28 w-full object-cover" src={item.previewUrl} />
+                    <img alt={`Evidencia ${index + 1}`} className="h-20 w-full object-cover" src={item.previewUrl} />
                   ) : (
-                    <video className="h-28 w-full object-cover" muted preload="metadata" src={item.previewUrl} />
+                    <div className="relative">
+                      <video className="h-20 w-full object-cover" muted preload="metadata" src={item.previewUrl} />
+                      <div className="absolute bottom-0 left-0 right-0 flex items-center gap-1 bg-yellow-300 px-2 py-1 text-[10px] font-semibold text-yellow-900">
+                        <span className="material-symbols-outlined text-xs">videocam</span>
+                        Video
+                      </div>
+                    </div>
                   )}
                   <button
                     className="absolute right-1 top-1 rounded-full bg-slate-900/75 p-1 text-white"
@@ -916,7 +932,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
                   >
                     <span className="material-symbols-outlined text-sm">close</span>
                   </button>
-                  <p className="px-2 py-1 text-[11px] text-slate-600">{item.type === "image" ? "Foto" : "Video"}</p>
+                  <p className="px-2 py-1 text-[10px] text-slate-600">{item.type === "image" ? "Foto" : "Video"}</p>
                 </article>
               ))}
             </div>
