@@ -162,13 +162,6 @@ export default function DashboardPage() {
         icon: "report_problem",
         iconStyle: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300",
       },
-      {
-        label: "Visitas completadas",
-        value: Math.max(0, (stats?.visits ?? 0) - (stats?.pending_visits ?? 0)),
-        icon: "check_circle",
-        iconStyle:
-          "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
-      },
     ],
     [stats],
   );
