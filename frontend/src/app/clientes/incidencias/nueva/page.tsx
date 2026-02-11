@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
@@ -18,6 +19,7 @@ const labelClassName =
   "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5";
 
 export default function NuevaIncidenciaPage() {
+  const router = useRouter();
   const [mobileStep, setMobileStep] = useState(1);
   const [clients, setClients] = useState<Client[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -272,7 +274,18 @@ export default function NuevaIncidenciaPage() {
               {mobileStep < 3 ? "Siguiente" : "Finalizar y Guardar"}
               <span className="material-symbols-outlined ml-2 text-sm">{mobileStep < 3 ? "arrow_forward" : "check"}</span>
             </button>
-            <button className="block w-full py-2 text-center text-sm font-medium text-slate-500 dark:text-slate-400" onClick={() => setMobileStep((prev) => (prev > 1 ? prev - 1 : prev))} type="button">
+            <button
+              className="block w-full py-2 text-center text-sm font-medium text-slate-500 dark:text-slate-400"
+              onClick={() => {
+                if (mobileStep === 1) {
+                  router.push("/clientes/incidencias");
+                  return;
+                }
+
+                setMobileStep((prev) => (prev > 1 ? prev - 1 : prev));
+              }}
+              type="button"
+            >
               {mobileStep === 1 ? "Cancelar" : "Atrás"}
             </button>
           </div>
