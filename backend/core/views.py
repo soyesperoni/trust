@@ -144,6 +144,7 @@ def _serialize_dispenser(dispenser: Dispenser) -> dict:
         "model": {
             "id": dispenser.model_id,
             "name": dispenser.model.name,
+            "photo": dispenser.model.photo.url if dispenser.model.photo else None,
         },
         "area": {
             "id": dispenser.area_id,
@@ -606,6 +607,14 @@ def visit_mobile_flow(request, visit_id: int):
         visit.completed_at = timezone.now()
         visit.end_latitude = end_latitude
         visit.end_longitude = end_longitude
+        report["start_location"] = {
+            "latitude": visit.start_latitude,
+            "longitude": visit.start_longitude,
+        }
+        report["end_location"] = {
+            "latitude": end_latitude,
+            "longitude": end_longitude,
+        }
         visit.visit_report = report
         visit.save(update_fields=["status", "completed_at", "end_latitude", "end_longitude", "visit_report"])
 
