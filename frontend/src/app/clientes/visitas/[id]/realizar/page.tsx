@@ -97,6 +97,11 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   const [isLeafletReady, setIsLeafletReady] = useState(false);
   const [leafletError, setLeafletError] = useState<string | null>(null);
 
+  const allDispensersChecked = useMemo(
+    () => checklistDispensers.length === 0 || checklistDispensers.every((dispenser) => dispenser.checked),
+    [checklistDispensers],
+  );
+
   useEffect(() => {
     params.then((resolved) => setVisitId(Number(resolved.id)));
   }, [params]);
@@ -264,10 +269,18 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   }, []);
 
   useEffect(() => {
-    if (step !== 1 || !isLeafletReady || !mapContainerRef.current || !window.L) return;
+    if (!isLeafletReady || !mapContainerRef.current || !window.L) return;
+
+    const mapContainer = mapContainerRef.current;
+
+    if (leafletMapRef.current && !mapContainer.querySelector(".leaflet-container")) {
+      leafletMapRef.current.remove();
+      leafletMapRef.current = null;
+      locationMarkerRef.current = null;
+    }
 
     if (!leafletMapRef.current) {
-      leafletMapRef.current = window.L.map(mapContainerRef.current);
+      leafletMapRef.current = window.L.map(mapContainer);
       window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: "&copy; OpenStreetMap contributors",
@@ -527,17 +540,23 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
                   <p className="font-semibold text-slate-900">{dispenser.identifier}</p>
                   <p className="text-xs text-slate-500">{dispenser.location}</p>
                 </div>
-                <input
-                  checked={dispenser.checked}
-                  onChange={(event) => {
-                    const checked = event.target.checked;
+                <button
+                  aria-label={dispenser.checked ? "Dosificador verificado" : "Marcar dosificador verificado"}
+                  aria-pressed={dispenser.checked}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition ${
+                    dispenser.checked ? "border-amber-400 bg-amber-400 text-slate-900" : "border-slate-300 bg-white text-transparent"
+                  }`}
+                  onClick={() => {
+                    const checked = !dispenser.checked;
                     setChecklist((prev) => prev.map((item) => (item.id === `dispenser-${dispenser.id}` ? { ...item, checked } : item)));
                     setChecklistDispensers((prev) =>
                       prev.map((item) => (item.id === dispenser.id ? { ...item, checked } : item)),
                     );
                   }}
-                  type="checkbox"
-                />
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-base">check</span>
+                </button>
               </div>
               <div className="mt-3 space-y-2">
                 <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5">
@@ -559,21 +578,24 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
                   </div>
                 </div>
                 {dispenser.products.length > 0 ? (
-                  dispenser.products.map((product) => (
-                    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5" key={product.id}>
-                      {product.photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img alt={`Foto del producto ${product.name}`} className="h-12 w-12 rounded-lg border border-slate-200 object-cover" src={product.photo} />
-                      ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                          Sin foto
-                        </div>
-                      )}
-                      <p className="text-sm font-medium text-slate-800">{product.name}</p>
-                    </div>
-                  ))
+                  <div className="space-y-2 pl-5">
+                    {dispenser.products.map((product) => (
+                      <div className="relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5" key={product.id}>
+                        <span className="pointer-events-none absolute -left-3 top-1/2 h-px w-3 -translate-y-1/2 bg-slate-300"></span>
+                        {product.photo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img alt={`Foto del producto ${product.name}`} className="h-12 w-12 rounded-lg border border-slate-200 object-cover" src={product.photo} />
+                        ) : (
+                          <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                            Sin foto
+                          </div>
+                        )}
+                        <p className="text-sm font-medium text-slate-800">{product.name}</p>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <p className="text-xs text-slate-400">Este dosificador no tiene productos registrados.</p>
+                  <p className="pl-5 text-xs text-slate-400">Este dosificador no tiene productos registrados.</p>
                 )}
               </div>
             </label>
@@ -664,7 +686,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
         {step < 4 ? (
           <button
             className="rounded-xl bg-primary py-3 font-bold text-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-            disabled={step === 1 && !startCoords}
+            disabled={(step === 1 && !startCoords) || (step === 2 && !allDispensersChecked)}
             onClick={() => setStep((value) => value + 1)}
             type="button"
           >
