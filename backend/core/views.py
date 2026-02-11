@@ -32,6 +32,8 @@ REPORT_FONT_BOLD = "Helvetica-Bold"
 REPORT_FONT_ITALIC = "Helvetica-Oblique"
 REPORT_PUBLIC_LINK_SALT = "visit-report-public-link"
 REPORT_PUBLIC_LINK_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+REPORT_PAGE_PADDING = 36
+REPORT_CARD_RADIUS = 14
 
 def _serialize_user(user: User) -> dict:
     full_name = user.get_full_name().strip()
@@ -393,7 +395,7 @@ def _draw_summary_grid(pdf: canvas.Canvas, visit: Visit, y_start: float):
     card_h = 110
     _draw_card(pdf, card_x, card_y, card_w, card_h)
 
-    report = visit.visit_report or {}
+    report = _get_visit_report_data(visit)
     items = [
         ("Cliente", visit.area.branch.client.name),
         ("Sucursal", visit.area.branch.name),
@@ -529,7 +531,7 @@ def _draw_report_images(pdf: canvas.Canvas, visit: Visit, y_start: int):
 
 
 def _draw_observations(pdf: canvas.Canvas, visit: Visit, y_start: float):
-    report = visit.visit_report or {}
+    report = _get_visit_report_data(visit)
     comments = str(report.get("comments") or visit.notes or "Sin observaciones.")[:800]
 
     card_x = REPORT_PAGE_PADDING
@@ -549,7 +551,7 @@ def _draw_observations(pdf: canvas.Canvas, visit: Visit, y_start: float):
 
 
 def _draw_signoff(pdf: canvas.Canvas, visit: Visit, y_start: float):
-    report = visit.visit_report or {}
+    report = _get_visit_report_data(visit)
     responsible_name = str(report.get("responsible_name") or "No registrado")
     signature_data = str(report.get("responsible_signature") or "")
 
@@ -688,6 +690,11 @@ def _normalize_visit_report(value: Any):
     if isinstance(value, dict):
         return value
     return None
+
+
+def _get_visit_report_data(visit: Visit) -> dict:
+    report = _normalize_visit_report(visit.visit_report)
+    return report if report is not None else {}
 
 
 def _is_truthy(value: Any) -> bool:
