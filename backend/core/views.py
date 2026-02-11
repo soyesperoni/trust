@@ -7,6 +7,8 @@ from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from django.core import signing
+from django.core.signing import BadSignature, SignatureExpired
 from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.http.multipartparser import MultiPartParser, MultiPartParserError
@@ -17,6 +19,9 @@ from django.views.decorators.http import require_GET, require_http_methods
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.utils import ImageReader
+from reportlab.graphics import renderPDF
+from reportlab.graphics.barcode import qr
+from reportlab.graphics.shapes import Drawing
 from reportlab.pdfgen import canvas
 
 from .models import Area, Branch, Client, Dispenser, Incident, Product, User, Visit, VisitMedia
@@ -25,6 +30,8 @@ from .models import Area, Branch, Client, Dispenser, Incident, Product, User, Vi
 REPORT_FONT = "Helvetica"
 REPORT_FONT_BOLD = "Helvetica-Bold"
 REPORT_FONT_ITALIC = "Helvetica-Oblique"
+REPORT_PUBLIC_LINK_SALT = "visit-report-public-link"
+REPORT_PUBLIC_LINK_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
 def _serialize_user(user: User) -> dict:
     full_name = user.get_full_name().strip()
@@ -307,6 +314,55 @@ def _fetch_static_map(start_lat: float, start_lon: float, end_lat: float, end_lo
         return response.read()
 
 
+def _build_public_report_token(visit: Visit) -> str:
+    return signing.dumps({"visit_id": visit.id}, salt=REPORT_PUBLIC_LINK_SALT)
+
+
+def _build_public_report_url(request, visit: Visit) -> str:
+    token = _build_public_report_token(visit)
+    path = f"/api/visits/report/public/{token}.pdf"
+    return request.build_absolute_uri(path)
+
+
+def _draw_public_access_qr(pdf: canvas.Canvas, public_url: str, y_start: float):
+    card_x = 52
+    card_y = y_start - 118
+    card_w = 506
+    card_h = 108
+
+    pdf.setFillColor(colors.white)
+    pdf.rect(card_x, card_y, card_w, card_h, fill=1, stroke=0)
+
+    pdf.setFillColor(colors.HexColor("#111827"))
+    pdf.setFont(REPORT_FONT_BOLD, 11)
+    pdf.drawString(card_x + 16, card_y + 84, "Acceso público al informe")
+
+    pdf.setFillColor(colors.HexColor("#64748b"))
+    pdf.setFont(REPORT_FONT, 9)
+    pdf.drawString(card_x + 16, card_y + 68, "Escanea este QR para ver o descargar el PDF sin iniciar sesión.")
+
+    qr_code = qr.QrCodeWidget(public_url)
+    bounds = qr_code.getBounds()
+    qr_size = 72
+    qr_drawing = Drawing(
+        qr_size,
+        qr_size,
+        transform=[qr_size / (bounds[2] - bounds[0]), 0, 0, qr_size / (bounds[3] - bounds[1]), 0, 0],
+    )
+    qr_drawing.add(qr_code)
+    renderPDF.draw(qr_drawing, pdf, card_x + 16, card_y + 10)
+
+    url_x = card_x + 102
+    available_width = card_w - 120
+    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.setFont(REPORT_FONT_BOLD, 8)
+    pdf.drawString(url_x, card_y + 48, "URL PÚBLICA")
+    pdf.setFont(REPORT_FONT, 8)
+    _draw_wrapped_text(pdf, public_url, url_x, card_y + 34, available_width, line_height=10)
+
+    return card_y - 20
+
+
 def _draw_summary_grid(pdf: canvas.Canvas, visit: Visit, y_start: float):
     card_x = 52
     card_y = y_start - 110
@@ -520,7 +576,7 @@ def _draw_report_footer(pdf: canvas.Canvas, generated_at: datetime):
     pdf.drawCentredString(page_width / 2, footer_y, footer_text)
 
 
-def _build_visit_pdf(visit: Visit) -> bytes:
+def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> bytes:
     output = BytesIO()
     pdf = canvas.Canvas(output, pagesize=LETTER)
     generated_at = timezone.localtime()
@@ -543,6 +599,8 @@ def _build_visit_pdf(visit: Visit) -> bytes:
 
     y = _draw_report_images(pdf, visit, y)
     y = _draw_signoff(pdf, visit, y)
+    if public_report_url:
+        y = _draw_public_access_qr(pdf, public_report_url, y)
 
     _draw_report_footer(pdf, generated_at)
 
@@ -1006,9 +1064,38 @@ def visit_report_pdf(request, visit_id: int):
     if visit.status != Visit.Status.COMPLETED:
         return JsonResponse({"error": "Solo puedes descargar informe de visitas finalizadas."}, status=400)
 
-    pdf_content = _build_visit_pdf(visit)
+    public_report_url = _build_public_report_url(request, visit)
+    pdf_content = _build_visit_pdf(visit, public_report_url=public_report_url)
     response = HttpResponse(pdf_content, content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="visita-{visit.id}-informe.pdf"'
+    return response
+
+
+@require_GET
+def visit_report_public_pdf(request, token: str):
+    try:
+        payload = signing.loads(
+            token,
+            salt=REPORT_PUBLIC_LINK_SALT,
+            max_age=REPORT_PUBLIC_LINK_MAX_AGE_SECONDS,
+        )
+        visit_id = int(payload.get("visit_id"))
+    except (BadSignature, SignatureExpired, TypeError, ValueError):
+        return JsonResponse({"error": "El enlace público del informe es inválido o expiró."}, status=404)
+
+    try:
+        visit = Visit.objects.select_related(
+            "area__branch__client", "inspector", "dispenser"
+        ).prefetch_related("media").get(pk=visit_id)
+    except Visit.DoesNotExist:
+        return JsonResponse({"error": "Visita no encontrada."}, status=404)
+
+    if visit.status != Visit.Status.COMPLETED:
+        return JsonResponse({"error": "Solo puedes descargar informe de visitas finalizadas."}, status=400)
+
+    pdf_content = _build_visit_pdf(visit, public_report_url=None)
+    response = HttpResponse(pdf_content, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="visita-{visit.id}-informe.pdf"'
     return response
 
 

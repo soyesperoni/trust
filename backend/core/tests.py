@@ -1,6 +1,7 @@
 import json
 from unittest.mock import patch
 
+from django.core import signing
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.utils import timezone
@@ -142,3 +143,32 @@ class VisitReportRouteTests(TestCase):
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertIn(f'visita-{self.visit.id}-informe.pdf', response["Content-Disposition"])
         build_pdf_mock.assert_called_once()
+
+
+class VisitPublicReportRouteTests(TestCase):
+    def setUp(self):
+        self.client_entity = Client.objects.create(name="Cliente", code="CL-2")
+        self.branch = Branch.objects.create(client=self.client_entity, name="Sucursal")
+        self.area = Area.objects.create(branch=self.branch, name="Área")
+        self.visit = Visit.objects.create(
+            area=self.area,
+            status=Visit.Status.COMPLETED,
+            started_at=timezone.now(),
+            completed_at=timezone.now(),
+        )
+
+    def test_public_report_route_requires_valid_token(self):
+        response = self.client.get("/api/visits/report/public/token-invalido.pdf")
+
+        self.assertEqual(response.status_code, 404)
+
+    @patch("core.views._build_visit_pdf", return_value=b"%PDF-1.4 test")
+    def test_public_report_route_returns_pdf_without_authentication(self, build_pdf_mock):
+        token = signing.dumps({"visit_id": self.visit.id}, salt="visit-report-public-link")
+
+        response = self.client.get(f"/api/visits/report/public/{token}.pdf")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("inline", response["Content-Disposition"])
+        build_pdf_mock.assert_called_once_with(self.visit, public_report_url=None)
