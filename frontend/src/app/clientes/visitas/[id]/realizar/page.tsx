@@ -28,11 +28,26 @@ type Visit = {
 
 type ChecklistItem = { id: string; label: string; location: string; checked: boolean; photo: string | null };
 
+type DispenserProduct = {
+  id: number;
+  name: string;
+  photo: string | null;
+};
+
+type ChecklistDispenser = {
+  id: number;
+  identifier: string;
+  location: string;
+  checked: boolean;
+  products: DispenserProduct[];
+};
+
 type Dispenser = {
   id: number;
   identifier: string;
   model: { id: number; name: string; photo: string | null };
   area: { id: number; name: string; branch: string } | null;
+  products?: DispenserProduct[];
 };
 
 export default function RealizarVisitaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -47,6 +62,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   const [startCoords, setStartCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [endCoords, setEndCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [checklistDispensers, setChecklistDispensers] = useState<ChecklistDispenser[]>([]);
   const [comments, setComments] = useState("");
   const [locationVerified, setLocationVerified] = useState(false);
   const [responsibleName, setResponsibleName] = useState("");
@@ -110,7 +126,16 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           photo: dispenser.model.photo,
         }));
 
+        const dispenserChecklistRows: ChecklistDispenser[] = dispensersInArea.map((dispenser) => ({
+          id: dispenser.id,
+          identifier: dispenser.identifier,
+          location: dispenser.area?.name ?? found.area,
+          checked: checkedById.get(`dispenser-${dispenser.id}`) ?? false,
+          products: dispenser.products ?? [],
+        }));
+
         setChecklist(realChecklist);
+        setChecklistDispensers(dispenserChecklistRows);
         setComments(found.visit_report?.comments ?? "");
         setLocationVerified(Boolean(found.visit_report?.location_verified));
         setResponsibleName(found.visit_report?.responsible_name ?? "");
@@ -370,29 +395,44 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
             <h1 className="mb-2 text-3xl font-bold text-slate-900">Revisión de Dosificadores</h1>
             <p className="text-base text-slate-500">Marca cada elemento verificado en el área.</p>
           </div>
-          {checklist.map((item) => (
-            <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4" key={item.id}>
-              <div className="flex items-center gap-3">
-                {item.photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img alt={`Foto del modelo ${item.label}`} className="h-14 w-14 rounded-lg border border-slate-200 object-cover" src={item.photo} />
-                ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-slate-200 bg-white text-[10px] text-slate-400">
-                    Sin foto
-                  </div>
-                )}
+          {checklistDispensers.map((dispenser) => (
+            <label className="rounded-2xl border border-slate-200 bg-slate-50 p-4" key={`dispenser-${dispenser.id}`}>
+              <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="font-semibold text-slate-900">{item.label}</p>
-                  <p className="text-xs text-slate-500">{item.location}</p>
+                  <p className="font-semibold text-slate-900">{dispenser.identifier}</p>
+                  <p className="text-xs text-slate-500">{dispenser.location}</p>
                 </div>
+                <input
+                  checked={dispenser.checked}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    setChecklist((prev) => prev.map((item) => (item.id === `dispenser-${dispenser.id}` ? { ...item, checked } : item)));
+                    setChecklistDispensers((prev) =>
+                      prev.map((item) => (item.id === dispenser.id ? { ...item, checked } : item)),
+                    );
+                  }}
+                  type="checkbox"
+                />
               </div>
-              <input
-                checked={item.checked}
-                onChange={(event) =>
-                  setChecklist((prev) => prev.map((current) => (current.id === item.id ? { ...current, checked: event.target.checked } : current)))
-                }
-                type="checkbox"
-              />
+              <div className="mt-3 space-y-2">
+                {dispenser.products.length > 0 ? (
+                  dispenser.products.map((product) => (
+                    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5" key={product.id}>
+                      {product.photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img alt={`Foto del producto ${product.name}`} className="h-12 w-12 rounded-lg border border-slate-200 object-cover" src={product.photo} />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                          Sin foto
+                        </div>
+                      )}
+                      <p className="text-sm font-medium text-slate-800">{product.name}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400">Este dosificador no tiene productos registrados.</p>
+                )}
+              </div>
             </label>
           ))}
         </div>
