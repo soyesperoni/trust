@@ -69,6 +69,16 @@ type Dispenser = {
   products?: DispenserProduct[];
 };
 
+const MAX_EVIDENCE_ITEMS = 4;
+const MAX_EVIDENCE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_DURATION_SECONDS = 60;
+
+type EvidencePreview = {
+  file: File;
+  previewUrl: string;
+  type: "image" | "video";
+};
+
 export default function RealizarVisitaPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { user, isLoading: isLoadingUser } = useCurrentUser();
@@ -88,6 +98,12 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   const [responsibleSignature, setResponsibleSignature] = useState("");
   const [isDrawingSignature, setIsDrawingSignature] = useState(false);
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  const [evidencePreviews, setEvidencePreviews] = useState<EvidencePreview[]>([]);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [cameraMode, setCameraMode] = useState<"photo" | "video">("photo");
+  const [pendingEvidence, setPendingEvidence] = useState<EvidencePreview | null>(null);
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastPointerPosition = useRef<{ x: number; y: number } | null>(null);
@@ -96,6 +112,13 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
   const locationMarkerRef = useRef<{ setLatLng: (coords: [number, number]) => void } | null>(null);
   const [isLeafletReady, setIsLeafletReady] = useState(false);
   const [leafletError, setLeafletError] = useState<string | null>(null);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoChunksRef = useRef<Blob[]>([]);
+  const recordingStartedAtRef = useRef<number | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const allDispensersChecked = useMemo(
     () => checklistDispensers.length === 0 || checklistDispensers.every((dispenser) => dispenser.checked),
@@ -309,6 +332,256 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
       locationMarkerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      evidencePreviews.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      if (pendingEvidence) {
+        URL.revokeObjectURL(pendingEvidence.previewUrl);
+      }
+    };
+  }, [evidencePreviews, pendingEvidence]);
+
+  const stopRecordingTimer = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+  };
+
+  const stopCameraStream = () => {
+    stopRecordingTimer();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
+    }
+    if (cameraVideoRef.current) {
+      cameraVideoRef.current.srcObject = null;
+    }
+    setIsRecordingVideo(false);
+  };
+
+  const closeCameraModal = () => {
+    stopCameraStream();
+    setIsCameraModalOpen(false);
+  };
+
+  const toCompressedJpeg = async (blob: Blob) => {
+    const imageBitmap = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = imageBitmap.width;
+    canvas.height = imageBitmap.height;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("No se pudo procesar la imagen capturada.");
+    }
+
+    context.drawImage(imageBitmap, 0, 0);
+
+    let quality = 0.86;
+    let compressedBlob: Blob | null = null;
+
+    while (quality >= 0.45) {
+      compressedBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/jpeg", quality);
+      });
+      if (compressedBlob && compressedBlob.size <= MAX_EVIDENCE_SIZE_BYTES) {
+        break;
+      }
+      quality -= 0.08;
+    }
+
+    if (!compressedBlob) {
+      throw new Error("No se pudo generar la imagen de evidencia.");
+    }
+
+    if (compressedBlob.size > MAX_EVIDENCE_SIZE_BYTES) {
+      throw new Error("La foto supera los 10 MB. Acércate más al objeto y vuelve a intentar.");
+    }
+
+    return compressedBlob;
+  };
+
+  const startCameraStream = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+    });
+    cameraStreamRef.current = stream;
+    if (cameraVideoRef.current) {
+      cameraVideoRef.current.srcObject = stream;
+      await cameraVideoRef.current.play();
+    }
+  };
+
+  useEffect(() => {
+    if (!isCameraModalOpen) return;
+
+    let isMounted = true;
+    (async () => {
+      try {
+        setEvidenceError(null);
+        await startCameraStream();
+        if (!isMounted) {
+          stopCameraStream();
+        }
+      } catch {
+        setEvidenceError("No se pudo abrir la cámara. Verifica permisos e inténtalo nuevamente.");
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+      stopCameraStream();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCameraModalOpen]);
+
+  const onRetakeEvidence = () => {
+    if (pendingEvidence) {
+      URL.revokeObjectURL(pendingEvidence.previewUrl);
+    }
+    setPendingEvidence(null);
+    setRecordingSeconds(0);
+    setEvidenceError(null);
+  };
+
+  const addPendingEvidence = () => {
+    if (!pendingEvidence) return;
+    setEvidenceFiles((prev) => [...prev, pendingEvidence.file]);
+    setEvidencePreviews((prev) => [...prev, pendingEvidence]);
+    setPendingEvidence(null);
+    setRecordingSeconds(0);
+    closeCameraModal();
+  };
+
+  const onOpenCameraModal = () => {
+    if (evidenceFiles.length >= MAX_EVIDENCE_ITEMS) {
+      setEvidenceError("Solo puedes registrar hasta 4 evidencias en total.");
+      return;
+    }
+    setEvidenceError(null);
+    setPendingEvidence(null);
+    setCameraMode("photo");
+    setRecordingSeconds(0);
+    setIsCameraModalOpen(true);
+  };
+
+  const onTakePhoto = async () => {
+    try {
+      setEvidenceError(null);
+      const video = cameraVideoRef.current;
+      if (!video) {
+        throw new Error("No se pudo leer la cámara.");
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        throw new Error("No se pudo tomar la foto.");
+      }
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const rawBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.95));
+      if (!rawBlob) {
+        throw new Error("No se pudo tomar la foto.");
+      }
+      const compressedBlob = await toCompressedJpeg(rawBlob);
+      const filename = `evidencia-${Date.now()}.jpg`;
+      const file = new File([compressedBlob], filename, { type: "image/jpeg" });
+      setPendingEvidence({
+        file,
+        previewUrl: URL.createObjectURL(file),
+        type: "image",
+      });
+    } catch (photoError) {
+      setEvidenceError(photoError instanceof Error ? photoError.message : "No se pudo tomar la foto.");
+    }
+  };
+
+  const onStartRecording = () => {
+    try {
+      setEvidenceError(null);
+      if (!cameraStreamRef.current) {
+        throw new Error("No se detectó la cámara activa.");
+      }
+      const recorder = new MediaRecorder(cameraStreamRef.current, {
+        mimeType: "video/webm;codecs=vp9,opus",
+        videoBitsPerSecond: 850_000,
+      });
+      videoChunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          videoChunksRef.current.push(event.data);
+        }
+      };
+      recorder.onstop = async () => {
+        stopRecordingTimer();
+        setIsRecordingVideo(false);
+        const durationSeconds = recordingStartedAtRef.current
+          ? Math.round((Date.now() - recordingStartedAtRef.current) / 1000)
+          : recordingSeconds;
+
+        if (durationSeconds > MAX_VIDEO_DURATION_SECONDS) {
+          setEvidenceError("El video no puede durar más de 1 minuto.");
+          return;
+        }
+
+        const blob = new Blob(videoChunksRef.current, { type: "video/webm" });
+        if (blob.size > MAX_EVIDENCE_SIZE_BYTES) {
+          setEvidenceError("El video supera 10 MB. Intenta grabar menos tiempo o con menos movimiento.");
+          return;
+        }
+
+        const filename = `evidencia-${Date.now()}.webm`;
+        const file = new File([blob], filename, { type: "video/webm" });
+        setPendingEvidence({
+          file,
+          previewUrl: URL.createObjectURL(file),
+          type: "video",
+        });
+      };
+
+      mediaRecorderRef.current = recorder;
+      recordingStartedAtRef.current = Date.now();
+      setRecordingSeconds(0);
+      recorder.start();
+      setIsRecordingVideo(true);
+      recordingTimerRef.current = setInterval(() => {
+        const seconds = recordingStartedAtRef.current ? Math.floor((Date.now() - recordingStartedAtRef.current) / 1000) : 0;
+        setRecordingSeconds(seconds);
+        if (seconds >= MAX_VIDEO_DURATION_SECONDS && mediaRecorderRef.current?.state === "recording") {
+          mediaRecorderRef.current.stop();
+        }
+      }, 250);
+    } catch (recordError) {
+      setEvidenceError(recordError instanceof Error ? recordError.message : "No se pudo iniciar la grabación.");
+    }
+  };
+
+  const onStopRecording = () => {
+    if (mediaRecorderRef.current?.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  const onRemoveEvidence = (index: number) => {
+    setEvidenceFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    setEvidencePreviews((prev) => {
+      const target = prev[index];
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((_, itemIndex) => itemIndex !== index);
+    });
+  };
 
   const validatePhoneLocation = async () => {
     if (typeof window === "undefined" || !navigator.geolocation) {
@@ -607,7 +880,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
         <div className="flex flex-1 flex-col gap-6">
           <div>
             <h1 className="mb-2 text-3xl font-bold text-slate-900">Hallazgos y Evidencias</h1>
-            <p className="text-base text-slate-500">Añade comentarios adicionales y fotos de la visita.</p>
+            <p className="text-base text-slate-500">Captura fotos y videos desde la cámara trasera (máximo 4 evidencias).</p>
           </div>
           <textarea
             className="h-36 w-full rounded-xl border border-slate-300 bg-white p-4"
@@ -615,22 +888,47 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
             placeholder="Describe los hallazgos encontrados..."
             value={comments}
           />
-          <label className="cursor-pointer rounded-xl border-2 border-dashed border-slate-300 p-5 text-center text-sm text-primary">
-            <input
-              accept="image/*,video/*"
-              className="hidden"
-              multiple
-              onChange={(event) => setEvidenceFiles(Array.from(event.target.files ?? []))}
-              type="file"
-            />
-            {evidenceFiles.length > 0 ? `${evidenceFiles.length} archivo(s) seleccionados` : "Añadir evidencia (opcional)"}
-          </label>
+          <button
+            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 p-5 text-center text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:text-slate-400"
+            disabled={evidenceFiles.length >= MAX_EVIDENCE_ITEMS}
+            onClick={onOpenCameraModal}
+            type="button"
+          >
+            <span className="material-symbols-outlined text-xl">photo_camera</span>
+            {evidenceFiles.length >= MAX_EVIDENCE_ITEMS
+              ? "Límite de 4 evidencias alcanzado"
+              : `Añadir evidencia (${evidenceFiles.length}/${MAX_EVIDENCE_ITEMS})`}
+          </button>
+          {evidencePreviews.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {evidencePreviews.map((item, index) => (
+                <article className="relative overflow-hidden rounded-xl border border-slate-200" key={`${item.file.name}-${index}`}>
+                  {item.type === "image" ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img alt={`Evidencia ${index + 1}`} className="h-28 w-full object-cover" src={item.previewUrl} />
+                  ) : (
+                    <video className="h-28 w-full object-cover" muted preload="metadata" src={item.previewUrl} />
+                  )}
+                  <button
+                    className="absolute right-1 top-1 rounded-full bg-slate-900/75 p-1 text-white"
+                    onClick={() => onRemoveEvidence(index)}
+                    type="button"
+                  >
+                    <span className="material-symbols-outlined text-sm">close</span>
+                  </button>
+                  <p className="px-2 py-1 text-[11px] text-slate-600">{item.type === "image" ? "Foto" : "Video"}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
+          {evidenceError ? <p className="text-xs text-red-600">{evidenceError}</p> : null}
           {isSubmitting && evidenceFiles.length > 0 ? (
             <p className="flex items-center gap-2 text-xs text-slate-500">
               <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
               Subiendo archivos...
             </p>
           ) : null}
+          <p className="text-xs text-slate-500">Los videos duran máximo 1 minuto y cada evidencia debe pesar hasta 10 MB.</p>
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input checked={locationVerified} onChange={(event) => setLocationVerified(event.target.checked)} type="checkbox" />
             Confirmo que me encuentro físicamente en el sitio de la inspección.
@@ -674,6 +972,81 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
         </div>
       )}
       </div>
+
+      {isCameraModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-900">Capturar evidencia</h2>
+              <button className="rounded-full p-1 text-slate-600" onClick={closeCameraModal} type="button">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-xl bg-black">
+              {pendingEvidence ? (
+                pendingEvidence.type === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img alt="Vista previa de evidencia" className="h-64 w-full object-cover" src={pendingEvidence.previewUrl} />
+                ) : (
+                  <video className="h-64 w-full object-cover" controls src={pendingEvidence.previewUrl} />
+                )
+              ) : (
+                <video className="h-64 w-full object-cover" muted playsInline ref={cameraVideoRef} />
+              )}
+            </div>
+
+            {!pendingEvidence ? (
+              <>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium ${cameraMode === "photo" ? "border-primary text-primary" : "border-slate-200 text-slate-600"}`}
+                    onClick={() => setCameraMode("photo")}
+                    type="button"
+                  >
+                    Foto
+                  </button>
+                  <button
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium ${cameraMode === "video" ? "border-primary text-primary" : "border-slate-200 text-slate-600"}`}
+                    onClick={() => setCameraMode("video")}
+                    type="button"
+                  >
+                    Video
+                  </button>
+                </div>
+                <div className="mt-4 flex items-center justify-center">
+                  {cameraMode === "photo" ? (
+                    <button
+                      className="h-16 w-16 rounded-full border-4 border-white bg-red-500 shadow"
+                      onClick={onTakePhoto}
+                      type="button"
+                    ></button>
+                  ) : (
+                    <button
+                      className={`rounded-full px-5 py-3 text-sm font-semibold text-white ${isRecordingVideo ? "bg-red-600" : "bg-slate-900"}`}
+                      onPointerDown={onStartRecording}
+                      onPointerUp={onStopRecording}
+                      onPointerLeave={onStopRecording}
+                      type="button"
+                    >
+                      {isRecordingVideo ? `Grabando ${recordingSeconds}s` : "Mantén presionado para grabar"}
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" onClick={onRetakeEvidence} type="button">
+                  Comenzar de nuevo
+                </button>
+                <button className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-black" onClick={addPendingEvidence} type="button">
+                  Utilizar evidencia
+                </button>
+              </div>
+            )}
+            {evidenceError ? <p className="mt-3 text-xs text-red-600">{evidenceError}</p> : null}
+          </div>
+        </div>
+      ) : null}
 
       <div className="sticky bottom-0 mt-2 grid grid-cols-2 gap-3 border-t border-slate-200 bg-white/95 py-3 pb-safe backdrop-blur">
         <button
