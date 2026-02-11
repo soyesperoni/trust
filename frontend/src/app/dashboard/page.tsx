@@ -233,11 +233,22 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 {todayScheduledVisits.map((visit) => {
                   const date = new Date(visit.visited_at);
-                  const typeLabel = visit.notes?.toLowerCase().includes("emergencia") ? "Emergencia" : "Programada";
+                  const statusLabel =
+                    visit.status === "completed"
+                      ? "Finalizada"
+                      : visit.status === "in_progress"
+                        ? "En progreso"
+                        : visit.status === "cancelled"
+                          ? "Cancelada"
+                          : "Programada";
                   const tagClassName =
-                    typeLabel === "Emergencia"
-                      ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-200"
-                      : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200";
+                    statusLabel === "Finalizada"
+                      ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200"
+                      : statusLabel === "En progreso"
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200"
+                        : statusLabel === "Cancelada"
+                          ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-200"
+                          : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200";
                   return (
                     <article
                       key={visit.id}
@@ -246,7 +257,7 @@ export default function DashboardPage() {
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
                           <span className={`inline-flex rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase ${tagClassName}`}>
-                            {typeLabel}
+                            {statusLabel}
                           </span>
                           <h4 className="mt-2 text-base font-bold text-slate-900 dark:text-white">{visit.branch}</h4>
                         </div>
