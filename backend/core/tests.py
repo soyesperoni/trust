@@ -205,4 +205,3 @@ class VisitPublicReportRouteTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["id"], self.visit.id)
         self.assertEqual(payload["status"], Visit.Status.COMPLETED)
-        self.assertIn("dispenser_detail", payload)

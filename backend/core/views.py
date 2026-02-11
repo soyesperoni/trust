@@ -1170,14 +1170,7 @@ def visit_report_public_detail(request, token: str):
     visit = _get_visit_from_public_token(token)
     if visit is None:
         return JsonResponse({"error": "El enlace público del informe es inválido o expiró."}, status=404)
-
-    payload = _serialize_visit(visit)
-    payload["dispenser_detail"] = (
-        _serialize_dispenser(visit.dispenser)
-        if visit.dispenser is not None
-        else None
-    )
-    return JsonResponse(payload)
+    return JsonResponse(_serialize_visit(visit))
 
 
 @require_GET
