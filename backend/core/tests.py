@@ -2,6 +2,7 @@ import json
 
 from django.test import TestCase
 
+from config import settings_prod
 from .models import Client
 
 
@@ -43,3 +44,12 @@ class ClientApiTests(TestCase):
         client.refresh_from_db()
         self.assertEqual(client.name, "Nuevo Nombre")
         self.assertEqual(client.notes, "Notas nuevas")
+
+
+class ProductionSettingsTests(TestCase):
+    def test_default_storage_is_configured_for_media_uploads(self):
+        self.assertIn("default", settings_prod.STORAGES)
+        self.assertEqual(
+            settings_prod.STORAGES["default"]["BACKEND"],
+            "django.core.files.storage.FileSystemStorage",
+        )
