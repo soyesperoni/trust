@@ -92,8 +92,12 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
         const dispensersInArea: Dispenser[] = (dispensersPayload.results ?? []).filter(
           (dispenser: Dispenser) => dispenser.area?.id === found.area_id,
         );
-        const checkedById = new Map((found.visit_report?.checklist ?? []).map((item) => [item.id, item.checked]));
-        const realChecklist = dispensersInArea.map((dispenser) => ({
+        const checkedById = new Map<string, boolean>(
+          (found.visit_report?.checklist ?? []).map(
+            (item: ChecklistItem): [string, boolean] => [item.id, item.checked],
+          ),
+        );
+        const realChecklist: ChecklistItem[] = dispensersInArea.map((dispenser) => ({
           id: `dispenser-${dispenser.id}`,
           label: `${dispenser.identifier} (${dispenser.model.name})`,
           location: dispenser.area?.name ?? found.area,
