@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import DashboardHeader from "../../../components/DashboardHeader";
@@ -12,6 +12,14 @@ type Branch = { id: number; name: string; client: { id: number; name: string } }
 type Area = { id: number; name: string; branch: { id: number; name: string; client: string } };
 
 type Priority = "low" | "medium" | "high";
+
+type EvidencePreview = {
+  file: File;
+  previewUrl: string;
+};
+
+const MAX_EVIDENCE_ITEMS = 4;
+const MAX_EVIDENCE_SIZE_BYTES = 10 * 1024 * 1024;
 
 const inputClassName =
   "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all";
@@ -32,6 +40,14 @@ export default function NuevaIncidenciaPage() {
   const [reportTime, setReportTime] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  const [evidencePreviews, setEvidencePreviews] = useState<EvidencePreview[]>([]);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [pendingEvidence, setPendingEvidence] = useState<EvidencePreview | null>(null);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const evidencePreviewsRef = useRef<EvidencePreview[]>([]);
 
   const progressValue = useMemo(() => {
     if (mobileStep === 1) return 33;
@@ -108,6 +124,137 @@ export default function NuevaIncidenciaPage() {
     (mobileStep === 2 && areaId && description.trim()) ||
     mobileStep === 3;
 
+  useEffect(() => {
+    evidencePreviewsRef.current = evidencePreviews;
+  }, [evidencePreviews]);
+
+  const stopCameraStream = () => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
+    }
+    if (cameraVideoRef.current) {
+      cameraVideoRef.current.srcObject = null;
+    }
+  };
+
+  useEffect(() => {
+    if (!isCameraModalOpen) {
+      stopCameraStream();
+      setPendingEvidence(null);
+      return;
+    }
+
+    const openCamera = async () => {
+      try {
+        setEvidenceError(null);
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false,
+        });
+        cameraStreamRef.current = stream;
+        if (cameraVideoRef.current) {
+          cameraVideoRef.current.srcObject = stream;
+          await cameraVideoRef.current.play();
+        }
+      } catch {
+        setEvidenceError("No se pudo acceder a la cámara.");
+      }
+    };
+
+    openCamera();
+
+    return () => {
+      stopCameraStream();
+    };
+  }, [isCameraModalOpen]);
+
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+      evidencePreviewsRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    };
+  }, []);
+
+  const onOpenCamera = () => {
+    if (evidenceFiles.length >= MAX_EVIDENCE_ITEMS) {
+      setEvidenceError("Solo puedes registrar hasta 4 evidencias.");
+      return;
+    }
+    setEvidenceError(null);
+    setPendingEvidence(null);
+    setIsCameraModalOpen(true);
+  };
+
+  const onTakePhoto = async () => {
+    const video = cameraVideoRef.current;
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setEvidenceError("La cámara todavía no está lista.");
+      return;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      setEvidenceError("No se pudo generar la imagen.");
+      return;
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+    if (!blob) {
+      setEvidenceError("No se pudo capturar la evidencia.");
+      return;
+    }
+
+    if (blob.size > MAX_EVIDENCE_SIZE_BYTES) {
+      setEvidenceError("La imagen no puede superar los 10MB.");
+      return;
+    }
+
+    const file = new File([blob], `incidencia-${Date.now()}.jpg`, { type: "image/jpeg" });
+    const previewUrl = URL.createObjectURL(file);
+    setPendingEvidence({ file, previewUrl });
+  };
+
+  const onUseEvidence = () => {
+    if (!pendingEvidence) return;
+    if (evidenceFiles.length >= MAX_EVIDENCE_ITEMS) {
+      setEvidenceError("Solo puedes registrar hasta 4 evidencias.");
+      URL.revokeObjectURL(pendingEvidence.previewUrl);
+      setPendingEvidence(null);
+      return;
+    }
+
+    setEvidenceFiles((prev) => [...prev, pendingEvidence.file]);
+    setEvidencePreviews((prev) => [...prev, pendingEvidence]);
+    setPendingEvidence(null);
+    setEvidenceError(null);
+    setIsCameraModalOpen(false);
+  };
+
+  const onRetakeEvidence = () => {
+    if (pendingEvidence) {
+      URL.revokeObjectURL(pendingEvidence.previewUrl);
+    }
+    setPendingEvidence(null);
+    setEvidenceError(null);
+  };
+
+  const onRemoveEvidence = (index: number) => {
+    setEvidenceFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    setEvidencePreviews((prev) => {
+      const target = prev[index];
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((_, itemIndex) => itemIndex !== index);
+    });
+    setEvidenceError(null);
+  };
+
   return (
     <>
       <div className="hidden md:block">
@@ -118,7 +265,7 @@ export default function NuevaIncidenciaPage() {
       </div>
 
       <PageTransition className="flex-1 overflow-y-auto p-0 md:p-8">
-        <section className="w-full min-h-full px-4 py-4 md:hidden">
+        <section className="mx-auto flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden px-4 py-5 md:hidden">
           <div className="mb-8">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-primary">Paso {mobileStep} de 3</span>
@@ -135,8 +282,9 @@ export default function NuevaIncidenciaPage() {
             </div>
           ) : null}
 
+          <div className="flex-1 overflow-y-auto pb-4">
           {mobileStep === 1 && (
-            <div className="space-y-6">
+            <div className="flex flex-1 flex-col gap-6">
               <div>
                 <h1 className="mb-2 text-3xl font-bold text-slate-900 dark:text-white">Seleccionar ubicación</h1>
                 <p className="text-base text-slate-500 dark:text-slate-400">Identifica dónde ocurrió el incidente para asignarlo correctamente.</p>
@@ -185,7 +333,7 @@ export default function NuevaIncidenciaPage() {
           )}
 
           {mobileStep === 2 && (
-            <div className="space-y-6">
+            <div className="flex flex-1 flex-col gap-6">
               <div>
                 <h1 className="mb-2 text-3xl font-bold text-slate-900 dark:text-white">Detalles del reporte</h1>
                 <p className="text-base text-slate-500 dark:text-slate-400">Proporciona información específica sobre lo sucedido.</p>
@@ -232,7 +380,7 @@ export default function NuevaIncidenciaPage() {
           )}
 
           {mobileStep === 3 && (
-            <div className="space-y-6">
+            <div className="flex flex-1 flex-col gap-6">
               <div>
                 <h1 className="mb-2 text-3xl font-bold text-slate-900 dark:text-white">Urgencia y Evidencias</h1>
                 <p className="text-base text-slate-500 dark:text-slate-400">Indica la prioridad y adjunta fotos como respaldo.</p>
@@ -252,30 +400,85 @@ export default function NuevaIncidenciaPage() {
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-symbols-outlined">expand_more</span></div>
                 </div>
               </div>
-              <div>
+              <div className="space-y-4">
                 <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Evidencias</label>
-                <label className="group mt-1 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 px-6 pb-8 pt-8 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 active:border-primary">
-                  <div className="mb-3 rounded-full bg-slate-100 dark:bg-slate-800 p-3 transition-transform duration-200 group-hover:scale-110"><span className="material-symbols-outlined text-3xl text-slate-500">add_photo_alternate</span></div>
-                  <span className="mb-1 text-base font-semibold text-primary">Elegir desde biblioteca</span>
-                  <p className="text-center text-xs text-slate-500 dark:text-slate-400">Selecciona imágenes o videos del dispositivo<br />(JPG, PNG, MP4 máx. 10MB)</p>
-                  <input accept="image/*,video/*" className="sr-only" multiple type="file" />
-                </label>
+                <button
+                  className="group mt-1 flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 px-6 pb-8 pt-8 transition-all hover:bg-slate-50 active:border-primary"
+                  onClick={onOpenCamera}
+                  type="button"
+                >
+                  <div className="mb-3 rounded-full bg-slate-100 p-3 transition-transform duration-200 group-hover:scale-110"><span className="material-symbols-outlined text-3xl text-slate-500">photo_camera</span></div>
+                  <span className="mb-1 text-base font-semibold text-primary">Tomar evidencia con cámara</span>
+                  <p className="text-center text-xs text-slate-500">Captura una foto directamente en el flujo<br />(máx. 4 imágenes, 10MB cada una)</p>
+                </button>
+                {evidencePreviews.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {evidencePreviews.map((evidence, index) => (
+                      <article className="relative overflow-hidden rounded-xl border border-slate-200" key={`${evidence.previewUrl}-${index}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img alt={`Evidencia ${index + 1}`} className="h-28 w-full object-cover" src={evidence.previewUrl} />
+                        <button
+                          aria-label="Eliminar evidencia"
+                          className="absolute right-2 top-2 rounded-full bg-black/70 p-1 text-white"
+                          onClick={() => onRemoveEvidence(index)}
+                          type="button"
+                        >
+                          <span className="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+                {evidenceError ? <p className="text-xs text-red-600">{evidenceError}</p> : null}
               </div>
             </div>
           )}
+          </div>
 
-          <div className="mt-8 space-y-4 pb-4">
+          {isCameraModalOpen ? (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-4">
+              <div className="w-full max-w-md rounded-2xl bg-white p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-slate-900">Capturar evidencia</h2>
+                  <button className="rounded-full p-1 text-slate-600" onClick={() => setIsCameraModalOpen(false)} type="button">
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                <div className="overflow-hidden rounded-xl bg-black">
+                  {pendingEvidence ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img alt="Vista previa de evidencia" className="h-64 w-full object-cover" src={pendingEvidence.previewUrl} />
+                  ) : (
+                    <video className="h-64 w-full object-cover" muted playsInline ref={cameraVideoRef} />
+                  )}
+                </div>
+
+                {!pendingEvidence ? (
+                  <div className="mt-4 flex items-center justify-center">
+                    <button
+                      className="h-16 w-16 rounded-full border-4 border-white bg-red-500 shadow"
+                      onClick={onTakePhoto}
+                      type="button"
+                    ></button>
+                  </div>
+                ) : (
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" onClick={onRetakeEvidence} type="button">
+                      Comenzar de nuevo
+                    </button>
+                    <button className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-black" onClick={onUseEvidence} type="button">
+                      Utilizar evidencia
+                    </button>
+                  </div>
+                )}
+                {evidenceError ? <p className="mt-3 text-xs text-red-600">{evidenceError}</p> : null}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="sticky bottom-0 mt-2 grid grid-cols-2 gap-3 border-t border-slate-200 bg-white/95 py-3 pb-safe backdrop-blur">
             <button
-              className="flex w-full items-center justify-center rounded-xl bg-primary py-4 text-base font-bold text-black shadow-md transition-transform enabled:active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled={!canGoNext}
-              onClick={() => setMobileStep((prev) => (prev < 3 ? prev + 1 : prev))}
-              type="button"
-            >
-              {mobileStep < 3 ? "Siguiente" : "Finalizar y Guardar"}
-              <span className="material-symbols-outlined ml-2 text-sm">{mobileStep < 3 ? "arrow_forward" : "check"}</span>
-            </button>
-            <button
-              className="block w-full py-2 text-center text-sm font-medium text-slate-500 dark:text-slate-400"
+              className="rounded-xl border border-slate-300 bg-white py-3 font-semibold"
               onClick={() => {
                 if (mobileStep === 1) {
                   router.push("/clientes/incidencias");
@@ -287,6 +490,21 @@ export default function NuevaIncidenciaPage() {
               type="button"
             >
               {mobileStep === 1 ? "Cancelar" : "Atrás"}
+            </button>
+
+            <button
+              className="rounded-xl bg-primary py-3 font-bold text-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+              disabled={!canGoNext}
+              onClick={() => {
+                if (mobileStep < 3) {
+                  setMobileStep((prev) => prev + 1);
+                  return;
+                }
+                router.push("/clientes/incidencias");
+              }}
+              type="button"
+            >
+              {mobileStep < 3 ? "Siguiente" : "Finalizar incidencia"}
             </button>
           </div>
         </section>
