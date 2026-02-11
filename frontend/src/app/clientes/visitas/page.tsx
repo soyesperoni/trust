@@ -15,6 +15,7 @@ type Visit = {
   inspector: string;
   visited_at: string;
   notes: string;
+  status?: string;
 };
 
 type User = {
@@ -24,9 +25,8 @@ type User = {
 
 const mobileFilters = [
   { label: "Todas", value: "all" as const },
+  { label: "Programadas", value: "programada" as const },
   { label: "Finalizadas", value: "finalizada" as const },
-  { label: "Canceladas", value: "cancelada" as const },
-  { label: "Incidencias", value: "incidencia" as const },
 ];
 
 export default function VisitasPage() {
@@ -123,21 +123,9 @@ export default function VisitasPage() {
       .map((part) => part[0]?.toUpperCase())
       .join("");
 
-  const visitType = (notes: string) => {
-    if (!notes) return "Finalizada";
-    const normalized = notes.toLowerCase();
-    if (normalized.includes("cancel")) return "Cancelada";
-    if (normalized.includes("incidencia") || normalized.includes("falla")) {
-      return "Incidencia";
-    }
-    return "Finalizada";
-  };
+  const visitType = (status?: string) => (status === "completed" ? "Finalizada" : "Programada");
 
-  const mapVisitTypeToFilter = (typeLabel: string) => {
-    if (typeLabel === "Cancelada") return "cancelada" as const;
-    if (typeLabel === "Incidencia") return "incidencia" as const;
-    return "finalizada" as const;
-  };
+  const mapVisitTypeToFilter = (typeLabel: string) => (typeLabel === "Programada" ? "programada" as const : "finalizada" as const);
 
   const typeStyles: Record<string, string> = {
     Mantenimiento:
@@ -148,16 +136,14 @@ export default function VisitasPage() {
       "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-100 dark:border-purple-900/50",
     Finalizada:
       "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-900/60",
-    Cancelada:
-      "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-900/60",
-    Incidencia:
-      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-900/60",
+    Programada:
+      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-900/60",
   };
 
   const filteredVisits = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     return visits.filter((visit) => {
-      const typeLabel = visitType(visit.notes);
+      const typeLabel = visitType(visit.status);
       const mappedFilter = mapVisitTypeToFilter(typeLabel);
       const matchesFilter = activeFilter === "all" || mappedFilter === activeFilter;
       if (!matchesFilter) return false;
@@ -226,14 +212,12 @@ export default function VisitasPage() {
 
       <section className="md:hidden flex-1 px-4 pb-32 pt-2 space-y-4 overflow-y-auto">
         {filteredVisits.map((visit) => {
-                const typeLabel = visitType(visit.notes);
+                const typeLabel = visitType(visit.status);
                 const formatted = formatDate(visit.visited_at);
                 const mobileStatusStyle =
-                  typeLabel === "Cancelada"
-                    ? "bg-red-100 text-red-700"
-                    : typeLabel === "Incidencia"
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-green-100 text-green-700";
+                  typeLabel === "Programada"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-green-100 text-green-700";
 
                 return (
                   <article
@@ -342,7 +326,7 @@ export default function VisitasPage() {
                 <tbody className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
                   {visits.map((visit) => {
                     const formatted = formatDate(visit.visited_at);
-                    const typeLabel = visitType(visit.notes);
+                    const typeLabel = visitType(visit.status);
                     return (
                       <tr
                         key={visit.id}

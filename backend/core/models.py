@@ -97,9 +97,7 @@ class Product(models.Model):
 class Visit(models.Model):
     class Status(models.TextChoices):
         SCHEDULED = "scheduled", _("Programada")
-        IN_PROGRESS = "in_progress", _("En progreso")
         COMPLETED = "completed", _("Finalizada")
-        CANCELLED = "cancelled", _("Cancelada")
 
     area = models.ForeignKey(Area, on_delete=models.CASCADE, related_name="visits")
     dispenser = models.ForeignKey(
