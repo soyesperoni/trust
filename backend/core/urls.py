@@ -28,6 +28,7 @@ urlpatterns = [
     path("products/", products, name="products"),
     path("visits/", visits, name="visits"),
     path("visits/<int:visit_id>/mobile-flow/", visit_mobile_flow, name="visit_mobile_flow"),
+    path("visits/<int:visit_id>/report", visit_report_pdf, name="visit_report_pdf_legacy"),
     path("visits/<int:visit_id>/report.pdf", visit_report_pdf, name="visit_report_pdf"),
     path("incidents/", incidents, name="incidents"),
     path("users/", users, name="users"),
