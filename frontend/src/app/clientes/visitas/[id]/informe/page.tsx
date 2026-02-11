@@ -444,11 +444,11 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
                   <div key={dispenser.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-[#0f172a]">
                     <p className="text-sm font-bold text-slate-900 dark:text-white">{dispenser.identifier}</p>
                     <p className="text-xs text-slate-500">Modelo: {dispenser.model.name}</p>
-                    <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                    <div className="mt-3 flex h-48 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
                       {toAbsoluteMediaUrl(dispenser.model.photo) ? (
-                        <img alt={`Modelo ${dispenser.model.name}`} className="h-32 w-full object-cover" src={toAbsoluteMediaUrl(dispenser.model.photo) ?? undefined} />
+                        <img alt={`Modelo ${dispenser.model.name}`} className="h-full w-full object-contain" src={toAbsoluteMediaUrl(dispenser.model.photo) ?? undefined} />
                       ) : (
-                        <div className="flex h-32 items-center justify-center text-slate-400">
+                        <div className="flex h-full w-full items-center justify-center text-slate-400">
                           <span className="material-symbols-outlined text-3xl">image</span>
                         </div>
                       )}
@@ -456,11 +456,11 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
                     <div className="mt-3 grid gap-2">
                       {dispenser.products.length > 0 ? (
                         dispenser.products.map((product) => (
-                          <div key={product.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
+                          <div key={product.id} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-900">
                             {toAbsoluteMediaUrl(product.photo) ? (
-                              <img alt={product.name} className="h-10 w-10 rounded object-cover" src={toAbsoluteMediaUrl(product.photo) ?? undefined} />
+                              <img alt={product.name} className="h-14 w-14 shrink-0 rounded-md object-cover" src={toAbsoluteMediaUrl(product.photo) ?? undefined} />
                             ) : (
-                              <span className="material-symbols-outlined text-slate-400">inventory_2</span>
+                              <span className="material-symbols-outlined text-2xl text-slate-400">inventory_2</span>
                             )}
                             <span className="text-sm text-slate-700 dark:text-slate-200">{product.name}</span>
                           </div>
