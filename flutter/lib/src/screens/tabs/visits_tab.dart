@@ -1,18 +1,37 @@
 import 'package:flutter/material.dart';
+
+import '../../models/user_role.dart';
 import '../../models/visit.dart';
 import '../../services/trust_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/visit_summary_card.dart';
 
-class VisitsTab extends StatelessWidget {
-  const VisitsTab({required this.email, super.key});
+class VisitsTab extends StatefulWidget {
+  const VisitsTab({required this.email, required this.role, super.key});
 
   final String email;
+  final UserRole role;
+
+  @override
+  State<VisitsTab> createState() => _VisitsTabState();
+}
+
+class _VisitsTabState extends State<VisitsTab> {
+  final TrustRepository _repository = TrustRepository();
+  final TextEditingController _searchController = TextEditingController();
+
+  _VisitFilter _selectedFilter = _VisitFilter.all;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final repository = TrustRepository();
     return FutureBuilder<List<Visit>>(
-      future: repository.loadVisits(email),
+      future: _repository.loadVisits(widget.email),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -27,16 +46,41 @@ class VisitsTab extends StatelessWidget {
           return const Center(child: Text('Sin visitas registradas.'));
         }
 
+        final filteredVisits = _applyFilters(visits);
+
         return Column(
           children: [
-            const _HistoryHeader(),
+            _HistoryHeader(
+              searchController: _searchController,
+              selectedFilter: _selectedFilter,
+              onFilterChanged: (filter) => setState(() => _selectedFilter = filter),
+              onSearchChanged: (_) => setState(() {}),
+              onResetSearch: () {
+                _searchController.clear();
+                setState(() {});
+              },
+            ),
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                itemCount: visits.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 14),
-                itemBuilder: (context, index) => _VisitCard(visit: visits[index]),
-              ),
+              child: filteredVisits.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(
+                          'No hay visitas que coincidan con los filtros aplicados.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                      itemCount: filteredVisits.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 14),
+                      itemBuilder: (context, index) => VisitSummaryCard(
+                        visit: filteredVisits[index],
+                        role: widget.role,
+                        email: widget.email,
+                      ),
+                    ),
             ),
           ],
         );
@@ -44,15 +88,62 @@ class VisitsTab extends StatelessWidget {
     );
   }
 
+  List<Visit> _applyFilters(List<Visit> visits) {
+    final normalizedQuery = _searchController.text.trim().toLowerCase();
+
+    return visits.where((visit) {
+      final matchesStatus = switch (_selectedFilter) {
+        _VisitFilter.all => true,
+        _VisitFilter.scheduled => _isScheduled(visit.status),
+        _VisitFilter.completed => _isCompleted(visit.status),
+      };
+
+      if (!matchesStatus) {
+        return false;
+      }
+
+      if (normalizedQuery.isEmpty) {
+        return true;
+      }
+
+      final searchableFields = [
+        visit.client,
+        visit.branch,
+        visit.area,
+      ].map((value) => value.toLowerCase());
+
+      return searchableFields.any((field) => field.contains(normalizedQuery));
+    }).toList();
+  }
+
+  bool _isScheduled(String status) {
+    final value = status.toLowerCase();
+    return value.contains('program') || value.contains('pend');
+  }
+
+  bool _isCompleted(String status) {
+    final value = status.toLowerCase();
+    return value.contains('complet') || value.contains('final');
+  }
 }
 
 class _HistoryHeader extends StatelessWidget {
-  const _HistoryHeader();
+  const _HistoryHeader({
+    required this.searchController,
+    required this.selectedFilter,
+    required this.onFilterChanged,
+    required this.onSearchChanged,
+    required this.onResetSearch,
+  });
+
+  final TextEditingController searchController;
+  final _VisitFilter selectedFilter;
+  final ValueChanged<_VisitFilter> onFilterChanged;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onResetSearch;
 
   @override
   Widget build(BuildContext context) {
-    const chips = ['Programadas', 'Finalizadas'];
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Column(
@@ -60,57 +151,61 @@ class _HistoryHeader extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: AppColors.gray100,
-                    borderRadius: BorderRadius.circular(999),
+                child: TextField(
+                  controller: searchController,
+                  onChanged: onSearchChanged,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por cliente, sucursal o área...',
+                    hintStyle: const TextStyle(color: AppColors.gray500, fontSize: 15),
+                    prefixIcon: const Icon(Icons.search, color: AppColors.gray500),
+                    filled: true,
+                    fillColor: AppColors.gray100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.search, color: AppColors.gray500),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Buscar historial...',
-                          style: TextStyle(color: AppColors.gray500, fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              IconButton.filledTonal(
+                onPressed: onResetSearch,
+                icon: const Icon(Icons.restart_alt_rounded),
+                tooltip: 'Restaurar búsqueda',
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.gray100,
+                  foregroundColor: AppColors.gray700,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            height: 34,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: chips.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final selected = index == 0;
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: selected ? AppColors.black : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: selected ? null : Border.all(color: AppColors.gray300),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    chips[index],
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: selected ? Colors.white : AppColors.gray700,
+          Row(
+            children: _VisitFilter.values
+                .map(
+                  (filter) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(filter.label),
+                      selected: selectedFilter == filter,
+                      showCheckmark: false,
+                      selectedColor: AppColors.black,
+                      backgroundColor: Colors.white,
+                      side: BorderSide(
+                        color: selectedFilter == filter ? AppColors.black : AppColors.gray300,
+                      ),
+                      labelStyle: TextStyle(
+                        color: selectedFilter == filter ? Colors.white : AppColors.gray700,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) => onFilterChanged(filter),
                     ),
                   ),
-                );
-              },
-            ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -118,164 +213,11 @@ class _HistoryHeader extends StatelessWidget {
   }
 }
 
-class _VisitCard extends StatelessWidget {
-  const _VisitCard({required this.visit});
+enum _VisitFilter {
+  all('Todas'),
+  scheduled('Programadas'),
+  completed('Finalizadas');
 
-  final Visit visit;
-
-  @override
-  Widget build(BuildContext context) {
-    final badge = _statusBadge(visit.status);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.gray50,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.gray100),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _formatDate(visit.visitedAt),
-                  style: const TextStyle(
-                    color: AppColors.gray500,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${visit.branch} #${visit.id}',
-                        style: const TextStyle(
-                          color: AppColors.black,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 20,
-                          height: 1.15,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: badge.background,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        badge.label,
-                        style: TextStyle(
-                          color: badge.foreground,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
-            child: Row(
-              children: [
-                const Icon(Icons.location_on, size: 18, color: AppColors.gray500),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    visit.area,
-                    style: const TextStyle(
-                      color: AppColors.gray700,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 2, 12, 12),
-            child: SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  foregroundColor: AppColors.gray700,
-                ),
-                child: const Text(
-                  'Ver reporte',
-                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  _StatusStyle _statusBadge(String rawStatus) {
-    final status = rawStatus.toLowerCase();
-    if (status.contains('program')) {
-      return const _StatusStyle('PROGRAMADA', AppColors.yellowSoft, AppColors.charcoal);
-    }
-
-    return const _StatusStyle('FINALIZADA', AppColors.gray100, AppColors.gray700);
-  }
-
-  String _formatDate(String value) {
-    if (value.isEmpty) {
-      return 'Sin fecha';
-    }
-
-    final parsed = DateTime.tryParse(value);
-    if (parsed == null) {
-      return value;
-    }
-
-    const weekdays = [
-      'Lunes',
-      'Martes',
-      'Miércoles',
-      'Jueves',
-      'Viernes',
-      'Sábado',
-      'Domingo',
-    ];
-    const months = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ];
-
-    return '${weekdays[parsed.weekday - 1]}, ${parsed.day.toString().padLeft(2, '0')} de ${months[parsed.month - 1]}';
-  }
-}
-
-class _StatusStyle {
-  const _StatusStyle(this.label, this.background, this.foreground);
-
+  const _VisitFilter(this.label);
   final String label;
-  final Color background;
-  final Color foreground;
 }
