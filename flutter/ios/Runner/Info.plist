@@ -49,6 +49,8 @@
 	<string>Necesitamos acceso a la cámara para registrar evidencias durante la visita.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Necesitamos tu ubicación para validar que estás en el sitio de inspección.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Necesitamos acceso al micrófono para grabar evidencias en video durante la visita.</string>
 
 </dict>
 </plist>
