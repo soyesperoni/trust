@@ -28,7 +28,7 @@ class IncidentsTab extends StatelessWidget {
 
         return ListView.separated(
           itemCount: incidents.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
+          separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final incident = incidents[index];
             return ListTile(
