@@ -29,7 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final tabs = [
-      DashboardTab(email: widget.email),
+      DashboardTab(
+        email: widget.email,
+        onViewMoreTodayVisits: () => setState(() => _currentIndex = 1),
+      ),
       CalendarTab(email: widget.email),
       VisitsTab(email: widget.email),
       IncidentsTab(email: widget.email),
