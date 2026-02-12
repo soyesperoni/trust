@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'home_screen.dart';
 
@@ -10,13 +11,13 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -42,12 +43,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'trust',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                            color: primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 49.4,
-                            letterSpacing: -1,
-                          ),
+                      style: GoogleFonts.poppins(
+                        color: primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 49.4,
+                        letterSpacing: -1,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     Container(
@@ -67,11 +68,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           TextFormField(
-                            controller: _usernameController,
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
-                              labelText: 'Nombre de usuario',
-                              hintText: 'tu_usuario',
-                              prefixIcon: const Icon(Icons.person_outline_rounded),
+                              labelText: 'Correo electrónico',
+                              hintText: 'tu_correo@empresa.com',
+                              prefixIcon: const Icon(Icons.mail_outline_rounded),
                               filled: true,
                               fillColor: const Color(0xFFF9FAFB),
                               border: OutlineInputBorder(
@@ -85,7 +87,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Ingresa tu usuario';
+                                return 'Ingresa tu correo electrónico';
+                              }
+                              if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim())) {
+                                return 'Ingresa un correo válido';
                               }
                               return null;
                             },
@@ -142,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               }
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute<void>(
-                                  builder: (_) => HomeScreen(email: _usernameController.text.trim()),
+                                  builder: (_) => HomeScreen(email: _emailController.text.trim()),
                                 ),
                               );
                             },
