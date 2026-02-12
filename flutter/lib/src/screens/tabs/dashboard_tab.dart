@@ -45,9 +45,7 @@ class DashboardTab extends StatelessWidget {
                   child: _MetricCard(
                     label: 'Visitas Pendientes',
                     value: payload.stats.pendingVisits,
-                    icon: Icons.pending_actions_rounded,
-                    iconBackground: const Color(0xFFFFEDD5),
-                    iconColor: const Color(0xFFEA580C),
+                    cardColor: const Color(0xFFFFEDD5),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -55,9 +53,7 @@ class DashboardTab extends StatelessWidget {
                   child: _MetricCard(
                     label: 'Incidencias',
                     value: payload.stats.incidents,
-                    icon: Icons.report_problem_rounded,
-                    iconBackground: const Color(0xFFFEE2E2),
-                    iconColor: const Color(0xFFDC2626),
+                    cardColor: const Color(0xFFFEE2E2),
                   ),
                 ),
               ],
@@ -162,16 +158,12 @@ class _MetricCard extends StatelessWidget {
   const _MetricCard({
     required this.label,
     required this.value,
-    required this.icon,
-    required this.iconBackground,
-    required this.iconColor,
+    required this.cardColor,
   });
 
   final String label;
   final int value;
-  final IconData icon;
-  final Color iconBackground;
-  final Color iconColor;
+  final Color cardColor;
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +171,7 @@ class _MetricCard extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 120),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
+        color: cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
           BoxShadow(color: Color(0x0A000000), blurRadius: 8, offset: Offset(0, 2)),
@@ -187,24 +179,21 @@ class _MetricCard extends StatelessWidget {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(color: iconBackground, shape: BoxShape.circle),
-            child: Icon(icon, color: iconColor, size: 22),
-          ),
           Text(
             '$value',
             style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Color(0xFF111827), height: 1),
+            textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 8),
           Text(
             label,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF4B5563)),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
