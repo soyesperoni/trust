@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../../models/dashboard_stats.dart';
+import '../../models/user_role.dart';
 import '../../models/visit.dart';
 import '../../services/trust_repository.dart';
+import '../visit_execution_screen.dart';
 
 class DashboardTab extends StatelessWidget {
   const DashboardTab({
     required this.email,
+    required this.role,
     required this.onViewMoreTodayVisits,
     super.key,
   });
 
   final String email;
+  final UserRole role;
   final VoidCallback onViewMoreTodayVisits;
 
   @override
@@ -87,10 +91,12 @@ class DashboardTab extends StatelessWidget {
             if (payload.todayVisits.isEmpty)
               const _EmptyVisits()
             else
-              ...payload.todayVisits.map((visit) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _VisitCard(visit: visit),
-              )),
+              ...payload.todayVisits.map(
+                (visit) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _VisitCard(visit: visit, role: role),
+                ),
+              ),
           ],
         );
       },
@@ -202,9 +208,10 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _VisitCard extends StatelessWidget {
-  const _VisitCard({required this.visit});
+  const _VisitCard({required this.visit, required this.role});
 
   final Visit visit;
+  final UserRole role;
 
   @override
   Widget build(BuildContext context) {
@@ -301,7 +308,13 @@ class _VisitCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  if (!status.isCompleted && status.label == 'Programada' && role.isInspector) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => VisitExecutionScreen(visit: visit)),
+                    );
+                  }
+                },
                 style: TextButton.styleFrom(
                   foregroundColor: status.actionColor,
                   padding: EdgeInsets.zero,
@@ -309,7 +322,9 @@ class _VisitCard extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                 ),
                 child: Text(
-                  status.isCompleted ? 'Ver reporte' : 'Ver detalles',
+                  status.isCompleted
+                      ? 'Ver reporte'
+                      : (status.label == 'Programada' && role.isInspector ? 'Comenzar visita' : 'Ver detalles'),
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),

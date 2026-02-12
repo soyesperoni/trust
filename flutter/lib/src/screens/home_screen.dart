@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'login_screen.dart';
 import 'tabs/calendar_tab.dart';
 import 'tabs/dashboard_tab.dart';
+import '../models/user_role.dart';
 import 'tabs/incidents_tab.dart';
 import 'tabs/visits_tab.dart';
 import 'notifications_screen.dart';
@@ -34,9 +35,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final tabs = [
       DashboardTab(
         email: widget.email,
+        role: UserRoleParsing.fromEmail(widget.email),
         onViewMoreTodayVisits: () => setState(() => _currentIndex = 1),
       ),
-      CalendarTab(email: widget.email),
+      CalendarTab(
+        email: widget.email,
+        role: UserRoleParsing.fromEmail(widget.email),
+      ),
       VisitsTab(email: widget.email),
       IncidentsTab(email: widget.email),
     ];
