@@ -9,12 +9,14 @@ class VisitSummaryCard extends StatelessWidget {
     required this.visit,
     required this.role,
     required this.email,
+    this.onVisitCompleted,
     super.key,
   });
 
   final Visit visit;
   final UserRole role;
   final String email;
+  final VoidCallback? onVisitCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -115,10 +117,13 @@ class VisitSummaryCard extends StatelessWidget {
                 const Spacer(),
                 if (canStartVisit)
                   ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(builder: (_) => VisitExecutionScreen(visit: visit, email: email)),
+                    onPressed: () async {
+                      final completed = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute<bool>(builder: (_) => VisitExecutionScreen(visit: visit, email: email)),
                       );
+                      if (completed == true) {
+                        onVisitCompleted?.call();
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       elevation: 0,

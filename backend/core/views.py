@@ -85,10 +85,10 @@ def _get_branch_scope_ids(request):
 
 def _extract_user_data(request):
     if request.content_type and request.content_type.startswith("multipart/form-data"):
-        if request.method == "POST":
-            data = request.POST.copy()
-            files = request.FILES
-        else:
+        data = request.POST.copy()
+        files = request.FILES
+
+        if request.method != "POST" and not data and not files:
             try:
                 parser = MultiPartParser(
                     request.META,
@@ -1065,12 +1065,16 @@ def visit_mobile_flow(request, visit_id: int):
         visit.visit_report = report
         visit.save(update_fields=["status", "completed_at", "end_latitude", "end_longitude", "visit_report"])
 
-        evidence_files = files.getlist("evidence_files") if files else []
+        evidence_files = []
+        if files:
+            evidence_files = files.getlist("evidence_files") or files.getlist("evidence")
+
         for evidence in evidence_files:
-            content_type = str(getattr(evidence, "content_type", "") or "")
-            if content_type.startswith("image/"):
+            content_type = str(getattr(evidence, "content_type", "") or "").lower()
+            filename = str(getattr(evidence, "name", "") or "").lower()
+            if content_type.startswith("image/") or filename.endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")):
                 media_type = VisitMedia.MediaType.PHOTO
-            elif content_type.startswith("video/"):
+            elif content_type.startswith("video/") or filename.endswith((".mp4", ".mov", ".avi", ".mkv", ".webm")):
                 media_type = VisitMedia.MediaType.VIDEO
             else:
                 media_type = VisitMedia.MediaType.OTHER

@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.core import signing
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.utils import timezone
 
 from config import settings_prod
@@ -83,9 +84,9 @@ class VisitMobileFlowTests(TestCase):
     def test_complete_visit_accepts_multipart_patch_payload(self, create_media_mock):
         evidence = SimpleUploadedFile("evidence.jpg", b"fake-image-bytes", content_type="image/jpeg")
 
-        response = self.client.patch(
-            f"/api/visits/{self.visit.id}/mobile-flow/",
-            data={
+        body = encode_multipart(
+            BOUNDARY,
+            {
                 "action": "complete",
                 "end_latitude": "-12.050001",
                 "end_longitude": "-77.040001",
@@ -100,6 +101,13 @@ class VisitMobileFlowTests(TestCase):
                 ),
                 "evidence_files": evidence,
             },
+        )
+
+        response = self.client.generic(
+            "PATCH",
+            f"/api/visits/{self.visit.id}/mobile-flow/",
+            data=body,
+            content_type=MULTIPART_CONTENT,
             HTTP_X_CURRENT_USER_EMAIL=self.inspector.email,
         )
 

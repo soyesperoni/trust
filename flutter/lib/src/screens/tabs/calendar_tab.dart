@@ -117,7 +117,7 @@ class _CalendarTabState extends State<CalendarTab> {
                   ...dayVisits.map(
                     (visit) => Padding(
                       padding: const EdgeInsets.only(bottom: 14),
-                      child: _ActivityCard(visit: visit, role: widget.role, email: widget.email),
+                      child: _ActivityCard(visit: visit, role: widget.role, email: widget.email, onVisitCompleted: _refreshVisits),
                     ),
                   ),
               ],
@@ -273,6 +273,13 @@ class _CalendarTabState extends State<CalendarTab> {
     );
   }
 
+
+  void _refreshVisits() {
+    setState(() {
+      _visitsFuture = _repository.loadVisitsByMonth(widget.email, _currentMonth);
+    });
+  }
+
   void _changeMonth(int delta) {
     final next = DateTime(_currentMonth.year, _currentMonth.month + delta);
     setState(() {
@@ -349,14 +356,25 @@ class _CalendarTabState extends State<CalendarTab> {
 }
 
 class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({required this.visit, required this.role, required this.email});
+  const _ActivityCard({
+    required this.visit,
+    required this.role,
+    required this.email,
+    required this.onVisitCompleted,
+  });
 
   final Visit visit;
   final UserRole role;
   final String email;
+  final VoidCallback onVisitCompleted;
 
   @override
   Widget build(BuildContext context) {
-    return VisitSummaryCard(visit: visit, role: role, email: email);
+    return VisitSummaryCard(
+      visit: visit,
+      role: role,
+      email: email,
+      onVisitCompleted: onVisitCompleted,
+    );
   }
 }
