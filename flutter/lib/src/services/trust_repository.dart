@@ -16,18 +16,25 @@ class TrustRepository {
   Future<List<Visit>> loadVisits(String email) async {
     final json = await _apiClient.getJson('/visits/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);
-    return results
-        .whereType<Map<String, dynamic>>()
-        .map(Visit.fromJson)
-        .toList(growable: false);
+    return results.whereType<Map<String, dynamic>>().map(Visit.fromJson).toList(growable: false);
+  }
+
+  Future<List<Visit>> loadVisitsByMonth(String email, DateTime month) async {
+    final normalizedMonth = DateTime(month.year, month.month);
+    final json = await _apiClient.getJson(
+      '/visits/',
+      email: email,
+      queryParameters: {
+        'month': '${normalizedMonth.year}-${normalizedMonth.month.toString().padLeft(2, '0')}',
+      },
+    );
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().map(Visit.fromJson).toList(growable: false);
   }
 
   Future<List<Incident>> loadIncidents(String email) async {
     final json = await _apiClient.getJson('/incidents/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);
-    return results
-        .whereType<Map<String, dynamic>>()
-        .map(Incident.fromJson)
-        .toList(growable: false);
+    return results.whereType<Map<String, dynamic>>().map(Incident.fromJson).toList(growable: false);
   }
 }
