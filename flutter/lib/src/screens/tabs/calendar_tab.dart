@@ -1,92 +1,133 @@
 import 'package:flutter/material.dart';
 
-class CalendarTab extends StatelessWidget {
-  const CalendarTab({super.key});
+import '../../models/visit.dart';
+import '../../services/trust_repository.dart';
 
+class CalendarTab extends StatefulWidget {
+  const CalendarTab({required this.email, super.key});
+
+  final String email;
+
+  @override
+  State<CalendarTab> createState() => _CalendarTabState();
+}
+
+class _CalendarTabState extends State<CalendarTab> {
   static const Color _primary = Color(0xFFFBC02D);
   static const Color _surfaceVariant = Color(0xFFF3F4F6);
   static const Color _outline = Color(0xFFE5E7EB);
+
+  final TrustRepository _repository = TrustRepository();
+
+  late DateTime _currentMonth;
+  DateTime? _selectedDate;
+  late Future<List<Visit>> _visitsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _currentMonth = DateTime(now.year, now.month);
+    _selectedDate = DateTime(now.year, now.month, now.day);
+    _visitsFuture = _repository.loadVisitsByMonth(widget.email, _currentMonth);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildCalendarCard(),
-            const SizedBox(height: 20),
-            Row(
+      child: FutureBuilder<List<Visit>>(
+        future: _visitsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text('No se pudo cargar el calendario: ${snapshot.error}'),
+              ),
+            );
+          }
+
+          final visits = snapshot.data ?? const <Visit>[];
+          final visitsByDay = _groupVisitsByDay(visits);
+          final selectedDate = _resolveSelectedDate(visitsByDay);
+          final dayVisits = visitsByDay[_dateKey(selectedDate)] ?? const <Visit>[];
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Expanded(
-                  child: Text(
-                    'Actividades del día 12',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF111827),
+                _buildCalendarCard(visitsByDay, selectedDate),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Actividades del día ${selectedDate.day}',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${dayVisits.length} Eventos',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                if (dayVisits.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'No hay visitas programadas para este día.',
+                      style: TextStyle(color: Color(0xFF4B5563)),
+                    ),
+                  )
+                else
+                  ...dayVisits.map(
+                    (visit) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _ActivityCard(visit: visit),
                     ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    '3 Eventos',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-                ),
               ],
             ),
-            const SizedBox(height: 14),
-            const _ActivityCard(
-              status: 'Programada',
-              title: 'Sucursal Centro #402',
-              time: '09:00 AM',
-              location: 'Av. Reforma 222, CDMX',
-              contact: 'Juan Pérez',
-              statusBackground: Color(0xFFDBEAFE),
-              statusTextColor: Color(0xFF1D4ED8),
-            ),
-            const SizedBox(height: 14),
-            const _ActivityCard(
-              status: 'Completada',
-              title: 'Plaza Satélite #105',
-              time: '11:30 AM',
-              location: 'Cto. Centro Comercial 2251',
-              contact: 'María González',
-              statusBackground: Color(0xFFDCFCE7),
-              statusTextColor: Color(0xFF15803D),
-            ),
-            const SizedBox(height: 14),
-            const _ActivityCard(
-              status: 'En proceso',
-              title: 'Almacén Norte #08',
-              time: '03:00 PM',
-              location: 'Calle Industrial 5, Monterrey',
-              contact: 'Ing. Roberto Díaz',
-              statusBackground: Color(0xFFFEF3C7),
-              statusTextColor: Color(0xFF92400E),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildCalendarCard() {
+  Widget _buildCalendarCard(Map<String, List<Visit>> visitsByDay, DateTime selectedDate) {
     const weekDays = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-    const leadingDays = [26, 27, 28, 29, 30, 31];
-    const monthDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final leadingSlots = firstDayOfMonth.weekday - 1;
+    final daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+    final totalGridItems = ((leadingSlots + daysInMonth + 6) ~/ 7) * 7;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -99,12 +140,15 @@ class CalendarTab extends StatelessWidget {
         children: [
           Row(
             children: [
-              _calendarButton(Icons.chevron_left_rounded),
-              const Expanded(
+              _calendarButton(
+                Icons.chevron_left_rounded,
+                onTap: () => _changeMonth(-1),
+              ),
+              Expanded(
                 child: Center(
                   child: Text(
-                    'Febrero 2026',
-                    style: TextStyle(
+                    '${_monthName(_currentMonth.month)} ${_currentMonth.year}',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF111827),
@@ -112,7 +156,10 @@ class CalendarTab extends StatelessWidget {
                   ),
                 ),
               ),
-              _calendarButton(Icons.chevron_right_rounded),
+              _calendarButton(
+                Icons.chevron_right_rounded,
+                onTap: () => _changeMonth(1),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -144,19 +191,27 @@ class CalendarTab extends StatelessWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: leadingDays.length + monthDays.length,
+            itemCount: totalGridItems,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               mainAxisSpacing: 6,
               crossAxisSpacing: 6,
             ),
             itemBuilder: (_, index) {
-              if (index < leadingDays.length) {
-                return _dayChip(text: '${leadingDays[index]}', enabled: false);
+              if (index < leadingSlots || index >= leadingSlots + daysInMonth) {
+                return const SizedBox.shrink();
               }
 
-              final day = monthDays[index - leadingDays.length];
-              return _dayChip(text: '$day', selected: day == 12);
+              final day = index - leadingSlots + 1;
+              final date = DateTime(_currentMonth.year, _currentMonth.month, day);
+              final key = _dateKey(date);
+              final hasVisits = (visitsByDay[key] ?? const <Visit>[]).isNotEmpty;
+              return _dayChip(
+                text: '$day',
+                selected: _isSameDate(date, selectedDate),
+                hasVisits: hasVisits,
+                onTap: () => setState(() => _selectedDate = date),
+              );
             },
           ),
         ],
@@ -164,9 +219,9 @@ class CalendarTab extends StatelessWidget {
     );
   }
 
-  Widget _calendarButton(IconData icon) {
+  Widget _calendarButton(IconData icon, {required VoidCallback onTap}) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
         height: 34,
@@ -180,65 +235,121 @@ class CalendarTab extends StatelessWidget {
     );
   }
 
-  Widget _dayChip({required String text, bool enabled = true, bool selected = false}) {
-    if (selected) {
-      return Container(
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(color: _primary, shape: BoxShape.circle),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      );
-    }
+  Widget _dayChip({
+    required String text,
+    required bool selected,
+    required bool hasVisits,
+    required VoidCallback onTap,
+  }) {
+    final baseTextColor = hasVisits ? const Color(0xFF111827) : const Color(0xFF6B7280);
 
     return InkWell(
-      onTap: enabled ? () {} : null,
+      onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: enabled ? 0.6 : 0.0),
+          color: selected ? _primary : Colors.white.withValues(alpha: 0.6),
           shape: BoxShape.circle,
+          border: hasVisits && !selected
+              ? Border.all(color: const Color(0xFFF59E0B), width: 1.2)
+              : null,
         ),
         child: Text(
           text,
           style: TextStyle(
-            color: enabled ? const Color(0xFF374151) : const Color(0xFFD1D5DB),
-            fontSize: enabled ? 14 : 12,
-            fontWeight: enabled ? FontWeight.w600 : FontWeight.w500,
+            color: selected ? Colors.white : baseTextColor,
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
           ),
         ),
       ),
     );
   }
+
+  void _changeMonth(int delta) {
+    final next = DateTime(_currentMonth.year, _currentMonth.month + delta);
+    setState(() {
+      _currentMonth = DateTime(next.year, next.month);
+      _selectedDate = DateTime(_currentMonth.year, _currentMonth.month, 1);
+      _visitsFuture = _repository.loadVisitsByMonth(widget.email, _currentMonth);
+    });
+  }
+
+  DateTime _resolveSelectedDate(Map<String, List<Visit>> visitsByDay) {
+    if (_selectedDate != null && _selectedDate!.year == _currentMonth.year && _selectedDate!.month == _currentMonth.month) {
+      return _selectedDate!;
+    }
+
+    if (visitsByDay.isNotEmpty) {
+      final earliest = visitsByDay.keys.toList()..sort();
+      final day = DateTime.tryParse(earliest.first);
+      if (day != null) {
+        _selectedDate = day;
+        return day;
+      }
+    }
+
+    final fallback = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    _selectedDate = fallback;
+    return fallback;
+  }
+
+  Map<String, List<Visit>> _groupVisitsByDay(List<Visit> visits) {
+    final grouped = <String, List<Visit>>{};
+    for (final visit in visits) {
+      final parsed = DateTime.tryParse(visit.visitedAt);
+      if (parsed == null) {
+        continue;
+      }
+      final localDate = parsed.toLocal();
+      final key = _dateKey(localDate);
+      grouped.putIfAbsent(key, () => []).add(visit);
+    }
+
+    for (final entry in grouped.entries) {
+      entry.value.sort((a, b) => a.visitedAt.compareTo(b.visitedAt));
+    }
+    return grouped;
+  }
+
+  bool _isSameDate(DateTime first, DateTime second) {
+    return first.year == second.year && first.month == second.month && first.day == second.day;
+  }
+
+  String _dateKey(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
+
+  String _monthName(int month) {
+    const monthNames = [
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ];
+    return monthNames[month - 1];
+  }
 }
 
 class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({
-    required this.status,
-    required this.title,
-    required this.time,
-    required this.location,
-    required this.contact,
-    required this.statusBackground,
-    required this.statusTextColor,
-  });
+  const _ActivityCard({required this.visit});
 
-  final String status;
-  final String title;
-  final String time;
-  final String location;
-  final String contact;
-  final Color statusBackground;
-  final Color statusTextColor;
+  final Visit visit;
 
   @override
   Widget build(BuildContext context) {
+    final status = _visitStatus(visit.status);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -266,13 +377,13 @@ class _ActivityCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: statusBackground,
+                        color: status.background,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        status,
+                        status.label,
                         style: TextStyle(
-                          color: statusTextColor,
+                          color: status.foreground,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.5,
@@ -281,7 +392,7 @@ class _ActivityCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      title,
+                      '${visit.branch} #${visit.id}',
                       style: const TextStyle(
                         color: Color(0xFF111827),
                         fontSize: 20,
@@ -300,7 +411,7 @@ class _ActivityCard extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFF3F4F6)),
                 ),
                 child: Text(
-                  time,
+                  _formatTime(visit.visitedAt),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -317,7 +428,7 @@ class _ActivityCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  location,
+                  '${visit.client} · ${visit.area}',
                   style: const TextStyle(fontSize: 14, color: Color(0xFF4B5563)),
                 ),
               ),
@@ -330,7 +441,7 @@ class _ActivityCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Contacto: $contact',
+                  'Inspector: ${visit.inspector}',
                   style: const TextStyle(fontSize: 14, color: Color(0xFF4B5563)),
                 ),
               ),
@@ -339,5 +450,40 @@ class _ActivityCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static ({String label, Color background, Color foreground}) _visitStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return (
+          label: 'Completada',
+          background: const Color(0xFFDCFCE7),
+          foreground: const Color(0xFF15803D),
+        );
+      case 'pending':
+        return (
+          label: 'Pendiente',
+          background: const Color(0xFFE5E7EB),
+          foreground: const Color(0xFF374151),
+        );
+      default:
+        return (
+          label: 'Programada',
+          background: const Color(0xFFDBEAFE),
+          foreground: const Color(0xFF1D4ED8),
+        );
+    }
+  }
+
+  static String _formatTime(String input) {
+    final date = DateTime.tryParse(input)?.toLocal();
+    if (date == null) {
+      return '--:--';
+    }
+
+    final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+    final minute = date.minute.toString().padLeft(2, '0');
+    final period = date.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
   }
 }

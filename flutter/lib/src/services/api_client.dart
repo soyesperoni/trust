@@ -9,9 +9,14 @@ class ApiClient {
 
   final http.Client _client;
 
-  Future<Map<String, dynamic>> getJson(String path, {required String email}) async {
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    required String email,
+    Map<String, String>? queryParameters,
+  }) async {
+    final uri = Uri.parse('$baseUrl$path').replace(queryParameters: queryParameters);
     final response = await _client.get(
-      Uri.parse('$baseUrl$path'),
+      uri,
       headers: {
         'Content-Type': 'application/json',
         'X-Current-User-Email': email,

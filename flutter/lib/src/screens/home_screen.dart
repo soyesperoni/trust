@@ -23,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final tabs = [
       DashboardTab(email: widget.email),
-      const CalendarTab(),
+      CalendarTab(email: widget.email),
       VisitsTab(email: widget.email),
       IncidentsTab(email: widget.email),
     ];
