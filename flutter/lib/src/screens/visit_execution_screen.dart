@@ -40,6 +40,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   int _step = 1;
   bool _loading = true;
   bool _isSubmitting = false;
+  bool _initialPermissionsRequested = false;
   String? _error;
 
   Visit? _visit;
@@ -52,6 +53,9 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestPermissionsAtStartup();
+    });
     _loadData();
   }
 
@@ -665,8 +669,16 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   }
 
   Future<void> _requestCameraPermissions({required bool requireMicrophone}) async {
-    final cameraPermission = await Permission.camera.status;
-    final microphonePermission = requireMicrophone ? await Permission.microphone.status : PermissionStatus.granted;
+    final requestedPermissions = <Permission>[Permission.camera];
+    if (requireMicrophone) {
+      requestedPermissions.add(Permission.microphone);
+    }
+
+    final statuses = await requestedPermissions.request();
+    final cameraPermission = statuses[Permission.camera] ?? PermissionStatus.denied;
+    final microphonePermission = requireMicrophone
+        ? (statuses[Permission.microphone] ?? PermissionStatus.denied)
+        : PermissionStatus.granted;
 
     if (!cameraPermission.isGranted || !microphonePermission.isGranted) {
       throw Exception(requireMicrophone
@@ -691,6 +703,21 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     }
     if (!cameraStatus.isGranted || !microphoneStatus.isGranted) {
       throw Exception('Debes otorgar permisos para cámara y micrófono para continuar.');
+    }
+  }
+
+  Future<void> _requestPermissionsAtStartup() async {
+    if (_initialPermissionsRequested || !mounted) {
+      return;
+    }
+
+    _initialPermissionsRequested = true;
+
+    try {
+      await _requestInitialFlowPermissions();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = _toError(error));
     }
   }
 
