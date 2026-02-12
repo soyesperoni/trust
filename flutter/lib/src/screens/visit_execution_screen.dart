@@ -42,7 +42,6 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
 
   Visit? _visit;
   Position? _startPosition;
-  Position? _endPosition;
   bool _locationValidated = false;
   bool _locationCheck = false;
   final List<_ChecklistDispenser> _checklistDispensers = <_ChecklistDispenser>[];
@@ -429,10 +428,11 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
         file = await _imagePicker.pickVideo(source: ImageSource.camera, maxDuration: const Duration(seconds: 60));
       }
       if (file == null) return;
+      final selectedFile = file;
 
       setState(() {
         _error = null;
-        _evidenceFiles.add(file);
+        _evidenceFiles.add(selectedFile);
       });
     } catch (error) {
       setState(() => _error = _toError(error));
@@ -523,7 +523,6 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
       );
 
       if (!mounted) return;
-      setState(() => _endPosition = endPosition);
       messenger.showSnackBar(const SnackBar(content: Text('Visita finalizada correctamente.')));
       Navigator.of(context).pop();
     } catch (error) {
@@ -550,7 +549,8 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
       throw Exception('Activa el servicio de ubicación para continuar.');
     }
 
-    return Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    const locationSettings = LocationSettings(accuracy: LocationAccuracy.high);
+    return Geolocator.getCurrentPosition(locationSettings: locationSettings);
   }
 
   String _formatTime(String input) {
@@ -568,12 +568,12 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
 }
 
 class _ChecklistDispenser {
-  _ChecklistDispenser({required this.id, required this.identifier, required this.location, this.checked = false});
+  _ChecklistDispenser({required this.id, required this.identifier, required this.location});
 
   final int id;
   final String identifier;
   final String location;
-  bool checked;
+  bool checked = false;
 }
 
 enum _EvidenceMode { photo, video }
