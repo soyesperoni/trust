@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'home_screen.dart';
+import '../theme/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -31,8 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primary = Color(0xFFFACC15);
-    const background = Color(0xFFF3F4F6);
+    const primary = AppColors.yellow;
+    const background = AppColors.gray100;
 
     return Scaffold(
       backgroundColor: background,
@@ -82,14 +83,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               hintText: 'tu_correo@empresa.com',
                               prefixIcon: const Icon(Icons.mail_outline_rounded),
                               filled: true,
-                              fillColor: const Color(0xFFF9FAFB),
+                              fillColor: AppColors.gray50,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                                borderSide: const BorderSide(color: AppColors.gray300),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                                borderSide: const BorderSide(color: AppColors.gray300),
                               ),
                             ),
                             validator: (value) {
@@ -111,14 +112,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               hintText: '••••••••',
                               prefixIcon: const Icon(Icons.lock_outline_rounded),
                               filled: true,
-                              fillColor: const Color(0xFFF9FAFB),
+                              fillColor: AppColors.gray50,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                                borderSide: const BorderSide(color: AppColors.gray300),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                                borderSide: const BorderSide(color: AppColors.gray300),
                               ),
                             ),
                             validator: (value) {
@@ -171,14 +172,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             TextSpan(
                               text: '¿No tienes cuenta? ',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: const Color(0xFF6B7280),
+                                    color: AppColors.gray500,
                                   ),
                               children: const [
                                 TextSpan(
                                   text: 'Contacta al Administrador',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF111827),
+                                    color: AppColors.black,
                                   ),
                                 ),
                               ],
@@ -193,9 +194,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: WrapAlignment.center,
                       spacing: 16,
                       children: const [
-                        Text('Política de Privacidad', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
-                        Text('Términos de Servicio', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
-                        Text('Ayuda', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                        Text('Política de Privacidad', style: TextStyle(fontSize: 12, color: AppColors.gray500)),
+                        Text('Términos de Servicio', style: TextStyle(fontSize: 12, color: AppColors.gray500)),
+                        Text('Ayuda', style: TextStyle(fontSize: 12, color: AppColors.gray500)),
                       ],
                     ),
                   ],

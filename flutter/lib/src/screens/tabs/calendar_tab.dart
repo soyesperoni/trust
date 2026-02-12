@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/visit.dart';
 import '../../services/trust_repository.dart';
+import '../../theme/app_colors.dart';
 
 class CalendarTab extends StatefulWidget {
   const CalendarTab({required this.email, super.key});
@@ -13,9 +14,9 @@ class CalendarTab extends StatefulWidget {
 }
 
 class _CalendarTabState extends State<CalendarTab> {
-  static const Color _primary = Color(0xFFFBC02D);
-  static const Color _surfaceVariant = Color(0xFFF3F4F6);
-  static const Color _outline = Color(0xFFE5E7EB);
+  static const Color _primary = AppColors.yellow;
+  static const Color _surfaceVariant = AppColors.gray100;
+  static const Color _outline = AppColors.gray300;
 
   final TrustRepository _repository = TrustRepository();
 
@@ -457,20 +458,20 @@ class _ActivityCard extends StatelessWidget {
       case 'completed':
         return (
           label: 'Completada',
-          background: const Color(0xFFDCFCE7),
-          foreground: const Color(0xFF15803D),
+          background: AppColors.gray100,
+          foreground: AppColors.gray700,
         );
       case 'pending':
         return (
           label: 'Pendiente',
-          background: const Color(0xFFE5E7EB),
-          foreground: const Color(0xFF374151),
+          background: AppColors.gray100,
+          foreground: AppColors.gray700,
         );
       default:
         return (
           label: 'Programada',
-          background: const Color(0xFFDBEAFE),
-          foreground: const Color(0xFF1D4ED8),
+          background: AppColors.yellowSoft,
+          foreground: AppColors.charcoal,
         );
     }
   }

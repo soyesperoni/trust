@@ -6,6 +6,7 @@ import 'tabs/calendar_tab.dart';
 import 'tabs/dashboard_tab.dart';
 import 'tabs/incidents_tab.dart';
 import 'tabs/visits_tab.dart';
+import '../theme/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -49,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text(
           'trust',
           style: GoogleFonts.poppins(
-            color: const Color(0xFFFACC15),
+            color: AppColors.yellow,
             fontWeight: FontWeight.bold,
             fontSize: 34,
             letterSpacing: -1,
@@ -90,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Container(
           decoration: BoxDecoration(
             color: Theme.of(context).bottomAppBarTheme.color ?? Theme.of(context).colorScheme.surface,
-            border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
+            border: const Border(top: BorderSide(color: AppColors.gray100)),
           ),
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
           child: Row(
@@ -188,7 +189,7 @@ class _NavItem extends StatelessWidget {
               width: 56,
               height: 32,
               decoration: BoxDecoration(
-                color: selected ? const Color(0xFFFFF9C4) : Colors.transparent,
+                color: selected ? AppColors.yellowSoft : Colors.transparent,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Stack(
@@ -198,7 +199,7 @@ class _NavItem extends StatelessWidget {
                     child: Icon(
                       icon,
                       size: 22,
-                      color: selected ? const Color(0xFF111827) : const Color(0xFF6B7280),
+                      color: selected ? AppColors.black : AppColors.gray500,
                     ),
                   ),
                   if (showDot)
@@ -206,7 +207,7 @@ class _NavItem extends StatelessWidget {
                       right: 14,
                       top: 6,
                       child: DecoratedBox(
-                        decoration: BoxDecoration(color: Color(0xFFEF4444), shape: BoxShape.circle),
+                        decoration: BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
                         child: SizedBox(width: 8, height: 8),
                       ),
                     ),
@@ -219,7 +220,7 @@ class _NavItem extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? const Color(0xFF111827) : const Color(0xFF6B7280),
+                color: selected ? AppColors.black : AppColors.gray500,
               ),
             ),
           ],
