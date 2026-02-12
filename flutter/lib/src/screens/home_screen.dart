@@ -8,9 +8,16 @@ import 'tabs/incidents_tab.dart';
 import 'tabs/visits_tab.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({required this.email, super.key});
+  const HomeScreen({
+    required this.email,
+    required this.isDarkMode,
+    required this.onToggleThemeMode,
+    super.key,
+  });
 
   final String email;
+  final bool isDarkMode;
+  final VoidCallback onToggleThemeMode;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -29,9 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -47,19 +54,25 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: widget.isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro',
+            onPressed: widget.onToggleThemeMode,
+            icon: Icon(widget.isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          IconButton(
             onPressed: () {},
             icon: const Icon(Icons.notifications_none_rounded),
-            color: const Color(0xFF4B5563),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: CircleAvatar(
               radius: 18,
-              backgroundColor: const Color(0xFFFFF9C4),
+              backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
               child: Text(
                 _initials(widget.email),
-                style: const TextStyle(
-                  color: Color(0xFFF57F17),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -72,8 +85,8 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: Theme.of(context).bottomAppBarColor,
             border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
           ),
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
@@ -111,7 +124,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 selected: false,
                 onTap: () {
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => LoginScreen(
+                        isDarkMode: widget.isDarkMode,
+                        onToggleThemeMode: widget.onToggleThemeMode,
+                      ),
+                    ),
                   );
                 },
               ),

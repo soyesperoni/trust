@@ -4,7 +4,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({
+    required this.isDarkMode,
+    required this.onToggleThemeMode,
+    super.key,
+  });
+
+  final bool isDarkMode;
+  final VoidCallback onToggleThemeMode;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -147,7 +154,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               }
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute<void>(
-                                  builder: (_) => HomeScreen(email: _emailController.text.trim()),
+                                  builder: (_) => HomeScreen(
+                                    email: _emailController.text.trim(),
+                                    isDarkMode: widget.isDarkMode,
+                                    onToggleThemeMode: widget.onToggleThemeMode,
+                                  ),
                                 ),
                               );
                             },
