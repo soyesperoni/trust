@@ -266,7 +266,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     );
   }
 
-  Widget _buildReferenceTile({required String title, required String name, this.imageUrl}) {
+  Widget _buildReferenceTile({required String title, required String name, String? imageUrl}) {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.gray300)),
