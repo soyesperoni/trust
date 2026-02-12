@@ -28,7 +28,7 @@ class VisitsTab extends StatelessWidget {
 
         return Column(
           children: [
-            _HistoryHeader(initials: _initials(email)),
+            const _HistoryHeader(),
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
@@ -43,30 +43,14 @@ class VisitsTab extends StatelessWidget {
     );
   }
 
-  static String _initials(String email) {
-    final user = email.split('@').first.trim();
-    if (user.isEmpty) {
-      return 'TR';
-    }
-    final parts = user.split(RegExp(r'[._-]+')).where((part) => part.isNotEmpty).toList();
-    if (parts.length >= 2) {
-      return (parts.first[0] + parts[1][0]).toUpperCase();
-    }
-    if (user.length >= 2) {
-      return user.substring(0, 2).toUpperCase();
-    }
-    return user[0].toUpperCase();
-  }
 }
 
 class _HistoryHeader extends StatelessWidget {
-  const _HistoryHeader({required this.initials});
-
-  final String initials;
+  const _HistoryHeader();
 
   @override
   Widget build(BuildContext context) {
-    const chips = ['Todo', 'Finalizadas', 'Canceladas', 'Incidencias'];
+    const chips = ['Programadas', 'Finalizadas'];
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -93,21 +77,6 @@ class _HistoryHeader extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const _CircleButton(icon: Icons.filter_list),
-              const SizedBox(width: 10),
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: const Color(0xFFFFF9C4),
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    color: Color(0xFFF57F17),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
                   ),
                 ),
               ),
@@ -258,8 +227,8 @@ class _VisitCard extends StatelessWidget {
 
   _StatusStyle _statusBadge(String rawStatus) {
     final status = rawStatus.toLowerCase();
-    if (status.contains('cancel')) {
-      return const _StatusStyle('CANCELADA', Color(0xFFFEE2E2), Color(0xFFB91C1C));
+    if (status.contains('program')) {
+      return const _StatusStyle('PROGRAMADA', Color(0xFFDBEAFE), Color(0xFF1D4ED8));
     }
 
     return const _StatusStyle('FINALIZADA', Color(0xFFDCFCE7), Color(0xFF15803D));
@@ -300,25 +269,6 @@ class _VisitCard extends StatelessWidget {
     ];
 
     return '${weekdays[parsed.weekday - 1]}, ${parsed.day.toString().padLeft(2, '0')} de ${months[parsed.month - 1]}';
-  }
-}
-
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-      ),
-      child: Icon(icon, color: Color(0xFF4B5563)),
-    );
   }
 }
 
