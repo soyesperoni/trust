@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/visit.dart';
 import '../../services/trust_repository.dart';
+import '../../theme/app_colors.dart';
 
 class VisitsTab extends StatelessWidget {
   const VisitsTab({required this.email, super.key});
@@ -63,17 +64,17 @@ class _HistoryHeader extends StatelessWidget {
                   height: 48,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: AppColors.gray100,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.search, color: Color(0xFF6B7280)),
+                      Icon(Icons.search, color: AppColors.gray500),
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Buscar historial...',
-                          style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
+                          style: TextStyle(color: AppColors.gray500, fontSize: 16),
                         ),
                       ),
                     ],
@@ -94,9 +95,9 @@ class _HistoryHeader extends StatelessWidget {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: selected ? const Color(0xFF111827) : Colors.white,
+                    color: selected ? AppColors.black : Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: selected ? null : Border.all(color: const Color(0xFFE5E7EB)),
+                    border: selected ? null : Border.all(color: AppColors.gray300),
                   ),
                   alignment: Alignment.center,
                   child: Text(
@@ -104,7 +105,7 @@ class _HistoryHeader extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: selected ? Colors.white : const Color(0xFF4B5563),
+                      color: selected ? Colors.white : AppColors.gray700,
                     ),
                   ),
                 );
@@ -128,9 +129,9 @@ class _VisitCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: AppColors.gray50,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
+        border: Border.all(color: AppColors.gray100),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,7 +144,7 @@ class _VisitCard extends StatelessWidget {
                 Text(
                   _formatDate(visit.visitedAt),
                   style: const TextStyle(
-                    color: Color(0xFF6B7280),
+                    color: AppColors.gray500,
                     fontWeight: FontWeight.w500,
                     fontSize: 13,
                   ),
@@ -156,7 +157,7 @@ class _VisitCard extends StatelessWidget {
                       child: Text(
                         '${visit.branch} #${visit.id}',
                         style: const TextStyle(
-                          color: Color(0xFF111827),
+                          color: AppColors.black,
                           fontWeight: FontWeight.w700,
                           fontSize: 20,
                           height: 1.15,
@@ -188,13 +189,13 @@ class _VisitCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
             child: Row(
               children: [
-                const Icon(Icons.location_on, size: 18, color: Color(0xFF9CA3AF)),
+                const Icon(Icons.location_on, size: 18, color: AppColors.gray500),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     visit.area,
                     style: const TextStyle(
-                      color: Color(0xFF4B5563),
+                      color: AppColors.gray700,
                       fontSize: 14,
                     ),
                   ),
@@ -210,7 +211,7 @@ class _VisitCard extends StatelessWidget {
                 onPressed: () {},
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 11),
-                  foregroundColor: const Color(0xFF374151),
+                  foregroundColor: AppColors.gray700,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text(
@@ -228,10 +229,10 @@ class _VisitCard extends StatelessWidget {
   _StatusStyle _statusBadge(String rawStatus) {
     final status = rawStatus.toLowerCase();
     if (status.contains('program')) {
-      return const _StatusStyle('PROGRAMADA', Color(0xFFDBEAFE), Color(0xFF1D4ED8));
+      return const _StatusStyle('PROGRAMADA', AppColors.yellowSoft, AppColors.charcoal);
     }
 
-    return const _StatusStyle('FINALIZADA', Color(0xFFDCFCE7), Color(0xFF15803D));
+    return const _StatusStyle('FINALIZADA', AppColors.gray100, AppColors.gray700);
   }
 
   String _formatDate(String value) {

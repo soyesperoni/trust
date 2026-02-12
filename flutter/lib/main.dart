@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'src/screens/login_screen.dart';
+import 'src/theme/app_colors.dart';
 
 void main() {
   runApp(const TrustApp());
@@ -39,28 +40,38 @@ class _TrustAppState extends State<TrustApp> {
 
   @override
   Widget build(BuildContext context) {
-    const darkOrange = Color(0xFFB87700);
-
     return MaterialApp(
       title: 'Trust Mobile',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFE5B43C)).copyWith(
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.yellow).copyWith(
+          primary: AppColors.yellow,
+          onPrimary: AppColors.black,
+          secondary: AppColors.charcoal,
+          onSecondary: Colors.white,
           surface: Colors.white,
+          onSurface: AppColors.gray900,
+          onSurfaceVariant: AppColors.gray500,
+          outline: AppColors.gray300,
         ),
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: AppColors.gray50,
         textTheme: GoogleFonts.poppinsTextTheme(),
         primaryTextTheme: GoogleFonts.poppinsTextTheme(),
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: darkOrange,
+          seedColor: AppColors.yellowDark,
           brightness: Brightness.dark,
         ).copyWith(
-          surface: darkOrange,
+          primary: AppColors.yellow,
+          onPrimary: AppColors.black,
+          surface: AppColors.black,
+          onSurface: Colors.white,
+          onSurfaceVariant: AppColors.gray300,
+          outline: AppColors.gray700,
         ),
-        scaffoldBackgroundColor: darkOrange,
+        scaffoldBackgroundColor: AppColors.black,
         textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
         primaryTextTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().primaryTextTheme),
         useMaterial3: true,
@@ -82,12 +93,12 @@ class TrustSplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.black,
       body: Center(
         child: Text(
           'trust',
           style: GoogleFonts.poppins(
-            color: const Color(0xFFFACC15),
+            color: AppColors.yellow,
             fontSize: 54,
             fontWeight: FontWeight.bold,
           ),
