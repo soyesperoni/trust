@@ -125,7 +125,6 @@ class VisitSummaryCard extends StatelessWidget {
                       backgroundColor: const Color(0xFF111827),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       textStyle: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     icon: const Icon(Icons.play_arrow_rounded, size: 18),
