@@ -159,7 +159,7 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 120,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F4F6),
         borderRadius: BorderRadius.circular(24),
@@ -177,17 +177,13 @@ class _MetricCard extends StatelessWidget {
             decoration: BoxDecoration(color: iconBackground, shape: BoxShape.circle),
             child: Icon(icon, color: iconColor, size: 22),
           ),
-          const SizedBox(height: 6),
           Text(
             '$value',
             style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Color(0xFF111827), height: 1),
           ),
-          const SizedBox(height: 2),
           Text(
             label,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF4B5563)),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
