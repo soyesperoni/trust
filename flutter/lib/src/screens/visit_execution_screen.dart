@@ -46,7 +46,6 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   bool _locationCheck = false;
   final List<_ChecklistDispenser> _checklistDispensers = <_ChecklistDispenser>[];
   final List<XFile> _evidenceFiles = <XFile>[];
-  _EvidenceMode _evidenceMode = _EvidenceMode.photo;
 
   @override
   void initState() {
@@ -162,6 +161,13 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
           onPressed: _isSubmitting ? null : _onStartVisit,
           child: Text(_isSubmitting ? 'Validando...' : 'Validar ubicación'),
         ),
+        if (_locationValidated && _startPosition != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Inicio: ${_startPosition!.latitude.toStringAsFixed(6)}, ${_startPosition!.longitude.toStringAsFixed(6)}',
+            style: const TextStyle(color: AppColors.gray500, fontSize: 12),
+          ),
+        ],
       ],
     );
   }
@@ -198,34 +204,108 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
         const SizedBox(height: 4),
         const Text('Marca cada elemento verificado en el área.', style: TextStyle(color: AppColors.gray500)),
         const SizedBox(height: 12),
-        ..._checklistDispensers.map(
-          (item) => Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.gray50, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.gray300)),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(item.identifier, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 2),
-                      Text(item.location, style: const TextStyle(color: AppColors.gray500, fontSize: 12)),
-                    ],
+        ..._checklistDispensers.map(_buildDispenserCard),
+      ],
+    );
+  }
+
+  Widget _buildDispenserCard(_ChecklistDispenser item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AppColors.gray50, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.gray300)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.identifier, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(item.location, style: const TextStyle(color: AppColors.gray500, fontSize: 12)),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => setState(() => item.checked = !item.checked),
+                icon: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: item.checked ? AppColors.yellow : Colors.white,
+                    border: Border.all(color: item.checked ? AppColors.yellowDark : AppColors.gray300, width: 2),
                   ),
+                  child: Icon(Icons.check, size: 18, color: item.checked ? AppColors.black : Colors.transparent),
                 ),
-                Checkbox(
-                  value: item.checked,
-                  onChanged: (value) {
-                    setState(() => item.checked = value ?? false);
-                  },
-                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildReferenceTile(title: 'Modelo del dosificador', name: item.modelName, imageUrl: item.modelPhoto),
+          if (item.products.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...item.products.map(
+              (product) => Padding(
+                padding: const EdgeInsets.only(left: 16, top: 6),
+                child: _buildReferenceTile(title: 'Producto', name: product.name, imageUrl: product.photo),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.only(left: 16),
+              child: Text('Este dosificador no tiene productos registrados.', style: TextStyle(color: AppColors.gray500, fontSize: 12)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReferenceTile({required String title, required String name, this.imageUrl}) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.gray300)),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: imageUrl == null || imageUrl!.isEmpty
+                  ? Container(
+                      color: AppColors.gray50,
+                      alignment: Alignment.center,
+                      child: const Text('Sin\nfoto', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: AppColors.gray500)),
+                    )
+                  : Image.network(
+                      imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.gray50,
+                        alignment: Alignment.center,
+                        child: const Text('Sin\nfoto', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: AppColors.gray500)),
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(color: AppColors.gray500, fontSize: 11)),
+                Text(name, style: const TextStyle(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -242,26 +322,8 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
           decoration: const InputDecoration(labelText: 'Comentarios', hintText: 'Escribe observaciones de la visita...'),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => setState(() => _evidenceMode = _EvidenceMode.photo),
-                child: Text('Foto', style: TextStyle(color: _evidenceMode == _EvidenceMode.photo ? AppColors.black : AppColors.gray500)),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => setState(() => _evidenceMode = _EvidenceMode.video),
-                child: Text('Video', style: TextStyle(color: _evidenceMode == _EvidenceMode.video ? AppColors.black : AppColors.gray500)),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
         OutlinedButton.icon(
-          onPressed: _pickEvidence,
+          onPressed: _openMiniCamera,
           icon: const Icon(Icons.add_a_photo_outlined),
           label: const Text('Agregar evidencia'),
         ),
@@ -369,11 +431,27 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
           ..clear()
           ..addAll(
             areaDispensers.map(
-              (item) => _ChecklistDispenser(
-                id: item['id'] as int? ?? 0,
-                identifier: item['identifier'] as String? ?? 'Dosificador',
-                location: (item['area'] as Map<String, dynamic>?)?['name'] as String? ?? visit.area,
-              ),
+              (item) {
+                final model = item['model'] as Map<String, dynamic>?;
+                final products = (item['products'] as List<dynamic>? ?? const <dynamic>[])
+                    .whereType<Map<String, dynamic>>()
+                    .map(
+                      (product) => _ChecklistProduct(
+                        name: product['name'] as String? ?? 'Producto',
+                        photo: product['photo'] as String?,
+                      ),
+                    )
+                    .toList(growable: false);
+
+                return _ChecklistDispenser(
+                  id: item['id'] as int? ?? 0,
+                  identifier: item['identifier'] as String? ?? 'Dosificador',
+                  location: (item['area'] as Map<String, dynamic>?)?['name'] as String? ?? visit.area,
+                  modelName: model?['name'] as String? ?? 'Sin modelo',
+                  modelPhoto: model?['photo'] as String?,
+                  products: products,
+                );
+              },
             ),
           );
       });
@@ -393,7 +471,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
         _error = null;
         _isSubmitting = true;
       });
-      await _requestMediaPermissions(requireMicrophone: false);
+      await _requestLocationPermission();
       final position = await _validatePhoneLocation();
       await _repository.startVisit(
         email: widget.email,
@@ -414,15 +492,60 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     }
   }
 
-  Future<void> _pickEvidence() async {
+  Future<void> _openMiniCamera() async {
+    final mode = await showModalBottomSheet<_EvidenceMode>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Capturar evidencia', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                const SizedBox(height: 6),
+                const Text('Selecciona el tipo de captura.', style: TextStyle(color: AppColors.gray500)),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(_EvidenceMode.photo),
+                        child: const Text('Foto'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(_EvidenceMode.video),
+                        child: const Text('Video'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (mode == null) return;
+    await _pickEvidence(mode);
+  }
+
+  Future<void> _pickEvidence(_EvidenceMode mode) async {
     if (_evidenceFiles.length >= _maxEvidenceItems) {
       setState(() => _error = 'Solo puedes adjuntar hasta $_maxEvidenceItems evidencias.');
       return;
     }
 
     try {
+      await _requestCameraPermissions(requireMicrophone: mode == _EvidenceMode.video);
       final XFile? file;
-      if (_evidenceMode == _EvidenceMode.photo) {
+      if (mode == _EvidenceMode.photo) {
         file = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80);
       } else {
         file = await _imagePicker.pickVideo(source: ImageSource.camera, maxDuration: const Duration(seconds: 60));
@@ -443,10 +566,8 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     if (_step < 4) {
       final targetStep = _step + 1;
       try {
-        if (targetStep == 3) {
-          await _requestMediaPermissions(requireMicrophone: true);
-        }
         if (targetStep == 4) {
+          await _requestLocationPermission();
           await _validatePhoneLocation();
         }
         if (!mounted) return;
@@ -533,13 +654,21 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     }
   }
 
-  Future<void> _requestMediaPermissions({required bool requireMicrophone}) async {
+  Future<void> _requestCameraPermissions({required bool requireMicrophone}) async {
     final cameraPermission = await Permission.camera.request();
-    final locationPermission = await Permission.locationWhenInUse.request();
     final microphonePermission = requireMicrophone ? await Permission.microphone.request() : PermissionStatus.granted;
 
-    if (!cameraPermission.isGranted || !locationPermission.isGranted || !microphonePermission.isGranted) {
-      throw Exception('Debes otorgar permisos para cámara, ubicación y micrófono para continuar.');
+    if (!cameraPermission.isGranted || !microphonePermission.isGranted) {
+      throw Exception(requireMicrophone
+          ? 'Debes otorgar permisos para cámara y micrófono para continuar.'
+          : 'Debes otorgar permisos para cámara para continuar.');
+    }
+  }
+
+  Future<void> _requestLocationPermission() async {
+    final locationPermission = await Permission.locationWhenInUse.request();
+    if (!locationPermission.isGranted) {
+      throw Exception('Debes otorgar permisos de ubicación para continuar.');
     }
   }
 
@@ -556,9 +685,11 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   String _formatTime(String input) {
     final date = DateTime.tryParse(input)?.toLocal();
     if (date == null) return '--:--';
-    final hour = date.hour.toString().padLeft(2, '0');
-    final minute = date.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+    final localizations = MaterialLocalizations.of(context);
+    return localizations.formatTimeOfDay(
+      TimeOfDay(hour: date.hour, minute: date.minute),
+      alwaysUse24HourFormat: false,
+    );
   }
 
   String _toError(Object error) {
@@ -568,12 +699,29 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
 }
 
 class _ChecklistDispenser {
-  _ChecklistDispenser({required this.id, required this.identifier, required this.location});
+  _ChecklistDispenser({
+    required this.id,
+    required this.identifier,
+    required this.location,
+    required this.modelName,
+    this.modelPhoto,
+    this.products = const <_ChecklistProduct>[],
+  });
 
   final int id;
   final String identifier;
   final String location;
+  final String modelName;
+  final String? modelPhoto;
+  final List<_ChecklistProduct> products;
   bool checked = false;
+}
+
+class _ChecklistProduct {
+  _ChecklistProduct({required this.name, this.photo});
+
+  final String name;
+  final String? photo;
 }
 
 enum _EvidenceMode { photo, video }
