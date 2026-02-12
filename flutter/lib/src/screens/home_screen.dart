@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
         top: false,
         child: Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).bottomAppBarColor,
+            color: Theme.of(context).bottomAppBarTheme.color ?? Theme.of(context).colorScheme.surface,
             border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
           ),
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
