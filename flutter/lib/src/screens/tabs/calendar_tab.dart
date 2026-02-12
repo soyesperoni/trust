@@ -35,8 +35,10 @@ class _CalendarTabState extends State<CalendarTab> {
 
   @override
   Widget build(BuildContext context) {
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Container(
-      color: Colors.white,
+      color: backgroundColor,
       child: FutureBuilder<List<Visit>>(
         future: _visitsFuture,
         builder: (context, snapshot) {
