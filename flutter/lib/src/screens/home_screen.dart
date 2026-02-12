@@ -29,23 +29,31 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  late final List<Widget> _tabs;
 
   @override
-  Widget build(BuildContext context) {
-    final tabs = [
+  void initState() {
+    super.initState();
+    final role = UserRoleParsing.fromEmail(widget.email);
+    _tabs = [
       DashboardTab(
         email: widget.email,
-        role: UserRoleParsing.fromEmail(widget.email),
-        onViewMoreTodayVisits: () => setState(() => _currentIndex = 1),
+        role: role,
+        onViewMoreTodayVisits: _openVisitsTab,
       ),
       CalendarTab(
         email: widget.email,
-        role: UserRoleParsing.fromEmail(widget.email),
+        role: role,
       ),
       VisitsTab(email: widget.email),
       IncidentsTab(email: widget.email),
     ];
+  }
 
+  void _openVisitsTab() => setState(() => _currentIndex = 1);
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -106,7 +114,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: tabs[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _tabs,
+      ),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
