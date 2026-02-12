@@ -5,9 +5,14 @@ import '../../models/visit.dart';
 import '../../services/trust_repository.dart';
 
 class DashboardTab extends StatelessWidget {
-  const DashboardTab({required this.email, super.key});
+  const DashboardTab({
+    required this.email,
+    required this.onViewMoreTodayVisits,
+    super.key,
+  });
 
   final String email;
+  final VoidCallback onViewMoreTodayVisits;
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +75,7 @@ class DashboardTab extends StatelessWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: onViewMoreTodayVisits,
                   style: TextButton.styleFrom(
                     backgroundColor: const Color(0xFFFFFDE7),
                     foregroundColor: const Color(0xFFB45309),
@@ -78,7 +83,7 @@ class DashboardTab extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                     textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
-                  child: const Text('Ver todas'),
+                  child: const Text('Ver más'),
                 ),
               ],
             ),
@@ -113,10 +118,23 @@ class DashboardTab extends StatelessWidget {
       return const [];
     }
 
-    final sorted = [...visits]
+    final now = DateTime.now();
+    final todayVisits = visits.where((visit) {
+      final parsed = DateTime.tryParse(visit.visitedAt)?.toLocal();
+      if (parsed == null) {
+        return false;
+      }
+      return parsed.year == now.year && parsed.month == now.month && parsed.day == now.day;
+    }).toList(growable: false);
+
+    if (todayVisits.isEmpty) {
+      return const [];
+    }
+
+    final sorted = [...todayVisits]
       ..sort((a, b) {
-        final aDate = DateTime.tryParse(a.visitedAt);
-        final bDate = DateTime.tryParse(b.visitedAt);
+        final aDate = DateTime.tryParse(a.visitedAt)?.toLocal();
+        final bDate = DateTime.tryParse(b.visitedAt)?.toLocal();
         if (aDate == null && bDate == null) {
           return 0;
         }
