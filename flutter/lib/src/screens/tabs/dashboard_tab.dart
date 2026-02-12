@@ -158,7 +158,7 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 120,
+      constraints: const BoxConstraints(minHeight: 120),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F4F6),
@@ -168,6 +168,7 @@ class _MetricCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
@@ -183,6 +184,8 @@ class _MetricCard extends StatelessWidget {
           ),
           Text(
             label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF4B5563)),
           ),
         ],
