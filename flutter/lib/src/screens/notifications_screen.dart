@@ -112,37 +112,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
         children: [
           _NotificationSection(title: 'Hoy', items: _todayItems),
           const SizedBox(height: 22),
           _NotificationSection(title: 'Anteriores', items: _previousItems),
         ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
-        ),
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-        child: SafeArea(
-          top: false,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: const [
-              _BottomNavItem(label: 'Dashboard', icon: Icons.dashboard_outlined),
-              _BottomNavItem(label: 'Calendario', icon: Icons.calendar_today_rounded),
-              _BottomNavItem(
-                label: 'Historial',
-                icon: Icons.history,
-                selected: true,
-                showBadge: true,
-              ),
-              _BottomNavItem(label: 'Incidencias', icon: Icons.report_problem_outlined),
-              _BottomNavItem(label: 'Salir', icon: Icons.logout_rounded),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -286,72 +261,6 @@ class _NotificationCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BottomNavItem extends StatelessWidget {
-  const _BottomNavItem({
-    required this.label,
-    required this.icon,
-    this.selected = false,
-    this.showBadge = false,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final bool showBadge;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 62,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 56,
-            height: 32,
-            decoration: BoxDecoration(
-              color: selected ? AppColors.yellowSoft : Colors.transparent,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Center(
-                  child: Icon(
-                    icon,
-                    size: 23,
-                    color: selected ? AppColors.black : AppColors.gray500,
-                  ),
-                ),
-                if (showBadge)
-                  const Positioned(
-                    right: 15,
-                    top: 5,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
-                      child: SizedBox(width: 8, height: 8),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected ? AppColors.black : AppColors.gray500,
-            ),
-          ),
         ],
       ),
     );
