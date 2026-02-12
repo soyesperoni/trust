@@ -231,6 +231,7 @@ def _serialize_visit(visit: Visit) -> dict:
         "branch_id": visit.area.branch_id,
         "area": visit.area.name,
         "area_id": visit.area_id,
+        "area_dispensers_count": visit.area.dispensers.count() if visit.area_id else 0,
         "dispenser": visit.dispenser.identifier if visit.dispenser else None,
         "dispenser_id": visit.dispenser_id,
         "inspector": inspector,

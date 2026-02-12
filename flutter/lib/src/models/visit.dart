@@ -7,6 +7,7 @@ class Visit {
     required this.visitedAt,
     required this.inspector,
     required this.status,
+    required this.areaDispensersCount,
   });
 
   final int id;
@@ -16,6 +17,7 @@ class Visit {
   final String visitedAt;
   final String inspector;
   final String status;
+  final int areaDispensersCount;
 
   factory Visit.fromJson(Map<String, dynamic> json) {
     return Visit(
@@ -26,6 +28,18 @@ class Visit {
       visitedAt: json['visited_at'] as String? ?? '',
       inspector: json['inspector'] as String? ?? 'Sin inspector',
       status: json['status'] as String? ?? 'unknown',
+      areaDispensersCount: _readAreaDispensersCount(json),
     );
+  }
+
+  static int _readAreaDispensersCount(Map<String, dynamic> json) {
+    final rawValue = json['area_dispensers_count'] ?? json['dispensers_count'] ?? json['area_dispenses_count'];
+    if (rawValue is int) {
+      return rawValue;
+    }
+    if (rawValue is String) {
+      return int.tryParse(rawValue) ?? 0;
+    }
+    return 0;
   }
 }
