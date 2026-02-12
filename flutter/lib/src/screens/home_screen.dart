@@ -6,6 +6,7 @@ import 'tabs/calendar_tab.dart';
 import 'tabs/dashboard_tab.dart';
 import 'tabs/incidents_tab.dart';
 import 'tabs/visits_tab.dart';
+import 'notifications_screen.dart';
 import '../theme/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -64,7 +65,11 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
+              );
+            },
             icon: const Icon(Icons.notifications_none_rounded),
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
