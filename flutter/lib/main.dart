@@ -25,20 +25,28 @@ class _TrustAppState extends State<TrustApp> {
 
   @override
   Widget build(BuildContext context) {
+    const darkOrange = Color(0xFFB87700);
+
     return MaterialApp(
       title: 'Trust Mobile',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFE5B43C)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFE5B43C)).copyWith(
+          surface: Colors.white,
+        ),
+        scaffoldBackgroundColor: Colors.white,
         textTheme: GoogleFonts.poppinsTextTheme(),
         primaryTextTheme: GoogleFonts.poppinsTextTheme(),
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFE5B43C),
+          seedColor: darkOrange,
           brightness: Brightness.dark,
+        ).copyWith(
+          surface: darkOrange,
         ),
+        scaffoldBackgroundColor: darkOrange,
         textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
         primaryTextTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().primaryTextTheme),
         useMaterial3: true,
