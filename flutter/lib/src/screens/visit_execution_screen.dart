@@ -456,6 +456,10 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
             ),
           );
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _precacheChecklistImages();
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = error.toString());
@@ -472,7 +476,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
         _error = null;
         _isSubmitting = true;
       });
-      await _requestLocationPermission();
+      await _requestInitialFlowPermissions();
       final position = await _validatePhoneLocation();
       await _repository.startVisit(
         email: widget.email,
@@ -549,7 +553,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     }
 
     try {
-      await _requestCameraPermissions(requireMicrophone: mode == _EvidenceMode.video);
+      await _ensureCapturePermissions(requireMicrophone: mode == _EvidenceMode.video);
       final XFile? file;
       if (mode == _EvidenceMode.photo) {
         file = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80);
@@ -661,14 +665,37 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   }
 
   Future<void> _requestCameraPermissions({required bool requireMicrophone}) async {
-    final cameraPermission = await Permission.camera.request();
-    final microphonePermission = requireMicrophone ? await Permission.microphone.request() : PermissionStatus.granted;
+    final cameraPermission = await Permission.camera.status;
+    final microphonePermission = requireMicrophone ? await Permission.microphone.status : PermissionStatus.granted;
 
     if (!cameraPermission.isGranted || !microphonePermission.isGranted) {
       throw Exception(requireMicrophone
           ? 'Debes otorgar permisos para cámara y micrófono para continuar.'
           : 'Debes otorgar permisos para cámara para continuar.');
     }
+  }
+
+  Future<void> _requestInitialFlowPermissions() async {
+    final statuses = await <Permission>[
+      Permission.locationWhenInUse,
+      Permission.camera,
+      Permission.microphone,
+    ].request();
+
+    final locationStatus = statuses[Permission.locationWhenInUse] ?? PermissionStatus.denied;
+    final cameraStatus = statuses[Permission.camera] ?? PermissionStatus.denied;
+    final microphoneStatus = statuses[Permission.microphone] ?? PermissionStatus.denied;
+
+    if (!locationStatus.isGranted) {
+      throw Exception('Debes otorgar permisos de ubicación para continuar.');
+    }
+    if (!cameraStatus.isGranted || !microphoneStatus.isGranted) {
+      throw Exception('Debes otorgar permisos para cámara y micrófono para continuar.');
+    }
+  }
+
+  Future<void> _ensureCapturePermissions({required bool requireMicrophone}) async {
+    await _requestCameraPermissions(requireMicrophone: requireMicrophone);
   }
 
   Future<void> _requestLocationPermission() async {
@@ -715,6 +742,22 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
       port: backendBase.hasPort ? backendBase.port : null,
     );
     return origin.resolve(rawUrl).toString();
+  }
+
+  Future<void> _precacheChecklistImages() async {
+    final imageUrls = <String>{
+      for (final dispenser in _checklistDispensers)
+        if (dispenser.modelPhoto != null && dispenser.modelPhoto!.isNotEmpty) dispenser.modelPhoto!,
+      for (final dispenser in _checklistDispensers)
+        for (final product in dispenser.products)
+          if (product.photo != null && product.photo!.isNotEmpty) product.photo!,
+    };
+
+    await Future.wait(
+      imageUrls.map(
+        (url) => precacheImage(NetworkImage(url), context).catchError((_) {}),
+      ),
+    );
   }
 }
 
