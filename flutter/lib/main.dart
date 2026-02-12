@@ -16,6 +16,12 @@ class TrustApp extends StatefulWidget {
 }
 
 class _TrustAppState extends State<TrustApp> {
+  static final RoundedRectangleBorder _buttonShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(10),
+  );
+
+  static const EdgeInsets _buttonPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 14);
+
   ThemeMode _themeMode = ThemeMode.light;
   bool _showSplash = true;
 
@@ -55,6 +61,30 @@ class _TrustAppState extends State<TrustApp> {
           outline: AppColors.gray300,
         ),
         scaffoldBackgroundColor: AppColors.gray50,
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            shape: _buttonShape,
+            padding: _buttonPadding,
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            shape: _buttonShape,
+            padding: _buttonPadding,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            shape: _buttonShape,
+            padding: _buttonPadding,
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            shape: _buttonShape,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+        ),
         textTheme: GoogleFonts.poppinsTextTheme(),
         primaryTextTheme: GoogleFonts.poppinsTextTheme(),
         useMaterial3: true,
@@ -72,6 +102,30 @@ class _TrustAppState extends State<TrustApp> {
           outline: AppColors.gray700,
         ),
         scaffoldBackgroundColor: AppColors.black,
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            shape: _buttonShape,
+            padding: _buttonPadding,
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            shape: _buttonShape,
+            padding: _buttonPadding,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            shape: _buttonShape,
+            padding: _buttonPadding,
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            shape: _buttonShape,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+        ),
         textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
         primaryTextTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().primaryTextTheme),
         useMaterial3: true,

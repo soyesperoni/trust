@@ -212,7 +212,6 @@ class _VisitCard extends StatelessWidget {
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 11),
                   foregroundColor: AppColors.gray700,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text(
                   'Ver reporte',

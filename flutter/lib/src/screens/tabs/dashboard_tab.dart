@@ -80,7 +80,6 @@ class DashboardTab extends StatelessWidget {
                     backgroundColor: const Color(0xFFFFFDE7),
                     foregroundColor: const Color(0xFFB45309),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                     textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                   child: const Text('Ver más'),

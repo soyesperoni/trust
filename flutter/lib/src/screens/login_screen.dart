@@ -147,7 +147,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.8,
                               ),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
                             onPressed: () {
                               if (!_formKey.currentState!.validate()) {
