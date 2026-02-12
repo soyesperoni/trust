@@ -28,7 +28,7 @@ class VisitsTab extends StatelessWidget {
 
         return ListView.separated(
           itemCount: visits.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
+          separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final visit = visits[index];
             return ListTile(
