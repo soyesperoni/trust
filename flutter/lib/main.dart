@@ -16,6 +16,20 @@ class TrustApp extends StatefulWidget {
 
 class _TrustAppState extends State<TrustApp> {
   ThemeMode _themeMode = ThemeMode.light;
+  bool _showSplash = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds: 1600), () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _showSplash = false;
+      });
+    });
+  }
 
   void _toggleThemeMode() {
     setState(() {
@@ -52,9 +66,32 @@ class _TrustAppState extends State<TrustApp> {
         useMaterial3: true,
       ),
       themeMode: _themeMode,
-      home: LoginScreen(
-        isDarkMode: _themeMode == ThemeMode.dark,
-        onToggleThemeMode: _toggleThemeMode,
+      home: _showSplash
+          ? const TrustSplashScreen()
+          : LoginScreen(
+              isDarkMode: _themeMode == ThemeMode.dark,
+              onToggleThemeMode: _toggleThemeMode,
+            ),
+    );
+  }
+}
+
+class TrustSplashScreen extends StatelessWidget {
+  const TrustSplashScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Text(
+          'trust',
+          style: GoogleFonts.poppins(
+            color: const Color(0xFFFACC15),
+            fontSize: 54,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
