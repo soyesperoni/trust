@@ -8,6 +8,7 @@ class Visit {
     required this.inspector,
     required this.status,
     required this.areaDispensersCount,
+    required this.areaId,
   });
 
   final int id;
@@ -18,6 +19,7 @@ class Visit {
   final String inspector;
   final String status;
   final int areaDispensersCount;
+  final int areaId;
 
   factory Visit.fromJson(Map<String, dynamic> json) {
     final rawArea = json['area'];
@@ -34,6 +36,7 @@ class Visit {
       inspector: json['inspector'] as String? ?? 'Sin inspector',
       status: json['status'] as String? ?? 'unknown',
       areaDispensersCount: _readAreaDispensersCount(json),
+      areaId: _asInt(json['area_id']) ?? 0,
     );
   }
 

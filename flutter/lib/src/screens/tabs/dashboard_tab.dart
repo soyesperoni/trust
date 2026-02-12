@@ -94,7 +94,7 @@ class DashboardTab extends StatelessWidget {
               ...payload.todayVisits.map(
                 (visit) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
-                  child: _VisitCard(visit: visit, role: role),
+                  child: _VisitCard(visit: visit, role: role, email: email),
                 ),
               ),
           ],
@@ -208,14 +208,15 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _VisitCard extends StatelessWidget {
-  const _VisitCard({required this.visit, required this.role});
+  const _VisitCard({required this.visit, required this.role, required this.email});
 
   final Visit visit;
   final UserRole role;
+  final String email;
 
   @override
   Widget build(BuildContext context) {
-    return VisitSummaryCard(visit: visit, role: role);
+    return VisitSummaryCard(visit: visit, role: role, email: email);
   }
 }
 

@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
 import '../models/dashboard_stats.dart';
 import '../models/incident.dart';
 import '../models/visit.dart';
@@ -17,6 +21,57 @@ class TrustRepository {
     final json = await _apiClient.getJson('/visits/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);
     return results.whereType<Map<String, dynamic>>().map(Visit.fromJson).toList(growable: false);
+  }
+
+  Future<Visit> loadVisitById(String email, int visitId) async {
+    final visits = await loadVisits(email);
+    return visits.firstWhere((visit) => visit.id == visitId);
+  }
+
+  Future<List<Map<String, dynamic>>> loadDispensers(String email) async {
+    final json = await _apiClient.getJson('/dispensers/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  Future<Visit> startVisit({
+    required String email,
+    required int visitId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final response = await _apiClient.patchJson(
+      '/visits/$visitId/mobile-flow/',
+      email: email,
+      body: {
+        'action': 'start',
+        'start_latitude': latitude,
+        'start_longitude': longitude,
+      },
+    );
+    return Visit.fromJson(response);
+  }
+
+  Future<Visit> completeVisit({
+    required String email,
+    required int visitId,
+    required double latitude,
+    required double longitude,
+    required Map<String, dynamic> visitReport,
+    List<http.MultipartFile> evidenceFiles = const [],
+  }) async {
+    final response = await _apiClient.patchMultipart(
+      '/visits/$visitId/mobile-flow/',
+      email: email,
+      fields: {
+        'action': 'complete',
+        'end_latitude': latitude.toString(),
+        'end_longitude': longitude.toString(),
+        'visit_report': jsonEncode(visitReport),
+      },
+      files: evidenceFiles,
+    );
+    return Visit.fromJson(response);
   }
 
   Future<List<Visit>> loadVisitsByMonth(String email, DateTime month) async {

@@ -8,11 +8,13 @@ class VisitSummaryCard extends StatelessWidget {
   const VisitSummaryCard({
     required this.visit,
     required this.role,
+    required this.email,
     super.key,
   });
 
   final Visit visit;
   final UserRole role;
+  final String email;
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +117,7 @@ class VisitSummaryCard extends StatelessWidget {
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute<void>(builder: (_) => VisitExecutionScreen(visit: visit)),
+                        MaterialPageRoute<void>(builder: (_) => VisitExecutionScreen(visit: visit, email: email)),
                       );
                     },
                     style: ElevatedButton.styleFrom(
