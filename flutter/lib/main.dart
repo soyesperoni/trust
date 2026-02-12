@@ -7,8 +7,21 @@ void main() {
   runApp(const TrustApp());
 }
 
-class TrustApp extends StatelessWidget {
+class TrustApp extends StatefulWidget {
   const TrustApp({super.key});
+
+  @override
+  State<TrustApp> createState() => _TrustAppState();
+}
+
+class _TrustAppState extends State<TrustApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  void _toggleThemeMode() {
+    setState(() {
+      _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +34,20 @@ class TrustApp extends StatelessWidget {
         primaryTextTheme: GoogleFonts.poppinsTextTheme(),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFE5B43C),
+          brightness: Brightness.dark,
+        ),
+        textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
+        primaryTextTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().primaryTextTheme),
+        useMaterial3: true,
+      ),
+      themeMode: _themeMode,
+      home: LoginScreen(
+        isDarkMode: _themeMode == ThemeMode.dark,
+        onToggleThemeMode: _toggleThemeMode,
+      ),
     );
   }
 }
