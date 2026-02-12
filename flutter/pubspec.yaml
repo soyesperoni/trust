@@ -17,6 +17,8 @@ dependencies:
   permission_handler: ^11.3.1
   image_picker: ^1.1.2
   signature: ^5.5.0
+  mime: ^2.0.0
+  http_parser: ^4.1.2
 
 dev_dependencies:
   flutter_test:

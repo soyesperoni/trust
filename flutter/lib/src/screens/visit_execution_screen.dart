@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -401,7 +403,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
                 ? null
                 : () {
                     if (_step == 1) {
-                      Navigator.of(context).pop();
+                      Navigator.of(context).pop(true);
                       return;
                     }
                     setState(() => _step -= 1);
@@ -633,13 +635,18 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
           .toList(growable: false);
 
       final files = await Future.wait(
-        _evidenceFiles.map(
-          (file) async => http.MultipartFile.fromBytes(
+        _evidenceFiles.map((file) async {
+          final mimeType = lookupMimeType(file.path) ?? lookupMimeType(file.name);
+          final mimeParts = mimeType?.split('/');
+          final mediaType = mimeParts != null && mimeParts.length == 2 ? MediaType(mimeParts[0], mimeParts[1]) : null;
+
+          return http.MultipartFile.fromBytes(
             'evidence_files',
             await file.readAsBytes(),
             filename: file.name,
-          ),
-        ),
+            contentType: mediaType,
+          );
+        }),
       );
 
       await _repository.completeVisit(
@@ -659,7 +666,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
 
       if (!mounted) return;
       messenger.showSnackBar(const SnackBar(content: Text('Visita finalizada correctamente.')));
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = _toError(error));

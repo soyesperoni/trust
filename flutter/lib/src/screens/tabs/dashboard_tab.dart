@@ -6,7 +6,7 @@ import '../../models/visit.dart';
 import '../../services/trust_repository.dart';
 import '../../widgets/visit_summary_card.dart';
 
-class DashboardTab extends StatelessWidget {
+class DashboardTab extends StatefulWidget {
   const DashboardTab({
     required this.email,
     required this.role,
@@ -19,11 +19,27 @@ class DashboardTab extends StatelessWidget {
   final VoidCallback onViewMoreTodayVisits;
 
   @override
-  Widget build(BuildContext context) {
-    final repository = TrustRepository();
+  State<DashboardTab> createState() => _DashboardTabState();
+}
 
+class _DashboardTabState extends State<DashboardTab> {
+  final TrustRepository _repository = TrustRepository();
+  late Future<_DashboardPayload> _payloadFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _payloadFuture = _loadPayload();
+  }
+
+  void _refreshVisits() {
+    setState(() => _payloadFuture = _loadPayload());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<_DashboardPayload>(
-      future: _loadPayload(repository),
+      future: _payloadFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -75,7 +91,7 @@ class DashboardTab extends StatelessWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: onViewMoreTodayVisits,
+                  onPressed: widget.onViewMoreTodayVisits,
                   style: TextButton.styleFrom(
                     backgroundColor: const Color(0xFFFFFDE7),
                     foregroundColor: const Color(0xFFB45309),
@@ -93,7 +109,7 @@ class DashboardTab extends StatelessWidget {
               ...payload.todayVisits.map(
                 (visit) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
-                  child: _VisitCard(visit: visit, role: role, email: email),
+                  child: _VisitCard(visit: visit, role: widget.role, email: widget.email, onVisitCompleted: _refreshVisits),
                 ),
               ),
           ],
@@ -102,10 +118,10 @@ class DashboardTab extends StatelessWidget {
     );
   }
 
-  Future<_DashboardPayload> _loadPayload(TrustRepository repository) async {
+  Future<_DashboardPayload> _loadPayload() async {
     final results = await Future.wait<dynamic>([
-      repository.loadDashboardStats(email),
-      repository.loadVisits(email),
+      _repository.loadDashboardStats(widget.email),
+      _repository.loadVisits(widget.email),
     ]);
 
     final stats = results[0] as DashboardStats;
@@ -207,15 +223,26 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _VisitCard extends StatelessWidget {
-  const _VisitCard({required this.visit, required this.role, required this.email});
+  const _VisitCard({
+    required this.visit,
+    required this.role,
+    required this.email,
+    required this.onVisitCompleted,
+  });
 
   final Visit visit;
   final UserRole role;
   final String email;
+  final VoidCallback onVisitCompleted;
 
   @override
   Widget build(BuildContext context) {
-    return VisitSummaryCard(visit: visit, role: role, email: email);
+    return VisitSummaryCard(
+      visit: visit,
+      role: role,
+      email: email,
+      onVisitCompleted: onVisitCompleted,
+    );
   }
 }
 
