@@ -72,7 +72,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              LinearProgressIndicator(value: progress, color: AppColors.yellow, backgroundColor: AppColors.gray200),
+              LinearProgressIndicator(value: progress, color: AppColors.yellow, backgroundColor: AppColors.gray300),
               const SizedBox(height: 20),
               Expanded(child: _buildStep()),
               const SizedBox(height: 12),
@@ -152,7 +152,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   Widget _buildChecklistStep() {
     return ListView.separated(
       itemCount: _checklistItems.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, index) {
         final item = _checklistItems[index];
         final id = '${item.$1}-${item.$2}';
@@ -168,7 +168,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
             });
           },
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: AppColors.gray200)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: AppColors.gray300)),
           title: Text(item.$1, style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Text(item.$2),
         );
@@ -315,24 +315,23 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
       return;
     }
 
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     final signatureBytes = await _signatureController.toPngBytes();
     if (!mounted) return;
     if (signatureBytes == null || signatureBytes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Debes registrar la firma para finalizar.')));
+      messenger.showSnackBar(const SnackBar(content: Text('Debes registrar la firma para finalizar.')));
       return;
     }
 
-    _showCompletionMessage(signatureBytes);
-  }
-
-  void _showCompletionMessage(Uint8List signatureBytes) {
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       SnackBar(
         content: Text(
           'Visita #${widget.visit.id} finalizada con ${_evidenceFiles.length} evidencias y firma registrada (${signatureBytes.lengthInBytes} bytes).',
         ),
       ),
     );
-    Navigator.of(context).pop();
+    navigator.pop();
   }
 }
