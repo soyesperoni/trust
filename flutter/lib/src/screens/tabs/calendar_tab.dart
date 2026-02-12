@@ -117,7 +117,7 @@ class _CalendarTabState extends State<CalendarTab> {
                   ...dayVisits.map(
                     (visit) => Padding(
                       padding: const EdgeInsets.only(bottom: 14),
-                      child: _ActivityCard(visit: visit, role: widget.role),
+                      child: _ActivityCard(visit: visit, role: widget.role, email: widget.email),
                     ),
                   ),
               ],
@@ -349,13 +349,14 @@ class _CalendarTabState extends State<CalendarTab> {
 }
 
 class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({required this.visit, required this.role});
+  const _ActivityCard({required this.visit, required this.role, required this.email});
 
   final Visit visit;
   final UserRole role;
+  final String email;
 
   @override
   Widget build(BuildContext context) {
-    return VisitSummaryCard(visit: visit, role: role);
+    return VisitSummaryCard(visit: visit, role: role, email: email);
   }
 }
