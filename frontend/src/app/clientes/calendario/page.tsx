@@ -140,10 +140,13 @@ export default function CalendarioPage() {
   }, [currentMonth, visits]);
 
   const mobileCells = useMemo(() => {
-    return cells.map((cell, index) => {
-      const indexInWeek = index % 7;
-      const mondayIndex = (indexInWeek + 6) % 7;
-      return { ...cell, mondayIndex, index };
+    const weeks = Array.from({ length: Math.ceil(cells.length / 7) }, (_, weekIndex) =>
+      cells.slice(weekIndex * 7, weekIndex * 7 + 7),
+    );
+
+    return weeks.flatMap((week) => {
+      if (week.length < 7) return week;
+      return [...week.slice(1), week[0]];
     });
   }, [cells]);
 
@@ -267,9 +270,7 @@ export default function CalendarioPage() {
             </div>
 
             <div className="grid grid-cols-7 gap-1 place-items-center">
-              {mobileCells
-                .sort((a, b) => a.mondayIndex - b.mondayIndex || a.index - b.index)
-                .map((cell, index) => {
+              {mobileCells.map((cell, index) => {
                   const isToday =
                     !!cell.date &&
                     cell.date.getFullYear() === today.getFullYear() &&
