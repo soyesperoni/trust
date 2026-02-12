@@ -137,11 +137,45 @@ export default function NuevaIncidenciaPage() {
       throw new Error("Tu dispositivo no permite geolocalización.");
     }
 
+    if (!window.isSecureContext && window.location.hostname !== "localhost") {
+      throw new Error("Safari requiere HTTPS para solicitar ubicación. Abre la app en una conexión segura.");
+    }
+
+    if ("permissions" in navigator && navigator.permissions?.query) {
+      try {
+        const permissionState = await navigator.permissions.query({ name: "geolocation" });
+        if (permissionState.state === "denied") {
+          throw new Error(
+            "El permiso de ubicación está bloqueado en Safari. Habilítalo en Ajustes > Safari > Ubicación.",
+          );
+        }
+      } catch {
+        // Safari no soporta completamente Permissions API para geolocalización.
+      }
+    }
+
     await new Promise<void>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(
         () => resolve(),
-        () => reject(new Error("Debes conceder permiso de ubicación para continuar.")),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+        (error) => {
+          if (error.code === error.PERMISSION_DENIED) {
+            reject(new Error("Debes conceder permiso de ubicación para continuar."));
+            return;
+          }
+
+          if (error.code === error.POSITION_UNAVAILABLE) {
+            reject(new Error("No pudimos obtener tu ubicación. Verifica GPS y vuelve a intentarlo."));
+            return;
+          }
+
+          if (error.code === error.TIMEOUT) {
+            reject(new Error("Se agotó el tiempo para obtener la ubicación. Inténtalo nuevamente."));
+            return;
+          }
+
+          reject(new Error("No pudimos validar tu ubicación en este momento."));
+        },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
       );
     });
   };
