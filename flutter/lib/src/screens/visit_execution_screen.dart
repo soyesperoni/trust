@@ -10,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:signature/signature.dart';
 
 import '../models/visit.dart';
+import '../services/api_client.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 
@@ -31,6 +32,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   final TextEditingController _commentsController = TextEditingController();
   final TextEditingController _responsibleNameController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
+  final MapController _mapController = MapController();
   final TrustRepository _repository = TrustRepository();
 
   static const int _maxEvidenceItems = 4;
@@ -135,6 +137,12 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
           child: SizedBox(
             height: 220,
             child: FlutterMap(
+              mapController: _mapController,
+              key: ValueKey<String>(
+                _startPosition == null
+                    ? 'location-pending'
+                    : '${_startPosition!.latitude}-${_startPosition!.longitude}',
+              ),
               options: MapOptions(initialCenter: center, initialZoom: _startPosition == null ? 14 : 17),
               children: [
                 TileLayer(
@@ -161,13 +169,6 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
           onPressed: _isSubmitting ? null : _onStartVisit,
           child: Text(_isSubmitting ? 'Validando...' : 'Validar ubicación'),
         ),
-        if (_locationValidated && _startPosition != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Inicio: ${_startPosition!.latitude.toStringAsFixed(6)}, ${_startPosition!.longitude.toStringAsFixed(6)}',
-            style: const TextStyle(color: AppColors.gray500, fontSize: 12),
-          ),
-        ],
       ],
     );
   }
@@ -438,7 +439,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
                     .map(
                       (product) => _ChecklistProduct(
                         name: product['name'] as String? ?? 'Producto',
-                        photo: product['photo'] as String?,
+                        photo: _normalizeMediaUrl(product['photo'] as String?),
                       ),
                     )
                     .toList(growable: false);
@@ -448,7 +449,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
                   identifier: item['identifier'] as String? ?? 'Dosificador',
                   location: (item['area'] as Map<String, dynamic>?)?['name'] as String? ?? visit.area,
                   modelName: model?['name'] as String? ?? 'Sin modelo',
-                  modelPhoto: model?['photo'] as String?,
+                  modelPhoto: _normalizeMediaUrl(model?['photo'] as String?),
                   products: products,
                 );
               },
@@ -483,6 +484,11 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
       setState(() {
         _startPosition = position;
         _locationValidated = true;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final target = LatLng(position.latitude, position.longitude);
+        _mapController.move(target, 17);
       });
     } catch (error) {
       if (!mounted) return;
@@ -695,6 +701,20 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   String _toError(Object error) {
     final message = error.toString();
     return message.startsWith('Exception: ') ? message.replaceFirst('Exception: ', '') : message;
+  }
+
+  String? _normalizeMediaUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.isEmpty) return null;
+    if (rawUrl.startsWith('data:')) return rawUrl;
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) return rawUrl;
+
+    final backendBase = Uri.parse(ApiClient.baseUrl);
+    final origin = Uri(
+      scheme: backendBase.scheme,
+      host: backendBase.host,
+      port: backendBase.hasPort ? backendBase.port : null,
+    );
+    return origin.resolve(rawUrl).toString();
   }
 }
 
