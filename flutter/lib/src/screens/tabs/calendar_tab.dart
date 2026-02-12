@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../models/user_role.dart';
 import '../../models/visit.dart';
 import '../../services/trust_repository.dart';
 import '../../theme/app_colors.dart';
+import '../visit_execution_screen.dart';
 
 class CalendarTab extends StatefulWidget {
-  const CalendarTab({required this.email, super.key});
+  const CalendarTab({required this.email, required this.role, super.key});
 
   final String email;
+  final UserRole role;
 
   @override
   State<CalendarTab> createState() => _CalendarTabState();
@@ -114,7 +117,7 @@ class _CalendarTabState extends State<CalendarTab> {
                   ...dayVisits.map(
                     (visit) => Padding(
                       padding: const EdgeInsets.only(bottom: 14),
-                      child: _ActivityCard(visit: visit),
+                      child: _ActivityCard(visit: visit, role: widget.role),
                     ),
                   ),
               ],
@@ -346,9 +349,10 @@ class _CalendarTabState extends State<CalendarTab> {
 }
 
 class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({required this.visit});
+  const _ActivityCard({required this.visit, required this.role});
 
   final Visit visit;
+  final UserRole role;
 
   @override
   Widget build(BuildContext context) {
@@ -450,30 +454,51 @@ class _ActivityCard extends StatelessWidget {
               ),
             ],
           ),
+          if (!status.isCompleted) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () {
+                  if (status.label == 'Programada' && role.isInspector) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => VisitExecutionScreen(visit: visit)),
+                    );
+                  }
+                },
+                child: Text(status.label == 'Programada' && role.isInspector ? 'Comenzar visita' : 'Ver detalles'),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  static ({String label, Color background, Color foreground}) _visitStatus(String status) {
+  static ({String label, Color background, Color foreground, bool isCompleted}) _visitStatus(String status) {
     switch (status.toLowerCase()) {
       case 'completed':
         return (
           label: 'Completada',
           background: AppColors.gray100,
           foreground: AppColors.gray700,
+          isCompleted: true,
         );
       case 'pending':
         return (
           label: 'Pendiente',
           background: AppColors.gray100,
           foreground: AppColors.gray700,
+          isCompleted: false,
         );
       default:
         return (
           label: 'Programada',
           background: AppColors.yellowSoft,
           foreground: AppColors.charcoal,
+          isCompleted: false,
         );
     }
   }
