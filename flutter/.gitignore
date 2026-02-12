@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Generated app icon source artifacts
+/assets/icon/app_icon.png
+/assets/icon/Poppins-Bold.ttf
