@@ -102,6 +102,16 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
     return true;
   }
 
+  Widget _compactField({required Widget child}) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: FractionallySizedBox(
+        widthFactor: 0.92,
+        child: child,
+      ),
+    );
+  }
+
   Future<void> _captureEvidence() async {
     try {
       final cameras = await availableCameras();
@@ -236,37 +246,41 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
         children: [
           const Text('Seleccionar ubicación', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
-          DropdownButtonFormField<int>(
-            value: _clientId,
-            decoration: const InputDecoration(labelText: 'Cliente', border: OutlineInputBorder()),
-            items: _clients
-                .map((c) => DropdownMenuItem<int>(value: c['id'] as int?, child: Text(c['name'] as String? ?? 'Cliente')))
-                .toList(growable: false),
-            onChanged: (value) {
-              setState(() {
-                _clientId = value;
-                _branchId = null;
-                _areaId = null;
-                _dispenserId = null;
-              });
-            },
+          _compactField(
+            child: DropdownButtonFormField<int>(
+              value: _clientId,
+              decoration: const InputDecoration(labelText: 'Cliente', border: OutlineInputBorder()),
+              items: _clients
+                  .map((c) => DropdownMenuItem<int>(value: c['id'] as int?, child: Text(c['name'] as String? ?? 'Cliente')))
+                  .toList(growable: false),
+              onChanged: (value) {
+                setState(() {
+                  _clientId = value;
+                  _branchId = null;
+                  _areaId = null;
+                  _dispenserId = null;
+                });
+              },
+            ),
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<int>(
-            value: _branchId,
-            decoration: const InputDecoration(labelText: 'Sucursal', border: OutlineInputBorder()),
-            items: _filteredBranches
-                .map((b) => DropdownMenuItem<int>(value: b['id'] as int?, child: Text(b['name'] as String? ?? 'Sucursal')))
-                .toList(growable: false),
-            onChanged: _clientId == null
-                ? null
-                : (value) {
-                    setState(() {
-                      _branchId = value;
-                      _areaId = null;
-                      _dispenserId = null;
-                    });
-                  },
+          _compactField(
+            child: DropdownButtonFormField<int>(
+              value: _branchId,
+              decoration: const InputDecoration(labelText: 'Sucursal', border: OutlineInputBorder()),
+              items: _filteredBranches
+                  .map((b) => DropdownMenuItem<int>(value: b['id'] as int?, child: Text(b['name'] as String? ?? 'Sucursal')))
+                  .toList(growable: false),
+              onChanged: _clientId == null
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _branchId = value;
+                        _areaId = null;
+                        _dispenserId = null;
+                      });
+                    },
+            ),
           ),
         ],
       );
@@ -277,29 +291,33 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
         children: [
           const Text('Detalles del reporte', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
-          DropdownButtonFormField<int>(
-            value: _areaId,
-            decoration: const InputDecoration(labelText: 'Área', border: OutlineInputBorder()),
-            items: _filteredAreas
-                .map((a) => DropdownMenuItem<int>(value: a['id'] as int?, child: Text(a['name'] as String? ?? 'Área')))
-                .toList(growable: false),
-            onChanged: _branchId == null
-                ? null
-                : (value) {
-                    setState(() {
-                      _areaId = value;
-                      _dispenserId = null;
-                    });
-                  },
+          _compactField(
+            child: DropdownButtonFormField<int>(
+              value: _areaId,
+              decoration: const InputDecoration(labelText: 'Área', border: OutlineInputBorder()),
+              items: _filteredAreas
+                  .map((a) => DropdownMenuItem<int>(value: a['id'] as int?, child: Text(a['name'] as String? ?? 'Área')))
+                  .toList(growable: false),
+              onChanged: _branchId == null
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _areaId = value;
+                        _dispenserId = null;
+                      });
+                    },
+            ),
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<int>(
-            value: _dispenserId,
-            decoration: const InputDecoration(labelText: 'Dispensador', border: OutlineInputBorder()),
-            items: _filteredDispensers
-                .map((d) => DropdownMenuItem<int>(value: d['id'] as int?, child: Text(d['identifier'] as String? ?? 'Dispensador')))
-                .toList(growable: false),
-            onChanged: _areaId == null ? null : (value) => setState(() => _dispenserId = value),
+          _compactField(
+            child: DropdownButtonFormField<int>(
+              value: _dispenserId,
+              decoration: const InputDecoration(labelText: 'Dispensador', border: OutlineInputBorder()),
+              items: _filteredDispensers
+                  .map((d) => DropdownMenuItem<int>(value: d['id'] as int?, child: Text(d['identifier'] as String? ?? 'Dispensador')))
+                  .toList(growable: false),
+              onChanged: _areaId == null ? null : (value) => setState(() => _dispenserId = value),
+            ),
           ),
           const SizedBox(height: 12),
           TextField(
