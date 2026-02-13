@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/user_role.dart';
 import '../models/visit.dart';
@@ -22,6 +23,8 @@ class VisitSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = _badgeForStatus(visit.status);
     final canStartVisit = !status.isCompleted && status.label == 'Programada' && role.isInspector;
+    final reportUrl = Uri.parse('https://trust.supplymax.net/clientes/visitas/${visit.id}/informe');
+    final reportPdfUrl = Uri.parse('https://trust.supplymax.net/api/visits/${visit.id}/report/');
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -142,9 +145,65 @@ class VisitSummaryCard extends StatelessWidget {
                   ),
               ],
             ),
+          ] else ...[
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+            const SizedBox(height: 12),
+            const Text(
+              'Informe de visita',
+              style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openExternalUrl(context, reportUrl),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF111827),
+                      side: const BorderSide(color: Color(0xFFD1D5DB)),
+                      minimumSize: const Size.fromHeight(44),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    icon: const Icon(Icons.visibility_outlined, size: 18),
+                    label: const Text('Ver informe'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openExternalUrl(context, reportPdfUrl),
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      backgroundColor: const Color(0xFF111827),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(44),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: const Text('Descargar PDF'),
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
+    );
+  }
+
+  Future<void> _openExternalUrl(BuildContext context, Uri url) async {
+    final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (launched || !context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No se pudo abrir el enlace del informe.')),
     );
   }
 
