@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -9,6 +11,7 @@ import 'tabs/incidents_tab.dart';
 import 'tabs/visits_tab.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
+import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -30,8 +33,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const Duration _incidentsRefreshInterval = Duration(seconds: 15);
+
   int _currentIndex = 0;
   late final List<Widget> _tabs;
+  final TrustRepository _repository = TrustRepository();
+  Timer? _incidentsRefreshTimer;
+  int? _incidentCount;
 
   @override
   void initState() {
@@ -49,6 +57,18 @@ class _HomeScreenState extends State<HomeScreen> {
       VisitsTab(email: widget.email, role: widget.role),
       IncidentsTab(email: widget.email, role: widget.role),
     ];
+
+    _refreshIncidentCount();
+    _incidentsRefreshTimer = Timer.periodic(
+      _incidentsRefreshInterval,
+      (_) => _refreshIncidentCount(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _incidentsRefreshTimer?.cancel();
+    super.dispose();
   }
 
   void _openVisitsTab() => setState(() => _currentIndex = 1);
@@ -152,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: 'Incidencias',
                 icon: Icons.report_problem_outlined,
                 selected: _currentIndex == 3,
-                showDot: true,
+                badgeCount: _incidentCount,
                 onTap: () => setState(() => _currentIndex = 3),
               ),
               _NavItem(
@@ -191,6 +211,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     return user[0].toUpperCase();
   }
+
+  Future<void> _refreshIncidentCount() async {
+    try {
+      final incidents = await _repository.loadIncidents(widget.email);
+      if (!mounted) {
+        return;
+      }
+      setState(() => _incidentCount = incidents.length);
+    } catch (_) {
+      // Silencioso: el contador no debe romper la navegación por fallas de red.
+    }
+  }
 }
 
 class _NavItem extends StatelessWidget {
@@ -199,13 +231,13 @@ class _NavItem extends StatelessWidget {
     required this.icon,
     required this.selected,
     required this.onTap,
-    this.showDot = false,
+    this.badgeCount,
   });
 
   final String label;
   final IconData icon;
   final bool selected;
-  final bool showDot;
+  final int? badgeCount;
   final VoidCallback onTap;
 
   @override
@@ -235,16 +267,26 @@ class _NavItem extends StatelessWidget {
                       color: selected ? AppColors.black : AppColors.gray500,
                     ),
                   ),
-                  if (showDot)
-                    const Positioned(
-                      right: 14,
-                      top: 6,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
+                  if (badgeCount != null)
+                    Positioned(
+                      right: 6,
+                      top: -2,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
                           color: Colors.redAccent,
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.all(Radius.circular(999)),
                         ),
-                        child: SizedBox(width: 8, height: 8),
+                        child: Text(
+                          '$badgeCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                 ],
