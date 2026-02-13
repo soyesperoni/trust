@@ -11,6 +11,7 @@ class ApiClient {
   );
 
   final http.Client _client;
+  String? _csrfToken;
 
   String get _normalizedBaseUrl =>
       baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
@@ -99,6 +100,44 @@ class ApiClient {
     throw Exception('No encontramos un usuario activo con ese correo.');
   }
 
+  Future<void> _ensureCsrfToken() async {
+    if (_csrfToken != null && _csrfToken!.isNotEmpty) {
+      return;
+    }
+
+    final uri = Uri.parse('$_normalizedBaseUrl/csrf/');
+    final response = await _client.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    );
+
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError: 'No fue posible obtener token CSRF.',
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(decoded['error'] ?? 'Error ${response.statusCode} al obtener CSRF');
+    }
+
+    _csrfToken = decoded['csrf_token'] as String?;
+    if (_csrfToken == null || _csrfToken!.isEmpty) {
+      throw Exception('No fue posible obtener token CSRF.');
+    }
+  }
+
+  Map<String, String> _authHeaders(String email, {bool includeCsrf = false}) {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'X-Current-User-Email': email,
+    };
+    if (includeCsrf && _csrfToken != null && _csrfToken!.isNotEmpty) {
+      headers['X-CSRFToken'] = _csrfToken!;
+    }
+    return headers;
+  }
+
   Future<Map<String, dynamic>> getJson(
     String path, {
     required String email,
@@ -107,10 +146,7 @@ class ApiClient {
     final uri = Uri.parse('$_normalizedBaseUrl$path').replace(queryParameters: queryParameters);
     final response = await _client.get(
       uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Current-User-Email': email,
-      },
+      headers: _authHeaders(email),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -129,13 +165,11 @@ class ApiClient {
     required String email,
     required Map<String, dynamic> body,
   }) async {
+    await _ensureCsrfToken();
     final uri = Uri.parse('$_normalizedBaseUrl$path');
     final response = await _client.post(
       uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Current-User-Email': email,
-      },
+      headers: _authHeaders(email, includeCsrf: true),
       body: jsonEncode(body),
     );
 
@@ -155,8 +189,10 @@ class ApiClient {
     required Map<String, String> fields,
     List<http.MultipartFile> files = const [],
   }) async {
+    await _ensureCsrfToken();
     final request = http.MultipartRequest('POST', Uri.parse('$_normalizedBaseUrl$path'))
       ..headers['X-Current-User-Email'] = email
+      ..headers['X-CSRFToken'] = _csrfToken!
       ..fields.addAll(fields)
       ..files.addAll(files);
 
@@ -177,13 +213,11 @@ class ApiClient {
     required String email,
     required Map<String, dynamic> body,
   }) async {
+    await _ensureCsrfToken();
     final uri = Uri.parse('$_normalizedBaseUrl$path');
     final response = await _client.patch(
       uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Current-User-Email': email,
-      },
+      headers: _authHeaders(email, includeCsrf: true),
       body: jsonEncode(body),
     );
 
@@ -203,8 +237,10 @@ class ApiClient {
     required Map<String, String> fields,
     List<http.MultipartFile> files = const [],
   }) async {
+    await _ensureCsrfToken();
     final request = http.MultipartRequest('PATCH', Uri.parse('$_normalizedBaseUrl$path'))
       ..headers['X-Current-User-Email'] = email
+      ..headers['X-CSRFToken'] = _csrfToken!
       ..fields.addAll(fields)
       ..files.addAll(files);
 
