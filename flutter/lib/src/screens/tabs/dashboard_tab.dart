@@ -64,7 +64,7 @@ class _DashboardTabState extends State<DashboardTab> {
     final payload = _payload!;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
