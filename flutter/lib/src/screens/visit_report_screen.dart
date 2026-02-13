@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 
 import '../services/trust_repository.dart';
 
@@ -331,7 +331,7 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
               child: Material(
                 color: const Color(0xFFF3F4F6),
                 child: InkWell(
-                  onTap: url == null ? null : () => _openExternalMedia(url),
+                  onTap: url == null ? null : () => _openMediaPopup(url, isVideo: isVideo),
                   child: url == null
                       ? Icon(isVideo ? Icons.videocam_off_outlined : Icons.image_not_supported_outlined)
                       : Stack(
@@ -368,16 +368,22 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
     );
   }
 
-  Future<void> _openExternalMedia(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir el archivo.')),
-      );
+  Future<void> _openMediaPopup(String url, {required bool isVideo}) async {
+    if (url.isEmpty) {
+      return;
     }
+
+    await showDialog<void>(
+      context: context,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        clipBehavior: Clip.antiAlias,
+        child: AspectRatio(
+          aspectRatio: isVideo ? 16 / 9 : 4 / 5,
+          child: isVideo ? _VideoEvidencePlayer(url: url) : _PhotoEvidenceViewer(url: url),
+        ),
+      ),
+    );
   }
 
   Uint8List? _decodeDataImage(String? source) {
@@ -475,5 +481,164 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
   bool _isVideoMedia(Map<String, dynamic> entry) {
     final mediaType = (entry['type'] as String? ?? '').toLowerCase();
     return mediaType == 'video';
+  }
+}
+
+class _PhotoEvidenceViewer extends StatelessWidget {
+  const _PhotoEvidenceViewer({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 4,
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Center(
+                  child: Icon(Icons.broken_image_outlined, color: Colors.white, size: 40),
+                ),
+              ),
+            ),
+          ),
+          const _ClosePopupButton(),
+        ],
+      ),
+    );
+  }
+}
+
+class _VideoEvidencePlayer extends StatefulWidget {
+  const _VideoEvidencePlayer({required this.url});
+
+  final String url;
+
+  @override
+  State<_VideoEvidencePlayer> createState() => _VideoEvidencePlayerState();
+}
+
+class _VideoEvidencePlayerState extends State<_VideoEvidencePlayer> {
+  VideoPlayerController? _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initController();
+  }
+
+  Future<void> _initController() async {
+    final uri = Uri.tryParse(widget.url);
+    if (uri == null) {
+      setState(() => _error = 'No se pudo reproducir el video.');
+      return;
+    }
+
+    final controller = VideoPlayerController.networkUrl(uri);
+    try {
+      await controller.initialize();
+      await controller.setLooping(true);
+      await controller.play();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _controller = controller;
+      });
+    } catch (_) {
+      await controller.dispose();
+      if (!mounted) return;
+      setState(() => _error = 'No se pudo reproducir el video.');
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    return Container(
+      color: Colors.black,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: controller == null
+                ? Center(
+                    child: _error == null
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            _error!,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                  )
+                : Column(
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: AspectRatio(
+                            aspectRatio: controller.value.aspectRatio,
+                            child: VideoPlayer(controller),
+                          ),
+                        ),
+                      ),
+                      VideoProgressIndicator(
+                        controller,
+                        allowScrubbing: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      IconButton(
+                        color: Colors.white,
+                        iconSize: 36,
+                        onPressed: () {
+                          if (controller.value.isPlaying) {
+                            controller.pause();
+                          } else {
+                            controller.play();
+                          }
+                          setState(() {});
+                        },
+                        icon: Icon(controller.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+          ),
+          const _ClosePopupButton(),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClosePopupButton extends StatelessWidget {
+  const _ClosePopupButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 8,
+      right: 8,
+      child: Material(
+        color: Colors.black45,
+        borderRadius: BorderRadius.circular(999),
+        child: IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.close_rounded, color: Colors.white),
+          tooltip: 'Cerrar',
+        ),
+      ),
+    );
   }
 }
