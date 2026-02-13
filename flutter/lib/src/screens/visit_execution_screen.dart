@@ -970,56 +970,65 @@ class _MiniCameraCaptureDialogState extends State<_MiniCameraCaptureDialog> {
     final controller = _controller;
     final canCapture = !_initializing && !_capturing && controller != null && controller.value.isInitialized;
 
+    final screenSize = MediaQuery.sizeOf(context);
+
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-      child: SizedBox(
-        width: 360,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.mode == _EvidenceMode.photo ? 'Mini cámara (Foto)' : 'Mini cámara (Video 30s máx.)',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 430),
+        child: SizedBox(
+          width: double.infinity,
+          height: screenSize.height * 0.82,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.mode == _EvidenceMode.photo ? 'Mini cámara (Foto)' : 'Mini cámara (Video 30s máx.)',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _recording ? null : () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AspectRatio(
+                        aspectRatio: 9 / 16,
+                        child: _initializing
+                            ? const Center(child: CircularProgressIndicator())
+                            : _error != null
+                                ? Center(child: Padding(padding: const EdgeInsets.all(8), child: Text(_error!, textAlign: TextAlign.center)))
+                                : CameraPreview(controller!),
+                      ),
                     ),
                   ),
-                  IconButton(
-                    onPressed: _recording ? null : () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
+                ),
+                if (widget.mode == _EvidenceMode.video)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text('Duración: ${_elapsed.inSeconds}s / 30s', style: const TextStyle(color: AppColors.gray500)),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: AspectRatio(
-                  aspectRatio: controller?.value.aspectRatio ?? (16 / 9),
-                  child: _initializing
-                      ? const Center(child: CircularProgressIndicator())
-                      : _error != null
-                          ? Center(child: Padding(padding: const EdgeInsets.all(8), child: Text(_error!, textAlign: TextAlign.center)))
-                          : CameraPreview(controller!),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: canCapture ? _capture : null,
+                    icon: Icon(widget.mode == _EvidenceMode.photo ? Icons.camera_alt_outlined : (_recording ? Icons.stop_circle_outlined : Icons.videocam_outlined)),
+                    label: Text(widget.mode == _EvidenceMode.photo ? 'Tomar foto' : (_recording ? 'Detener grabación' : 'Iniciar grabación')),
+                  ),
                 ),
-              ),
-              if (widget.mode == _EvidenceMode.video)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text('Duración: ${_elapsed.inSeconds}s / 30s', style: const TextStyle(color: AppColors.gray500)),
-                ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: canCapture ? _capture : null,
-                  icon: Icon(widget.mode == _EvidenceMode.photo ? Icons.camera_alt_outlined : (_recording ? Icons.stop_circle_outlined : Icons.videocam_outlined)),
-                  label: Text(widget.mode == _EvidenceMode.photo ? 'Tomar foto' : (_recording ? 'Detener grabación' : 'Iniciar grabación')),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
