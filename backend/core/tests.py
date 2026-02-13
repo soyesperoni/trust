@@ -213,3 +213,34 @@ class VisitPublicReportRouteTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["id"], self.visit.id)
         self.assertEqual(payload["status"], Visit.Status.COMPLETED)
+
+
+class LoginApiTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="login-user",
+            email="login@test.com",
+            password="secret123",
+            role=User.Role.INSPECTOR,
+        )
+
+    def test_login_requires_valid_credentials(self):
+        response = self.client.post(
+            "/api/login/",
+            data=json.dumps({"email": self.user.email, "password": "incorrecta"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_login_returns_user_when_credentials_are_valid(self):
+        response = self.client.post(
+            "/api/login/",
+            data=json.dumps({"email": self.user.email, "password": "secret123"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["user"]["email"], self.user.email)
+

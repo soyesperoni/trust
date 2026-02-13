@@ -9,6 +9,7 @@ from .views import (
     dispensers,
     health,
     incidents,
+    login,
     products,
     user_detail,
     users,
@@ -21,6 +22,7 @@ from .views import (
 
 urlpatterns = [
     path("health/", health, name="health"),
+    path("login/", login, name="login"),
     path("dashboard/", dashboard, name="dashboard"),
     path("clients/", clients, name="clients"),
     path("clients/<int:client_id>/", client_detail, name="client_detail"),

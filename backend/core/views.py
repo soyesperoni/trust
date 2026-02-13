@@ -1146,6 +1146,28 @@ def incidents(request):
 
 
 @csrf_exempt
+@require_http_methods(["POST"])
+def login(request):
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    email = str(data.get("email") or "").strip().lower()
+    password = str(data.get("password") or "")
+    if not email or not password:
+        return JsonResponse({"error": "Email y contraseña son obligatorios."}, status=400)
+
+    user = User.objects.filter(email__iexact=email).first()
+    if user is None or not user.check_password(password):
+        return JsonResponse({"error": "Credenciales inválidas."}, status=401)
+    if not user.is_active:
+        return JsonResponse({"error": "El usuario está inactivo."}, status=403)
+
+    return JsonResponse({"user": _serialize_user(user)})
+
+
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def users(request):
     if request.method == "GET":

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'home_screen.dart';
+import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,12 +23,58 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _repository = TrustRepository();
+
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate() || _isSubmitting) {
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    final email = _emailController.text.trim();
+
+    try {
+      final response = await _repository.login(
+        email: email,
+        password: _passwordController.text,
+      );
+      final user = response['user'] as Map<String, dynamic>?;
+      final resolvedEmail = (user?['email'] as String?)?.trim();
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => HomeScreen(
+            email: (resolvedEmail == null || resolvedEmail.isEmpty) ? email : resolvedEmail,
+            isDarkMode: widget.isDarkMode,
+            onToggleThemeMode: widget.onToggleThemeMode,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 
   @override
@@ -148,21 +195,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 letterSpacing: 0.8,
                               ),
                             ),
-                            onPressed: () {
-                              if (!_formKey.currentState!.validate()) {
-                                return;
-                              }
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => HomeScreen(
-                                    email: _emailController.text.trim(),
-                                    isDarkMode: widget.isDarkMode,
-                                    onToggleThemeMode: widget.onToggleThemeMode,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: const Text('INICIAR SESIÓN'),
+                            onPressed: _isSubmitting ? null : _submit,
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Text('INICIAR SESIÓN'),
                           ),
                           const SizedBox(height: 18),
                           const Divider(height: 1),
