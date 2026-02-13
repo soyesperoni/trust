@@ -17,6 +17,15 @@ class ApiClient {
   String get _normalizedBaseUrl =>
       baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
 
+  Map<String, String> _csrfSafeHeaders() {
+    final uri = Uri.parse(_normalizedBaseUrl);
+    final origin = '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
+    return {
+      'Origin': origin,
+      'Referer': '$origin/',
+    };
+  }
+
   Map<String, dynamic> _decodeJsonBody(http.Response response, {required String fallbackError}) {
     try {
       final decoded = jsonDecode(response.body);
@@ -136,6 +145,7 @@ class ApiClient {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'X-Current-User-Email': email,
+      ..._csrfSafeHeaders(),
     };
     if (includeCsrf && _csrfToken != null && _csrfToken!.isNotEmpty) {
       headers['X-CSRFToken'] = _csrfToken!;
@@ -197,6 +207,7 @@ class ApiClient {
     await _ensureCsrfToken();
     final request = http.MultipartRequest('POST', Uri.parse('$_normalizedBaseUrl$path'))
       ..headers['X-Current-User-Email'] = email
+      ..headers.addAll(_csrfSafeHeaders())
       ..fields.addAll(fields)
       ..files.addAll(files);
 
@@ -248,6 +259,7 @@ class ApiClient {
     await _ensureCsrfToken();
     final request = http.MultipartRequest('PATCH', Uri.parse('$_normalizedBaseUrl$path'))
       ..headers['X-Current-User-Email'] = email
+      ..headers.addAll(_csrfSafeHeaders())
       ..fields.addAll(fields)
       ..files.addAll(files);
 
