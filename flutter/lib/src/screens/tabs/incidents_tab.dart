@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/incident.dart';
 import '../../models/user_role.dart';
 import '../../services/trust_repository.dart';
+import '../incidents/new_incident_screen.dart';
 
 class IncidentsTab extends StatefulWidget {
   const IncidentsTab({required this.email, required this.role, super.key});

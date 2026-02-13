@@ -19,12 +19,12 @@ class Incident {
     final dispenser = json['dispenser'];
     return Incident(
       id: json['id'] as int? ?? 0,
-      type: json['type'] as String? ?? 'general',
+      type: (json['type'] as String?) ?? (json['description'] as String?) ?? 'general',
       status: json['status'] as String? ?? 'open',
       createdAt: json['created_at'] as String? ?? '',
       dispenser: dispenser is Map<String, dynamic>
           ? (dispenser['identifier'] as String? ?? 'Sin dosificador')
-          : 'Sin dosificador',
+          : (dispenser as String? ?? 'Sin dosificador'),
       reportedBy: json['reported_by'] as String? ?? 'No definido',
     );
   }

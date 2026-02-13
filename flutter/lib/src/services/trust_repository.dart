@@ -35,6 +35,25 @@ class TrustRepository {
     return visits.firstWhere((visit) => visit.id == visitId);
   }
 
+
+  Future<List<Map<String, dynamic>>> loadClients(String email) async {
+    final json = await _apiClient.getJson('/clients/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  Future<List<Map<String, dynamic>>> loadBranches(String email) async {
+    final json = await _apiClient.getJson('/branches/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  Future<List<Map<String, dynamic>>> loadAreas(String email) async {
+    final json = await _apiClient.getJson('/areas/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
   Future<List<Map<String, dynamic>>> loadDispensers(String email) async {
     final json = await _apiClient.getJson('/dispensers/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);
@@ -110,5 +129,45 @@ class TrustRepository {
     final json = await _apiClient.getJson('/incidents/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);
     return results.whereType<Map<String, dynamic>>().map(Incident.fromJson).toList(growable: false);
+  }
+
+
+  Future<Map<String, dynamic>> createIncident({
+    required String email,
+    required int clientId,
+    required int branchId,
+    required int areaId,
+    required int dispenserId,
+    required String description,
+    List<http.MultipartFile> evidenceFiles = const [],
+  }) async {
+    final fields = {
+      'client_id': clientId.toString(),
+      'branch_id': branchId.toString(),
+      'area_id': areaId.toString(),
+      'dispenser_id': dispenserId.toString(),
+      'description': description,
+    };
+
+    if (evidenceFiles.isNotEmpty) {
+      return _apiClient.postMultipart(
+        '/incidents/',
+        email: email,
+        fields: fields,
+        files: evidenceFiles,
+      );
+    }
+
+    return _apiClient.postJson(
+      '/incidents/',
+      email: email,
+      body: {
+        'client_id': clientId,
+        'branch_id': branchId,
+        'area_id': areaId,
+        'dispenser_id': dispenserId,
+        'description': description,
+      },
+    );
   }
 }
