@@ -677,12 +677,24 @@ def _is_truthy(value: Any) -> bool:
 def _serialize_incident(incident: Incident) -> dict:
     return {
         "id": incident.id,
+        "client_id": incident.client_id,
         "client": incident.client.name,
+        "branch_id": incident.branch_id,
         "branch": incident.branch.name,
+        "area_id": incident.area_id,
         "area": incident.area.name,
+        "dispenser_id": incident.dispenser_id,
         "dispenser": incident.dispenser.identifier,
         "description": incident.description,
         "created_at": incident.created_at.isoformat(),
+        "media": [
+            {
+                "id": medium.id,
+                "type": medium.media_type,
+                "file": medium.file.url if medium.file else None,
+            }
+            for medium in incident.media.all()
+        ],
     }
 
 
@@ -1201,13 +1213,37 @@ def incidents(request):
 
     evidence_files = files.getlist("evidence_files") if files else []
     for evidence in evidence_files:
+        content_type = str(getattr(evidence, "content_type", "") or "").lower()
+        media_type = (
+            IncidentMedia.MediaType.VIDEO
+            if content_type.startswith("video/")
+            else IncidentMedia.MediaType.PHOTO
+        )
         IncidentMedia.objects.create(
             incident=incident,
-            media_type=IncidentMedia.MediaType.PHOTO,
+            media_type=media_type,
             file=evidence,
         )
 
     return JsonResponse(_serialize_incident(incident), status=201)
+
+
+@require_GET
+def incident_detail(request, incident_id: int):
+    queryset = Incident.objects.select_related("client", "branch", "area", "dispenser")
+    client_scope_ids = _get_client_scope_ids(request)
+    branch_scope_ids = _get_branch_scope_ids(request)
+
+    if client_scope_ids is not None:
+        queryset = queryset.filter(client_id__in=client_scope_ids)
+    if branch_scope_ids is not None:
+        queryset = queryset.filter(branch_id__in=branch_scope_ids)
+
+    incident = queryset.filter(pk=incident_id).first()
+    if incident is None:
+        return JsonResponse({"error": "No se encontró la incidencia."}, status=404)
+
+    return JsonResponse(_serialize_incident(incident))
 
 
 @csrf_exempt

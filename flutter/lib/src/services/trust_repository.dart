@@ -182,6 +182,15 @@ class TrustRepository {
   }
 
 
+  Future<Incident> loadIncidentById({
+    required String email,
+    required int incidentId,
+  }) async {
+    final json = await _apiClient.getJson('/incidents/$incidentId/', email: email);
+    return Incident.fromJson(json);
+  }
+
+
   Future<Map<String, dynamic>> createIncident({
     required String email,
     required int clientId,
