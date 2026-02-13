@@ -353,8 +353,9 @@ export default function IncidenciasPage() {
         ) : null}
       </section>
 
-      <PageTransition className="hidden md:flex flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
+      <PageTransition className="hidden flex-1 flex-col overflow-y-auto md:flex">
+        <div className="hidden min-h-0 flex-1 overflow-y-auto p-4 pt-4 md:block md:p-8">
+          <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-card dark:border-slate-800 dark:bg-[#161e27]">
           <div className="overflow-x-auto custom-scrollbar flex-1">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
@@ -460,17 +461,18 @@ export default function IncidenciasPage() {
               </tbody>
             </table>
           </div>
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <span className="text-sm text-slate-500">
-              Mostrando {filteredIncidents.length} de {incidents.length} incidencias
-            </span>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500">
-                Anterior
-              </button>
-              <button className="px-3 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500">
-                Siguiente
-              </button>
+            <div className="flex items-center justify-between border-t border-slate-100 p-4 dark:border-slate-800">
+              <span className="text-sm text-slate-500">
+                Mostrando {filteredIncidents.length} de {incidents.length} incidencias
+              </span>
+              <div className="flex gap-2">
+                <button className="rounded border border-slate-200 px-3 py-1 text-sm text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                  Anterior
+                </button>
+                <button className="rounded border border-slate-200 px-3 py-1 text-sm text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
         </div>
