@@ -10,6 +10,7 @@ import { getSessionUserEmail } from "../../../lib/session";
 type Client = { id: number; name: string };
 type Branch = { id: number; name: string; client: { id: number; name: string } };
 type Area = { id: number; name: string; branch: { id: number; name: string; client: string } };
+type Dispenser = { id: number; identifier: string; area: { id: number; name: string } };
 
 type Priority = "low" | "medium" | "high";
 
@@ -32,11 +33,13 @@ export default function NuevaIncidenciaPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [dispensers, setDispensers] = useState<Dispenser[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [clientId, setClientId] = useState("");
   const [branchId, setBranchId] = useState("");
   const [areaId, setAreaId] = useState("");
+  const [dispenserId, setDispenserId] = useState("");
   const [reportTime, setReportTime] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
@@ -61,7 +64,7 @@ export default function NuevaIncidenciaPage() {
     const loadData = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const [clientsResponse, branchesResponse, areasResponse] = await Promise.all([
+        const [clientsResponse, branchesResponse, areasResponse, dispensersResponse] = await Promise.all([
           fetch("/api/clients", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
@@ -74,16 +77,21 @@ export default function NuevaIncidenciaPage() {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
+          fetch("/api/dispensers", {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
         ]);
 
-        if (!clientsResponse.ok || !branchesResponse.ok || !areasResponse.ok) {
+        if (!clientsResponse.ok || !branchesResponse.ok || !areasResponse.ok || !dispensersResponse.ok) {
           throw new Error("No se pudieron cargar los datos de ubicación.");
         }
 
-        const [clientsPayload, branchesPayload, areasPayload] = await Promise.all([
+        const [clientsPayload, branchesPayload, areasPayload, dispensersPayload] = await Promise.all([
           clientsResponse.json(),
           branchesResponse.json(),
           areasResponse.json(),
+          dispensersResponse.json(),
         ]);
 
         if (!isMounted) return;
@@ -91,6 +99,7 @@ export default function NuevaIncidenciaPage() {
         setClients(clientsPayload.results ?? []);
         setBranches(branchesPayload.results ?? []);
         setAreas(areasPayload.results ?? []);
+        setDispensers(dispensersPayload.results ?? []);
         setLoadError(null);
       } catch (error) {
         if (!isMounted) return;
@@ -117,6 +126,11 @@ export default function NuevaIncidenciaPage() {
   const filteredAreas = useMemo(
     () => areas.filter((area) => (branchId ? String(area.branch.id) === branchId : true)),
     [areas, branchId],
+  );
+
+  const filteredDispensers = useMemo(
+    () => dispensers.filter((dispenser) => (areaId ? String(dispenser.area.id) === areaId : true)),
+    [dispensers, areaId],
   );
 
 
@@ -193,7 +207,7 @@ export default function NuevaIncidenciaPage() {
 
   const canGoNext =
     (mobileStep === 1 && clientId && branchId) ||
-    (mobileStep === 2 && areaId && description.trim()) ||
+    (mobileStep === 2 && areaId && dispenserId && description.trim()) ||
     mobileStep === 3;
 
   useEffect(() => {
@@ -355,7 +369,37 @@ export default function NuevaIncidenciaPage() {
       return;
     }
 
-    router.push("/clientes/incidencias");
+    try {
+      const formData = new FormData();
+      formData.append("client_id", clientId);
+      formData.append("branch_id", branchId);
+      formData.append("area_id", areaId);
+      formData.append("dispenser_id", dispenserId);
+      formData.append("description", description.trim());
+      evidenceFiles.forEach((file) => {
+        formData.append("evidence_files", file);
+      });
+
+      const currentUserEmail = getSessionUserEmail();
+      const response = await fetch("/api/incidents", {
+        method: "POST",
+        headers: { "x-current-user-email": currentUserEmail },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error ?? "No se pudo registrar la incidencia.");
+      }
+
+      router.push("/clientes/incidencias");
+    } catch (submitError) {
+      setLoadError(
+        submitError instanceof Error
+          ? submitError.message
+          : "No se pudo registrar la incidencia.",
+      );
+    }
   };
 
   return (
@@ -401,6 +445,7 @@ export default function NuevaIncidenciaPage() {
                       setClientId(event.target.value);
                       setBranchId("");
                       setAreaId("");
+                      setDispenserId("");
                     }}
                     value={clientId}
                   >
@@ -421,6 +466,7 @@ export default function NuevaIncidenciaPage() {
                     onChange={(event) => {
                       setBranchId(event.target.value);
                       setAreaId("");
+                      setDispenserId("");
                     }}
                     value={branchId}
                   >
@@ -447,12 +493,32 @@ export default function NuevaIncidenciaPage() {
                   <select
                     className="block w-full appearance-none rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 py-3.5 pl-4 pr-10 text-base text-slate-900 dark:text-slate-100 shadow-sm focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={!branchId}
-                    onChange={(event) => setAreaId(event.target.value)}
+                    onChange={(event) => {
+                      setAreaId(event.target.value);
+                      setDispenserId("");
+                    }}
                     value={areaId}
                   >
                     <option value="">Seleccionar área</option>
                     {filteredAreas.map((area) => (
                       <option key={area.id} value={area.id}>{area.name}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-symbols-outlined">expand_more</span></div>
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Dispensador</label>
+                <div className="relative">
+                  <select
+                    className="block w-full appearance-none rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 py-3.5 pl-4 pr-10 text-base text-slate-900 dark:text-slate-100 shadow-sm focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={!areaId}
+                    onChange={(event) => setDispenserId(event.target.value)}
+                    value={dispenserId}
+                  >
+                    <option value="">Seleccionar dispensador</option>
+                    {filteredDispensers.map((dispenser) => (
+                      <option key={dispenser.id} value={dispenser.id}>{dispenser.identifier}</option>
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500"><span className="material-symbols-outlined">expand_more</span></div>
@@ -643,6 +709,7 @@ export default function NuevaIncidenciaPage() {
                           setClientId(event.target.value);
                           setBranchId("");
                           setAreaId("");
+                          setDispenserId("");
                         }}
                         value={clientId}
                       >
@@ -668,6 +735,7 @@ export default function NuevaIncidenciaPage() {
                         onChange={(event) => {
                           setBranchId(event.target.value);
                           setAreaId("");
+                          setDispenserId("");
                         }}
                         value={branchId}
                       >
@@ -690,12 +758,37 @@ export default function NuevaIncidenciaPage() {
                         className={`${inputClassName} appearance-none cursor-pointer disabled:opacity-70`}
                         disabled={!branchId}
                         id="area"
-                        onChange={(event) => setAreaId(event.target.value)}
+                        onChange={(event) => {
+                          setAreaId(event.target.value);
+                          setDispenserId("");
+                        }}
                         value={areaId}
                       >
                         <option value="">Seleccione Área</option>
                         {filteredAreas.map((area) => (
                           <option key={area.id} value={area.id}>{area.name}</option>
+                        ))}
+                      </select>
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined">
+                        expand_more
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelClassName} htmlFor="dispenser">
+                      Dispensador
+                    </label>
+                    <div className="relative">
+                      <select
+                        className={`${inputClassName} appearance-none cursor-pointer disabled:opacity-70`}
+                        disabled={!areaId}
+                        id="dispenser"
+                        onChange={(event) => setDispenserId(event.target.value)}
+                        value={dispenserId}
+                      >
+                        <option value="">Seleccione Dispensador</option>
+                        {filteredDispensers.map((dispenser) => (
+                          <option key={dispenser.id} value={dispenser.id}>{dispenser.identifier}</option>
                         ))}
                       </select>
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined">
