@@ -9,6 +9,22 @@ class ApiClient {
 
   final http.Client _client;
 
+  Map<String, dynamic> _decodeJsonBody(http.Response response, {required String fallbackError}) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      throw const FormatException('La respuesta no es un objeto JSON válido');
+    } on FormatException {
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final rawMessage = response.body.trim();
+        throw Exception(rawMessage.isEmpty ? fallbackError : rawMessage);
+      }
+      throw Exception('Respuesta inválida del servidor. Intenta nuevamente.');
+    }
+  }
+
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -25,7 +41,10 @@ class ApiClient {
       }),
     );
 
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError: 'Error ${response.statusCode} al iniciar sesión',
+    );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(decoded['error'] ?? 'Error ${response.statusCode} al iniciar sesión');
     }
@@ -51,7 +70,10 @@ class ApiClient {
       throw Exception('Error ${response.statusCode} al consultar $path');
     }
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    return _decodeJsonBody(
+      response,
+      fallbackError: 'Error ${response.statusCode} al consultar $path',
+    );
   }
 
   Future<Map<String, dynamic>> patchJson(
@@ -69,7 +91,10 @@ class ApiClient {
       body: jsonEncode(body),
     );
 
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError: 'Error ${response.statusCode} al actualizar $path',
+    );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(decoded['error'] ?? 'Error ${response.statusCode} al actualizar $path');
     }
@@ -89,7 +114,10 @@ class ApiClient {
 
     final streamed = await _client.send(request);
     final response = await http.Response.fromStream(streamed);
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError: 'Error ${response.statusCode} al actualizar $path',
+    );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(decoded['error'] ?? 'Error ${response.statusCode} al actualizar $path');
     }
