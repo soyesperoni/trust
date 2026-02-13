@@ -251,7 +251,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build\nFLUTTER_FRAMEWORK_PATH=\"${TARGET_BUILD_DIR}/Flutter.framework\"\nif [ -d \"$FLUTTER_FRAMEWORK_PATH\" ] && command -v xattr >/dev/null 2>&1; then\n  xattr -r -d com.apple.provenance \"$FLUTTER_FRAMEWORK_PATH\" 2>/dev/null || true\n  xattr -r -d com.apple.quarantine \"$FLUTTER_FRAMEWORK_PATH\" 2>/dev/null || true\nfi";
+			shellScript = "set -e\nexport COPYFILE_DISABLE=1\nexport COPY_EXTENDED_ATTRIBUTES_DISABLE=1\n/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build\nFLUTTER_FRAMEWORK_PATH=\"${TARGET_BUILD_DIR}/Flutter.framework\"\nif [ -d \"$FLUTTER_FRAMEWORK_PATH\" ] && command -v xattr >/dev/null 2>&1; then\n  xattr -r -c \"$FLUTTER_FRAMEWORK_PATH\" 2>/dev/null || true\n  xattr -r -d com.apple.provenance \"$FLUTTER_FRAMEWORK_PATH\" 2>/dev/null || true\n  xattr -r -d com.apple.quarantine \"$FLUTTER_FRAMEWORK_PATH\" 2>/dev/null || true\nfi";
 		};
 /* End PBXShellScriptBuildPhase section */
 
