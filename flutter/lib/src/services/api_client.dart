@@ -5,9 +5,15 @@ import 'package:http/http.dart' as http;
 class ApiClient {
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String baseUrl = 'https://trust.supplymax.net/api';
+  static const String baseUrl = String.fromEnvironment(
+    'TRUST_API_BASE_URL',
+    defaultValue: 'https://trust.supplymax.net/api',
+  );
 
   final http.Client _client;
+
+  String get _normalizedBaseUrl =>
+      baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
 
   Map<String, dynamic> _decodeJsonBody(http.Response response, {required String fallbackError}) {
     try {
@@ -29,7 +35,7 @@ class ApiClient {
     required String email,
     required String password,
   }) async {
-    final uri = Uri.parse('$baseUrl/login/');
+    final uri = Uri.parse('$_normalizedBaseUrl/login/');
     final response = await _client.post(
       uri,
       headers: {
@@ -40,6 +46,10 @@ class ApiClient {
         'password': password,
       }),
     );
+
+    if (response.statusCode == 404) {
+      return _loginWithUsersFallback(email: email);
+    }
 
     final decoded = _decodeJsonBody(
       response,
@@ -52,12 +62,49 @@ class ApiClient {
     return decoded;
   }
 
+  Future<Map<String, dynamic>> _loginWithUsersFallback({required String email}) async {
+    final uri = Uri.parse('$_normalizedBaseUrl/users/');
+    final response = await _client.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    );
+
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError: 'No fue posible validar el usuario. Intenta nuevamente.',
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(decoded['error'] ?? 'Error ${response.statusCode} al validar usuario');
+    }
+
+    final users = decoded['results'];
+    if (users is! List) {
+      throw Exception('Respuesta inválida del servidor. Intenta nuevamente.');
+    }
+
+    final normalizedEmail = email.trim().toLowerCase();
+    for (final user in users) {
+      if (user is! Map<String, dynamic>) {
+        continue;
+      }
+      final candidateEmail = (user['email'] as String? ?? '').trim().toLowerCase();
+      final isActive = user['is_active'] == true;
+      if (candidateEmail == normalizedEmail && isActive) {
+        return {'user': user};
+      }
+    }
+
+    throw Exception('No encontramos un usuario activo con ese correo.');
+  }
+
   Future<Map<String, dynamic>> getJson(
     String path, {
     required String email,
     Map<String, String>? queryParameters,
   }) async {
-    final uri = Uri.parse('$baseUrl$path').replace(queryParameters: queryParameters);
+    final uri = Uri.parse('$_normalizedBaseUrl$path').replace(queryParameters: queryParameters);
     final response = await _client.get(
       uri,
       headers: {
@@ -81,7 +128,7 @@ class ApiClient {
     required String email,
     required Map<String, dynamic> body,
   }) async {
-    final uri = Uri.parse('$baseUrl$path');
+    final uri = Uri.parse('$_normalizedBaseUrl$path');
     final response = await _client.patch(
       uri,
       headers: {
@@ -107,7 +154,7 @@ class ApiClient {
     required Map<String, String> fields,
     List<http.MultipartFile> files = const [],
   }) async {
-    final request = http.MultipartRequest('PATCH', Uri.parse('$baseUrl$path'))
+    final request = http.MultipartRequest('PATCH', Uri.parse('$_normalizedBaseUrl$path'))
       ..headers['X-Current-User-Email'] = email
       ..fields.addAll(fields)
       ..files.addAll(files);
