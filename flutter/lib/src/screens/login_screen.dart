@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'home_screen.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
+import '../models/user_role.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -49,6 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       final user = response['user'] as Map<String, dynamic>?;
       final resolvedEmail = (user?['email'] as String?)?.trim();
+      final resolvedRole = UserRoleParsing.fromBackendRole(user?['role'] as String?);
 
       if (!mounted) {
         return;
@@ -58,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute<void>(
           builder: (_) => HomeScreen(
             email: (resolvedEmail == null || resolvedEmail.isEmpty) ? email : resolvedEmail,
+            role: resolvedRole,
             isDarkMode: widget.isDarkMode,
             onToggleThemeMode: widget.onToggleThemeMode,
           ),
