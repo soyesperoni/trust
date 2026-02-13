@@ -697,6 +697,10 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     await _requestCameraPermissions(requireMicrophone: requireMicrophone);
   }
 
+  Future<void> _requestInitialFlowPermissions() async {
+    await _requestLocationPermission();
+  }
+
   Future<void> _requestLocationPermission() async {
     final locationPermission = await Permission.locationWhenInUse.request();
     if (!locationPermission.isGranted) {
