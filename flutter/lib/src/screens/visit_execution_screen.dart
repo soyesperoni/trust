@@ -284,14 +284,14 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
             child: SizedBox(
               width: 48,
               height: 48,
-              child: imageUrl == null || imageUrl!.isEmpty
+              child: imageUrl == null || imageUrl.isEmpty
                   ? Container(
                       color: AppColors.gray50,
                       alignment: Alignment.center,
                       child: const Text('Sin\nfoto', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: AppColors.gray500)),
                     )
                   : Image.network(
-                      imageUrl!,
+                      imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
                         color: AppColors.gray50,
