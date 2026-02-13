@@ -1,31 +1,59 @@
-class Incident {
-  const Incident({
+class IncidentMedia {
+  const IncidentMedia({
     required this.id,
     required this.type,
-    required this.status,
-    required this.createdAt,
-    required this.dispenser,
-    required this.reportedBy,
+    required this.file,
   });
 
   final int id;
   final String type;
-  final String status;
-  final String createdAt;
+  final String? file;
+
+  factory IncidentMedia.fromJson(Map<String, dynamic> json) {
+    return IncidentMedia(
+      id: json['id'] as int? ?? 0,
+      type: json['type'] as String? ?? 'photo',
+      file: json['file'] as String?,
+    );
+  }
+}
+
+class Incident {
+  const Incident({
+    required this.id,
+    required this.client,
+    required this.branch,
+    required this.area,
+    required this.dispenser,
+    required this.description,
+    required this.createdAt,
+    required this.media,
+  });
+
+  final int id;
+  final String client;
+  final String branch;
+  final String area;
   final String dispenser;
-  final String reportedBy;
+  final String description;
+  final String createdAt;
+  final List<IncidentMedia> media;
 
   factory Incident.fromJson(Map<String, dynamic> json) {
-    final dispenser = json['dispenser'];
+    final media = (json['media'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(IncidentMedia.fromJson)
+        .toList(growable: false);
+
     return Incident(
       id: json['id'] as int? ?? 0,
-      type: (json['type'] as String?) ?? (json['description'] as String?) ?? 'general',
-      status: json['status'] as String? ?? 'open',
+      client: json['client'] as String? ?? 'Sin cliente',
+      branch: json['branch'] as String? ?? 'Sin sucursal',
+      area: json['area'] as String? ?? 'Sin área',
+      dispenser: json['dispenser'] as String? ?? 'Sin dosificador',
+      description: json['description'] as String? ?? '',
       createdAt: json['created_at'] as String? ?? '',
-      dispenser: dispenser is Map<String, dynamic>
-          ? (dispenser['identifier'] as String? ?? 'Sin dosificador')
-          : (dispenser as String? ?? 'Sin dosificador'),
-      reportedBy: json['reported_by'] as String? ?? 'No definido',
+      media: media,
     );
   }
 }
