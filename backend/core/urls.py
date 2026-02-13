@@ -9,6 +9,7 @@ from .views import (
     dispensers,
     health,
     incidents,
+    csrf_token,
     login,
     products,
     user_detail,
@@ -22,6 +23,7 @@ from .views import (
 
 urlpatterns = [
     path("health/", health, name="health"),
+    path("csrf/", csrf_token, name="csrf_token"),
     path("login/", login, name="login"),
     path("dashboard/", dashboard, name="dashboard"),
     path("clients/", clients, name="clients"),

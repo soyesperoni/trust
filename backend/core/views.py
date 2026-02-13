@@ -10,10 +10,12 @@ from urllib.request import Request, urlopen
 from django.core import signing
 from django.core.signing import BadSignature, SignatureExpired
 from django.core.files.storage import default_storage
+from django.middleware.csrf import get_token
 from django.http import HttpResponse, JsonResponse
 from django.http.multipartparser import MultiPartParser, MultiPartParserError
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
 from reportlab.lib import colors
@@ -687,6 +689,12 @@ def _serialize_incident(incident: Incident) -> dict:
 @require_GET
 def health(request):
     return JsonResponse({"ok": True, "app": "trust"})
+
+
+@ensure_csrf_cookie
+@require_GET
+def csrf_token(request):
+    return JsonResponse({"csrf_token": get_token(request)})
 
 
 @require_GET
