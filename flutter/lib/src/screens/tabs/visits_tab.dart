@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/user_role.dart';
@@ -19,73 +21,106 @@ class VisitsTab extends StatefulWidget {
 class _VisitsTabState extends State<VisitsTab> {
   final TrustRepository _repository = TrustRepository();
   final TextEditingController _searchController = TextEditingController();
+  static const Duration _refreshInterval = Duration(seconds: 1);
 
+  Timer? _refreshTimer;
   _VisitFilter _selectedFilter = _VisitFilter.all;
+  List<Visit> _visits = const [];
+  Object? _error;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshVisits(showLoader: true);
+    _refreshTimer = Timer.periodic(_refreshInterval, (_) => _refreshVisits());
+  }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Visit>>(
-      future: _repository.loadVisits(widget.email),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (_isLoading && _visits.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        if (snapshot.hasError) {
-          return Center(child: Text('Error cargando visitas: ${snapshot.error}'));
-        }
+    if (_error != null && _visits.isEmpty) {
+      return Center(child: Text('Error cargando visitas: $_error'));
+    }
 
-        final visits = snapshot.data ?? [];
-        if (visits.isEmpty) {
-          return const Center(child: Text('Sin visitas registradas.'));
-        }
+    if (_visits.isEmpty) {
+      return const Center(child: Text('Sin visitas registradas.'));
+    }
 
-        final filteredVisits = _applyFilters(visits);
+    final filteredVisits = _applyFilters(_visits);
 
-        return Column(
-          children: [
-            _HistoryHeader(
-              searchController: _searchController,
-              selectedFilter: _selectedFilter,
-              onFilterChanged: (filter) => setState(() => _selectedFilter = filter),
-              onSearchChanged: (_) => setState(() {}),
-              onResetSearch: () {
-                _searchController.clear();
-                setState(() {});
-              },
-            ),
-            Expanded(
-              child: filteredVisits.isEmpty
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24),
-                        child: Text(
-                          'No hay visitas que coincidan con los filtros aplicados.',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                      itemCount: filteredVisits.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 14),
-                      itemBuilder: (context, index) => VisitSummaryCard(
-                        visit: filteredVisits[index],
-                        role: widget.role,
-                        email: widget.email,
-                      ),
+    return Column(
+      children: [
+        _HistoryHeader(
+          searchController: _searchController,
+          selectedFilter: _selectedFilter,
+          onFilterChanged: (filter) => setState(() => _selectedFilter = filter),
+          onSearchChanged: (_) => setState(() {}),
+          onResetSearch: () {
+            _searchController.clear();
+            setState(() {});
+          },
+        ),
+        Expanded(
+          child: filteredVisits.isEmpty
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'No hay visitas que coincidan con los filtros aplicados.',
+                      textAlign: TextAlign.center,
                     ),
-            ),
-          ],
-        );
-      },
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                  itemCount: filteredVisits.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) => VisitSummaryCard(
+                    visit: filteredVisits[index],
+                    role: widget.role,
+                    email: widget.email,
+                  ),
+                ),
+        ),
+      ],
     );
+  }
+
+  Future<void> _refreshVisits({bool showLoader = false}) async {
+    if (showLoader && mounted) {
+      setState(() => _isLoading = true);
+    }
+
+    try {
+      final visits = await _repository.loadVisits(widget.email);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _visits = visits;
+        _error = null;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = error;
+        _isLoading = false;
+      });
+    }
   }
 
   List<Visit> _applyFilters(List<Visit> visits) {

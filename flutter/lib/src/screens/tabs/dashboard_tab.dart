@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/dashboard_stats.dart';
@@ -24,39 +26,44 @@ class DashboardTab extends StatefulWidget {
 
 class _DashboardTabState extends State<DashboardTab> {
   final TrustRepository _repository = TrustRepository();
-  late Future<_DashboardPayload> _payloadFuture;
+  static const Duration _refreshInterval = Duration(seconds: 1);
+
+  Timer? _refreshTimer;
+  _DashboardPayload? _payload;
+  Object? _error;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _payloadFuture = _loadPayload();
+    _refreshData(showLoader: true);
+    _refreshTimer = Timer.periodic(_refreshInterval, (_) => _refreshData());
   }
 
-  void _refreshVisits() {
-    setState(() => _payloadFuture = _loadPayload());
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<_DashboardPayload>(
-      future: _payloadFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (_isLoading && _payload == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        if (snapshot.hasError || snapshot.data == null) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('No se pudo cargar el dashboard: ${snapshot.error}'),
-            ),
-          );
-        }
+    if (_payload == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('No se pudo cargar el dashboard: $_error'),
+        ),
+      );
+    }
 
-        final payload = snapshot.data!;
+    final payload = _payload!;
 
-        return ListView(
+    return ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
           children: [
             Row(
@@ -109,13 +116,37 @@ class _DashboardTabState extends State<DashboardTab> {
               ...payload.todayVisits.map(
                 (visit) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
-                  child: _VisitCard(visit: visit, role: widget.role, email: widget.email, onVisitCompleted: _refreshVisits),
+                  child: _VisitCard(visit: visit, role: widget.role, email: widget.email, onVisitCompleted: () => _refreshData()),
                 ),
               ),
           ],
         );
-      },
-    );
+  }
+
+  Future<void> _refreshData({bool showLoader = false}) async {
+    if (showLoader && mounted) {
+      setState(() => _isLoading = true);
+    }
+
+    try {
+      final payload = await _loadPayload();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _payload = payload;
+        _error = null;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = error;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<_DashboardPayload> _loadPayload() async {
