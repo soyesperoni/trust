@@ -63,64 +63,77 @@ class _DashboardTabState extends State<DashboardTab> {
 
     final payload = _payload!;
 
-    return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _MetricCard(
-                    label: 'Visitas Pendientes',
-                    value: payload.stats.pendingVisits,
-                    cardColor: const Color(0xFFFFEDD5),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _MetricCard(
-                    label: 'Incidencias',
-                    value: payload.stats.incidents,
-                    cardColor: const Color(0xFFFEE2E2),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Visitas de Hoy',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-                TextButton(
-                  onPressed: widget.onViewMoreTodayVisits,
-                  style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFFDE7),
-                    foregroundColor: const Color(0xFFB45309),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                  child: const Text('Ver más'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (payload.todayVisits.isEmpty)
-              const _EmptyVisits()
-            else
-              ...payload.todayVisits.map(
-                (visit) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _VisitCard(visit: visit, role: widget.role, email: widget.email, onVisitCompleted: () => _refreshData()),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
+                  label: 'Visitas Pendientes',
+                  value: payload.stats.pendingVisits,
+                  cardColor: const Color(0xFFFFEDD5),
                 ),
               ),
-          ],
-        );
+              const SizedBox(width: 14),
+              Expanded(
+                child: _MetricCard(
+                  label: 'Incidencias',
+                  value: payload.stats.incidents,
+                  cardColor: const Color(0xFFFEE2E2),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Visitas de Hoy',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              TextButton(
+                onPressed: widget.onViewMoreTodayVisits,
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFFDE7),
+                  foregroundColor: const Color(0xFFB45309),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                child: const Text('Ver más'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: payload.todayVisits.isEmpty
+                ? const _EmptyVisits()
+                : ListView.builder(
+                    itemCount: payload.todayVisits.length,
+                    itemBuilder: (context, index) {
+                      final visit = payload.todayVisits[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _VisitCard(
+                          visit: visit,
+                          role: widget.role,
+                          email: widget.email,
+                          onVisitCompleted: () => _refreshData(),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _refreshData({bool showLoader = false}) async {
