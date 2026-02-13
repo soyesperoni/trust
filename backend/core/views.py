@@ -24,7 +24,7 @@ from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
 from reportlab.pdfgen import canvas
 
-from .models import Area, Branch, Client, Dispenser, Incident, Product, User, Visit, VisitMedia
+from .models import Area, Branch, Client, Dispenser, Incident, IncidentMedia, Product, User, Visit, VisitMedia
 
 
 REPORT_FONT = "Helvetica"
@@ -1129,20 +1129,77 @@ def visit_report_public_detail(request, token: str):
     return JsonResponse(_serialize_visit(visit))
 
 
-@require_GET
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def incidents(request):
-    queryset = Incident.objects.select_related("client", "branch", "area", "dispenser")
-    client_scope_ids = _get_client_scope_ids(request)
-    branch_scope_ids = _get_branch_scope_ids(request)
-    if client_scope_ids is not None:
-        queryset = queryset.filter(client_id__in=client_scope_ids)
-    if branch_scope_ids is not None:
-        queryset = queryset.filter(branch_id__in=branch_scope_ids)
-    payload = [
-        _serialize_incident(incident)
-        for incident in queryset.all()
-    ]
-    return JsonResponse({"results": payload})
+    current_user = _get_current_user(request)
+
+    if request.method == "GET":
+        queryset = Incident.objects.select_related("client", "branch", "area", "dispenser")
+        client_scope_ids = _get_client_scope_ids(request)
+        branch_scope_ids = _get_branch_scope_ids(request)
+        if client_scope_ids is not None:
+            queryset = queryset.filter(client_id__in=client_scope_ids)
+        if branch_scope_ids is not None:
+            queryset = queryset.filter(branch_id__in=branch_scope_ids)
+        payload = [
+            _serialize_incident(incident)
+            for incident in queryset.all()
+        ]
+        return JsonResponse({"results": payload})
+
+    if not current_user or current_user.role not in {User.Role.GENERAL_ADMIN, User.Role.BRANCH_ADMIN}:
+        return JsonResponse({"error": "Solo administradores pueden registrar incidencias."}, status=403)
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    try:
+        client_id = int(data.get("client_id") or 0)
+        branch_id = int(data.get("branch_id") or 0)
+        area_id = int(data.get("area_id") or 0)
+        dispenser_id = int(data.get("dispenser_id") or 0)
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "IDs inválidos para registrar la incidencia."}, status=400)
+
+    description = str(data.get("description") or "").strip()
+    if not description:
+        return JsonResponse({"error": "La descripción es obligatoria."}, status=400)
+
+    try:
+        client = Client.objects.get(pk=client_id)
+        branch = Branch.objects.select_related("client").get(pk=branch_id)
+        area = Area.objects.select_related("branch").get(pk=area_id)
+        dispenser = Dispenser.objects.select_related("area").get(pk=dispenser_id)
+    except (Client.DoesNotExist, Branch.DoesNotExist, Area.DoesNotExist, Dispenser.DoesNotExist):
+        return JsonResponse({"error": "No se encontraron datos válidos para la incidencia."}, status=400)
+
+    if branch.client_id != client.id or area.branch_id != branch.id or dispenser.area_id != area.id:
+        return JsonResponse({"error": "La ubicación seleccionada no es consistente."}, status=400)
+
+    if current_user.role == User.Role.BRANCH_ADMIN:
+        branch_scope_ids = list(current_user.branches.values_list("id", flat=True))
+        if branch.id not in branch_scope_ids:
+            return JsonResponse({"error": "No tienes permiso sobre la sucursal seleccionada."}, status=403)
+
+    incident = Incident.objects.create(
+        client=client,
+        branch=branch,
+        area=area,
+        dispenser=dispenser,
+        description=description,
+    )
+
+    evidence_files = files.getlist("evidence_files") if files else []
+    for evidence in evidence_files:
+        IncidentMedia.objects.create(
+            incident=incident,
+            media_type=IncidentMedia.MediaType.PHOTO,
+            file=evidence,
+        )
+
+    return JsonResponse(_serialize_incident(incident), status=201)
 
 
 @csrf_exempt

@@ -123,6 +123,55 @@ class ApiClient {
     );
   }
 
+
+  Future<Map<String, dynamic>> postJson(
+    String path, {
+    required String email,
+    required Map<String, dynamic> body,
+  }) async {
+    final uri = Uri.parse('$_normalizedBaseUrl$path');
+    final response = await _client.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Current-User-Email': email,
+      },
+      body: jsonEncode(body),
+    );
+
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError: 'Error ${response.statusCode} al crear en $path',
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(decoded['error'] ?? 'Error ${response.statusCode} al crear en $path');
+    }
+    return decoded;
+  }
+
+  Future<Map<String, dynamic>> postMultipart(
+    String path, {
+    required String email,
+    required Map<String, String> fields,
+    List<http.MultipartFile> files = const [],
+  }) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$_normalizedBaseUrl$path'))
+      ..headers['X-Current-User-Email'] = email
+      ..fields.addAll(fields)
+      ..files.addAll(files);
+
+    final streamed = await _client.send(request);
+    final response = await http.Response.fromStream(streamed);
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError: 'Error ${response.statusCode} al crear en $path',
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(decoded['error'] ?? 'Error ${response.statusCode} al crear en $path');
+    }
+    return decoded;
+  }
+
   Future<Map<String, dynamic>> patchJson(
     String path, {
     required String email,
