@@ -1,15 +1,19 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:camera/camera.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:mime/mime.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mime/mime.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:signature/signature.dart';
+import 'package:video_compress/video_compress.dart';
 
 import '../models/visit.dart';
 import '../services/api_client.dart';
@@ -33,11 +37,11 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   );
   final TextEditingController _commentsController = TextEditingController();
   final TextEditingController _responsibleNameController = TextEditingController();
-  final ImagePicker _imagePicker = ImagePicker();
   final MapController _mapController = MapController();
   final TrustRepository _repository = TrustRepository();
 
   static const int _maxEvidenceItems = 4;
+  static const int _maxEvidenceBytes = 10 * 1024 * 1024;
 
   int _step = 1;
   bool _loading = true;
@@ -49,7 +53,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   bool _locationValidated = false;
   bool _locationCheck = false;
   final List<_ChecklistDispenser> _checklistDispensers = <_ChecklistDispenser>[];
-  final List<XFile> _evidenceFiles = <XFile>[];
+  final List<File> _evidenceFiles = <File>[];
 
   @override
   void initState() {
@@ -336,7 +340,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
             dense: true,
             contentPadding: EdgeInsets.zero,
             leading: Icon(entry.value.path.toLowerCase().endsWith('.mp4') ? Icons.videocam_outlined : Icons.image_outlined),
-            title: Text(entry.value.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+            title: Text(entry.value.uri.pathSegments.last, maxLines: 1, overflow: TextOverflow.ellipsis),
             trailing: IconButton(
               onPressed: () => setState(() => _evidenceFiles.removeAt(entry.key)),
               icon: const Icon(Icons.delete_outline),
@@ -545,10 +549,10 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     );
 
     if (mode == null) return;
-    await _pickEvidence(mode);
+    await _captureEvidence(mode);
   }
 
-  Future<void> _pickEvidence(_EvidenceMode mode) async {
+  Future<void> _captureEvidence(_EvidenceMode mode) async {
     if (_evidenceFiles.length >= _maxEvidenceItems) {
       setState(() => _error = 'Solo puedes adjuntar hasta $_maxEvidenceItems evidencias.');
       return;
@@ -556,14 +560,16 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
 
     try {
       await _ensureCapturePermissions(requireMicrophone: mode == _EvidenceMode.video);
-      final XFile? file;
-      if (mode == _EvidenceMode.photo) {
-        file = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80);
-      } else {
-        file = await _imagePicker.pickVideo(source: ImageSource.camera, maxDuration: const Duration(seconds: 60));
-      }
-      if (file == null) return;
-      final selectedFile = file;
+      final XFile? capturedFile = await showDialog<XFile>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _MiniCameraCaptureDialog(mode: mode),
+      );
+      if (capturedFile == null) return;
+
+      final selectedFile = mode == _EvidenceMode.photo
+          ? await _compressPhoto(File(capturedFile.path))
+          : await _compressVideo(File(capturedFile.path));
 
       setState(() {
         _error = null;
@@ -571,6 +577,50 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
       });
     } catch (error) {
       setState(() => _error = _toError(error));
+    }
+  }
+
+  Future<File> _compressPhoto(File file) async {
+    final qualities = <int>[80, 65, 50, 35, 20];
+    final basePath = file.path;
+
+    for (final quality in qualities) {
+      final compressed = await FlutterImageCompress.compressWithFile(
+        file.absolute.path,
+        quality: quality,
+        minWidth: 1280,
+        minHeight: 1280,
+        format: CompressFormat.jpeg,
+      );
+      if (compressed == null) continue;
+
+      final target = File('${basePath}_q$quality.jpg');
+      await target.writeAsBytes(compressed, flush: true);
+      if (await target.length() <= _maxEvidenceBytes) {
+        return target;
+      }
+    }
+
+    throw Exception('No se pudo comprimir la foto por debajo de 10MB.');
+  }
+
+  Future<File> _compressVideo(File file) async {
+    MediaInfo? mediaInfo;
+    try {
+      mediaInfo = await VideoCompress.compressVideo(
+        file.path,
+        quality: VideoQuality.MediumQuality,
+        includeAudio: true,
+        deleteOrigin: false,
+      );
+      final compressedPath = mediaInfo?.file?.path ?? file.path;
+      final compressedFile = File(compressedPath);
+      if (await compressedFile.length() > _maxEvidenceBytes) {
+        throw Exception('El video comprimido supera 10MB. Intenta con menos movimiento o mejor iluminación.');
+      }
+      return compressedFile;
+    } finally {
+      await VideoCompress.cancelCompression();
     }
   }
 
@@ -635,14 +685,15 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
 
       final files = await Future.wait(
         _evidenceFiles.map((file) async {
-          final mimeType = lookupMimeType(file.path) ?? lookupMimeType(file.name);
+          final fileName = file.uri.pathSegments.last;
+          final mimeType = lookupMimeType(file.path) ?? lookupMimeType(fileName);
           final mimeParts = mimeType?.split('/');
           final mediaType = mimeParts != null && mimeParts.length == 2 ? MediaType(mimeParts[0], mimeParts[1]) : null;
 
           return http.MultipartFile.fromBytes(
             'evidence_files',
             await file.readAsBytes(),
-            filename: file.name,
+            filename: fileName,
             contentType: mediaType,
           );
         }),
@@ -788,6 +839,187 @@ class _ChecklistProduct {
 
   final String name;
   final String? photo;
+}
+
+
+class _MiniCameraCaptureDialog extends StatefulWidget {
+  const _MiniCameraCaptureDialog({required this.mode});
+
+  final _EvidenceMode mode;
+
+  @override
+  State<_MiniCameraCaptureDialog> createState() => _MiniCameraCaptureDialogState();
+}
+
+class _MiniCameraCaptureDialogState extends State<_MiniCameraCaptureDialog> {
+  static const Duration _maxVideoDuration = Duration(seconds: 30);
+
+  CameraController? _controller;
+  bool _initializing = true;
+  bool _capturing = false;
+  bool _recording = false;
+  Timer? _videoTimer;
+  Duration _elapsed = Duration.zero;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initCamera();
+  }
+
+  @override
+  void dispose() {
+    _videoTimer?.cancel();
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initCamera() async {
+    try {
+      final cameras = await availableCameras();
+      final camera = cameras.firstWhere(
+        (item) => item.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+      final controller = CameraController(
+        camera,
+        ResolutionPreset.medium,
+        enableAudio: widget.mode == _EvidenceMode.video,
+      );
+      await controller.initialize();
+      if (!mounted) return;
+      setState(() {
+        _controller = controller;
+        _initializing = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'No se pudo iniciar la cámara: $error';
+        _initializing = false;
+      });
+    }
+  }
+
+  Future<void> _capture() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized || _capturing) return;
+
+    try {
+      setState(() {
+        _capturing = true;
+        _error = null;
+      });
+      if (widget.mode == _EvidenceMode.photo) {
+        final file = await controller.takePicture();
+        if (!mounted) return;
+        Navigator.of(context).pop(file);
+        return;
+      }
+
+      if (!_recording) {
+        await controller.startVideoRecording();
+        _startVideoTimer();
+        if (!mounted) return;
+        setState(() {
+          _capturing = false;
+          _recording = true;
+        });
+        return;
+      }
+
+      final file = await controller.stopVideoRecording();
+      _videoTimer?.cancel();
+      if (!mounted) return;
+      Navigator.of(context).pop(file);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _capturing = false;
+        _recording = false;
+        _error = 'No se pudo capturar evidencia: $error';
+      });
+    }
+  }
+
+  void _startVideoTimer() {
+    _elapsed = Duration.zero;
+    _videoTimer?.cancel();
+    _videoTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (!mounted || !_recording) {
+        timer.cancel();
+        return;
+      }
+      final next = _elapsed + const Duration(seconds: 1);
+      setState(() => _elapsed = next);
+      if (next >= _maxVideoDuration) {
+        timer.cancel();
+        await _capture();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    final canCapture = !_initializing && !_capturing && controller != null && controller.value.isInitialized;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+      child: SizedBox(
+        width: 360,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.mode == _EvidenceMode.photo ? 'Mini cámara (Foto)' : 'Mini cámara (Video 30s máx.)',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _recording ? null : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: AspectRatio(
+                  aspectRatio: controller?.value.aspectRatio ?? (16 / 9),
+                  child: _initializing
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? Center(child: Padding(padding: const EdgeInsets.all(8), child: Text(_error!, textAlign: TextAlign.center)))
+                          : CameraPreview(controller!),
+                ),
+              ),
+              if (widget.mode == _EvidenceMode.video)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text('Duración: ${_elapsed.inSeconds}s / 30s', style: const TextStyle(color: AppColors.gray500)),
+                ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: canCapture ? _capture : null,
+                  icon: Icon(widget.mode == _EvidenceMode.photo ? Icons.camera_alt_outlined : (_recording ? Icons.stop_circle_outlined : Icons.videocam_outlined)),
+                  label: Text(widget.mode == _EvidenceMode.photo ? 'Tomar foto' : (_recording ? 'Detener grabación' : 'Iniciar grabación')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 enum _EvidenceMode { photo, video }
