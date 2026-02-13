@@ -49,6 +49,10 @@
 	<string>Necesitamos acceso a la cámara para registrar evidencias durante la visita.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Necesitamos tu ubicación para validar que estás en el sitio de inspección.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Usamos tu ubicación para ofrecer funciones incluso cuando la app está en segundo plano (si aplica).</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Usamos tu ubicación para funciones de la app (si aplica).</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Necesitamos acceso al micrófono para grabar evidencias en video durante la visita.</string>
 
