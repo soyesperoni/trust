@@ -42,7 +42,6 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   int _step = 1;
   bool _loading = true;
   bool _isSubmitting = false;
-  bool _initialPermissionsRequested = false;
   String? _error;
 
   Visit? _visit;
@@ -55,9 +54,6 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _requestPermissionsAtStartup();
-    });
     _loadData();
   }
 
@@ -582,6 +578,9 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     if (_step < 4) {
       final targetStep = _step + 1;
       try {
+        if (targetStep == 3) {
+          await _ensureCapturePermissions(requireMicrophone: true);
+        }
         if (targetStep == 4) {
           await _requestLocationPermission();
           await _validatePhoneLocation();
@@ -691,40 +690,6 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
       throw Exception(requireMicrophone
           ? 'Debes otorgar permisos para cámara y micrófono para continuar.'
           : 'Debes otorgar permisos para cámara para continuar.');
-    }
-  }
-
-  Future<void> _requestInitialFlowPermissions() async {
-    final statuses = await <Permission>[
-      Permission.locationWhenInUse,
-      Permission.camera,
-      Permission.microphone,
-    ].request();
-
-    final locationStatus = statuses[Permission.locationWhenInUse] ?? PermissionStatus.denied;
-    final cameraStatus = statuses[Permission.camera] ?? PermissionStatus.denied;
-    final microphoneStatus = statuses[Permission.microphone] ?? PermissionStatus.denied;
-
-    if (!locationStatus.isGranted) {
-      throw Exception('Debes otorgar permisos de ubicación para continuar.');
-    }
-    if (!cameraStatus.isGranted || !microphoneStatus.isGranted) {
-      throw Exception('Debes otorgar permisos para cámara y micrófono para continuar.');
-    }
-  }
-
-  Future<void> _requestPermissionsAtStartup() async {
-    if (_initialPermissionsRequested || !mounted) {
-      return;
-    }
-
-    _initialPermissionsRequested = true;
-
-    try {
-      await _requestInitialFlowPermissions();
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _error = _toError(error));
     }
   }
 
