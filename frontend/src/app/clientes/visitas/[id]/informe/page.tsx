@@ -528,7 +528,7 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
                   return (
                     <div key={entry.id} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900">
                       {videoUrl ? (
-                        <video className="h-64 w-full bg-black object-cover" controls preload="metadata" src={videoUrl} />
+                        <video className="max-h-[32rem] w-full bg-black object-contain" controls preload="metadata" src={videoUrl} />
                       ) : (
                         <div className="flex h-64 items-center justify-center">
                           <span className="material-symbols-outlined text-4xl text-slate-400">movie</span>
