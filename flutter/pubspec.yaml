@@ -15,7 +15,9 @@ dependencies:
   latlong2: ^0.9.1
   geolocator: ^13.0.1
   permission_handler: ^11.3.1
-  image_picker: ^1.1.2
+  camera: ^0.11.0+2
+  flutter_image_compress: ^2.3.0
+  video_compress: ^3.1.4
   signature: ^5.5.0
   mime: ^2.0.0
   http_parser: ^4.1.2
