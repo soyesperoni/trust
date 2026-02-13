@@ -560,6 +560,8 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
 
     try {
       await _ensureCapturePermissions(requireMicrophone: mode == _EvidenceMode.video);
+      if (!mounted) return;
+
       final XFile? capturedFile = await showDialog<XFile>(
         context: context,
         barrierDismissible: false,
@@ -571,11 +573,14 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
           ? await _compressPhoto(File(capturedFile.path))
           : await _compressVideo(File(capturedFile.path));
 
+      if (!mounted) return;
+
       setState(() {
         _error = null;
         _evidenceFiles.add(selectedFile);
       });
     } catch (error) {
+      if (!mounted) return;
       setState(() => _error = _toError(error));
     }
   }
