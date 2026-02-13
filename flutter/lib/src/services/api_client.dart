@@ -278,4 +278,22 @@ class ApiClient {
     }
     return decoded;
   }
+
+  Future<http.Response> getRaw(
+    String path, {
+    required String email,
+    Map<String, String>? queryParameters,
+  }) async {
+    final uri = Uri.parse('$_normalizedBaseUrl$path').replace(queryParameters: queryParameters);
+    final response = await _client.get(
+      uri,
+      headers: _authHeaders(email),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Error ${response.statusCode} al consultar $path');
+    }
+
+    return response;
+  }
 }

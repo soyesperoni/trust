@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import '../models/user_role.dart';
 import '../models/visit.dart';
 import '../screens/visit_execution_screen.dart';
+import '../screens/visit_report_screen.dart';
 
 class VisitSummaryCard extends StatelessWidget {
   const VisitSummaryCard({
@@ -23,8 +22,6 @@ class VisitSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = _badgeForStatus(visit.status);
     final canStartVisit = !status.isCompleted && status.label == 'Programada' && role.isInspector;
-    final reportUrl = Uri.parse('https://trust.supplymax.net/clientes/visitas/${visit.id}/informe');
-    final reportPdfUrl = Uri.parse('https://trust.supplymax.net/api/visits/${visit.id}/report/');
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -162,7 +159,7 @@ class VisitSummaryCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _openExternalUrl(context, reportUrl),
+                    onPressed: () => _openReport(context),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF111827),
                       side: const BorderSide(color: Color(0xFFD1D5DB)),
@@ -176,7 +173,7 @@ class VisitSummaryCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => _openExternalUrl(context, reportPdfUrl),
+                    onPressed: () => _openReport(context, openWithDownload: true),
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
                       backgroundColor: const Color(0xFF111827),
@@ -196,15 +193,17 @@ class VisitSummaryCard extends StatelessWidget {
     );
   }
 
-  Future<void> _openExternalUrl(BuildContext context, Uri url) async {
-    final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
-    if (launched || !context.mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('No se pudo abrir el enlace del informe.')),
+  Future<void> _openReport(BuildContext context, {bool openWithDownload = false}) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VisitReportScreen(
+          visitId: visit.id,
+          email: email,
+          openWithDownload: openWithDownload,
+        ),
+      ),
     );
+
   }
 
   Widget _infoRow(IconData icon, String text) {
