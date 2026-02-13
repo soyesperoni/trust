@@ -36,6 +36,10 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final List<File> _evidenceFiles = [];
 
+  static const _primaryColor = Color(0xFFFACC15);
+  static const _textPrimary = Color(0xFF0F172A);
+  static const _textSecondary = Color(0xFF64748B);
+
   @override
   void initState() {
     super.initState();
@@ -102,12 +106,28 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
     return true;
   }
 
-  Widget _compactField({required Widget child}) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: FractionallySizedBox(
-        widthFactor: 0.92,
-        child: child,
+  InputDecoration _mobileInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w600),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _primaryColor, width: 1.8),
       ),
     );
   }
@@ -185,54 +205,120 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final progressValue = (_step + 1) / 3;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Nueva incidencia')),
+      backgroundColor: Colors.white,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16),
+          : SafeArea(
               child: Column(
                 children: [
-                  LinearProgressIndicator(value: (_step + 1) / 3),
-                  const SizedBox(height: 16),
-                  if (_error != null)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEE2E2),
-                        borderRadius: BorderRadius.circular(12),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Paso ${_step + 1} de 3',
+                                style: const TextStyle(
+                                  color: _primaryColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              Text(
+                                '${(progressValue * 100).round()}%',
+                                style: const TextStyle(color: _textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: LinearProgressIndicator(
+                              value: progressValue,
+                              minHeight: 6,
+                              backgroundColor: const Color(0xFFE2E8F0),
+                              valueColor: const AlwaysStoppedAnimation<Color>(_primaryColor),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (_error != null)
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFECACA)),
+                              ),
+                              child: Text(_error!, style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 13)),
+                            ),
+                          Expanded(child: _buildStep()),
+                        ],
                       ),
-                      child: Text(_error!, style: const TextStyle(color: Color(0xFF991B1B))),
                     ),
-                  Expanded(child: _buildStep()),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      if (_step > 0)
+                  ),
+                  Container(
+                    decoration: const BoxDecoration(
+                      border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    child: Row(
+                      children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: _submitting ? null : () => setState(() => _step -= 1),
-                            child: const Text('Atrás'),
+                            onPressed: _submitting
+                                ? null
+                                : () {
+                                    if (_step == 0) {
+                                      Navigator.of(context).pop();
+                                      return;
+                                    }
+                                    setState(() => _step -= 1);
+                                  },
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                              foregroundColor: _textPrimary,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            child: Text(_step == 0 ? 'Cancelar' : 'Atrás'),
                           ),
                         ),
-                      if (_step > 0) const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: !_canContinue || _submitting
-                              ? null
-                              : () {
-                                  if (_step < 2) {
-                                    setState(() => _step += 1);
-                                  } else {
-                                    _submit();
-                                  }
-                                },
-                          child: Text(_step < 2 ? 'Siguiente' : (_submitting ? 'Guardando...' : 'Finalizar incidencia')),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: !_canContinue || _submitting
+                                ? null
+                                : () {
+                                    if (_step < 2) {
+                                      setState(() => _step += 1);
+                                    } else {
+                                      _submit();
+                                    }
+                                  },
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                              backgroundColor: _primaryColor,
+                              foregroundColor: Colors.black,
+                              disabledBackgroundColor: const Color(0xFFE2E8F0),
+                              disabledForegroundColor: const Color(0xFF64748B),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            child: Text(_step < 2 ? 'Siguiente' : (_submitting ? 'Guardando...' : 'Finalizar incidencia')),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -244,43 +330,44 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
     if (_step == 0) {
       return ListView(
         children: [
-          const Text('Seleccionar ubicación', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
-          _compactField(
-            child: DropdownButtonFormField<int>(
-              value: _clientId,
-              decoration: const InputDecoration(labelText: 'Cliente', border: OutlineInputBorder()),
-              items: _clients
-                  .map((c) => DropdownMenuItem<int>(value: c['id'] as int?, child: Text(c['name'] as String? ?? 'Cliente')))
-                  .toList(growable: false),
-              onChanged: (value) {
-                setState(() {
-                  _clientId = value;
-                  _branchId = null;
-                  _areaId = null;
-                  _dispenserId = null;
-                });
-              },
-            ),
+          const Text('Seleccionar ubicación', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _textPrimary)),
+          const SizedBox(height: 8),
+          const Text(
+            'Identifica dónde ocurrió el incidente para asignarlo correctamente.',
+            style: TextStyle(fontSize: 15, color: _textSecondary),
+          ),
+          const SizedBox(height: 20),
+          DropdownButtonFormField<int>(
+            value: _clientId,
+            decoration: _mobileInputDecoration('Cliente'),
+            items: _clients
+                .map((c) => DropdownMenuItem<int>(value: c['id'] as int?, child: Text(c['name'] as String? ?? 'Cliente')))
+                .toList(growable: false),
+            onChanged: (value) {
+              setState(() {
+                _clientId = value;
+                _branchId = null;
+                _areaId = null;
+                _dispenserId = null;
+              });
+            },
           ),
           const SizedBox(height: 12),
-          _compactField(
-            child: DropdownButtonFormField<int>(
-              value: _branchId,
-              decoration: const InputDecoration(labelText: 'Sucursal', border: OutlineInputBorder()),
-              items: _filteredBranches
-                  .map((b) => DropdownMenuItem<int>(value: b['id'] as int?, child: Text(b['name'] as String? ?? 'Sucursal')))
-                  .toList(growable: false),
-              onChanged: _clientId == null
-                  ? null
-                  : (value) {
-                      setState(() {
-                        _branchId = value;
-                        _areaId = null;
-                        _dispenserId = null;
-                      });
-                    },
-            ),
+          DropdownButtonFormField<int>(
+            value: _branchId,
+            decoration: _mobileInputDecoration('Sucursal'),
+            items: _filteredBranches
+                .map((b) => DropdownMenuItem<int>(value: b['id'] as int?, child: Text(b['name'] as String? ?? 'Sucursal')))
+                .toList(growable: false),
+            onChanged: _clientId == null
+                ? null
+                : (value) {
+                    setState(() {
+                      _branchId = value;
+                      _areaId = null;
+                      _dispenserId = null;
+                    });
+                  },
           ),
         ],
       );
@@ -289,35 +376,36 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
     if (_step == 1) {
       return ListView(
         children: [
-          const Text('Detalles del reporte', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
-          _compactField(
-            child: DropdownButtonFormField<int>(
-              value: _areaId,
-              decoration: const InputDecoration(labelText: 'Área', border: OutlineInputBorder()),
-              items: _filteredAreas
-                  .map((a) => DropdownMenuItem<int>(value: a['id'] as int?, child: Text(a['name'] as String? ?? 'Área')))
-                  .toList(growable: false),
-              onChanged: _branchId == null
-                  ? null
-                  : (value) {
-                      setState(() {
-                        _areaId = value;
-                        _dispenserId = null;
-                      });
-                    },
-            ),
+          const Text('Detalles del reporte', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _textPrimary)),
+          const SizedBox(height: 8),
+          const Text(
+            'Proporciona información específica sobre lo sucedido.',
+            style: TextStyle(fontSize: 15, color: _textSecondary),
+          ),
+          const SizedBox(height: 20),
+          DropdownButtonFormField<int>(
+            value: _areaId,
+            decoration: _mobileInputDecoration('Área'),
+            items: _filteredAreas
+                .map((a) => DropdownMenuItem<int>(value: a['id'] as int?, child: Text(a['name'] as String? ?? 'Área')))
+                .toList(growable: false),
+            onChanged: _branchId == null
+                ? null
+                : (value) {
+                    setState(() {
+                      _areaId = value;
+                      _dispenserId = null;
+                    });
+                  },
           ),
           const SizedBox(height: 12),
-          _compactField(
-            child: DropdownButtonFormField<int>(
-              value: _dispenserId,
-              decoration: const InputDecoration(labelText: 'Dispensador', border: OutlineInputBorder()),
-              items: _filteredDispensers
-                  .map((d) => DropdownMenuItem<int>(value: d['id'] as int?, child: Text(d['identifier'] as String? ?? 'Dispensador')))
-                  .toList(growable: false),
-              onChanged: _areaId == null ? null : (value) => setState(() => _dispenserId = value),
-            ),
+          DropdownButtonFormField<int>(
+            value: _dispenserId,
+            decoration: _mobileInputDecoration('Dispensador'),
+            items: _filteredDispensers
+                .map((d) => DropdownMenuItem<int>(value: d['id'] as int?, child: Text(d['identifier'] as String? ?? 'Dispensador')))
+                .toList(growable: false),
+            onChanged: _areaId == null ? null : (value) => setState(() => _dispenserId = value),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -325,10 +413,9 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
             minLines: 4,
             maxLines: 6,
             onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              labelText: 'Descripción',
+            decoration: _mobileInputDecoration('Descripción').copyWith(
               hintText: 'Escribe los detalles aquí...',
-              border: OutlineInputBorder(),
+              alignLabelWithHint: true,
             ),
           ),
         ],
@@ -337,40 +424,85 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
 
     return ListView(
       children: [
-        const Text('Evidencias', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-          onPressed: _evidenceFiles.length >= 4 ? null : _captureEvidence,
-          icon: const Icon(Icons.camera_alt_outlined),
-          label: Text(_evidenceFiles.length >= 4 ? 'Límite de evidencias alcanzado' : 'Tomar evidencia'),
+        const Text('Adjuntar evidencia', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _textPrimary)),
+        const SizedBox(height: 8),
+        const Text(
+          'Añade fotos para respaldar el reporte técnico.',
+          style: TextStyle(fontSize: 15, color: _textSecondary),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 18),
+        InkWell(
+          onTap: _evidenceFiles.length >= 4 ? null : _captureEvidence,
+          borderRadius: BorderRadius.circular(16),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFCBD5E1)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Column(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                  child: const Icon(Icons.photo_camera_outlined, color: Color(0xFF475569), size: 28),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _evidenceFiles.length >= 4 ? 'Límite de evidencias alcanzado' : 'Tomar evidencia con cámara',
+                  style: const TextStyle(color: _primaryColor, fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Captura una foto directamente en el flujo\n(máx. 4 imágenes)',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: _textSecondary, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
         if (_evidenceFiles.isEmpty)
-          const Text('No has agregado evidencias aún.')
+          const Text('No has agregado evidencias aún.', style: TextStyle(color: _textSecondary))
         else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: List.generate(_evidenceFiles.length, (index) {
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _evidenceFiles.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 1.25,
+            ),
+            itemBuilder: (context, index) {
               final file = _evidenceFiles[index];
               return Stack(
+                fit: StackFit.expand,
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.file(file, width: 100, height: 100, fit: BoxFit.cover),
+                    child: Image.file(file, fit: BoxFit.cover),
                   ),
                   Positioned(
-                    right: 0,
-                    top: 0,
-                    child: IconButton.filledTonal(
+                    right: 6,
+                    top: 6,
+                    child: IconButton.filled(
                       onPressed: () => setState(() => _evidenceFiles.removeAt(index)),
-                      icon: const Icon(Icons.close, size: 16),
-                      style: IconButton.styleFrom(minimumSize: const Size(26, 26), padding: EdgeInsets.zero),
+                      icon: const Icon(Icons.close, size: 14),
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(24, 24),
+                        backgroundColor: Colors.black87,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.zero,
+                      ),
                     ),
                   ),
                 ],
               );
-            }),
+            },
           ),
       ],
     );
