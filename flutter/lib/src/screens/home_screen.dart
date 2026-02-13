@@ -14,12 +14,14 @@ import '../theme/app_colors.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     required this.email,
+    required this.role,
     required this.isDarkMode,
     required this.onToggleThemeMode,
     super.key,
   });
 
   final String email;
+  final UserRole role;
   final bool isDarkMode;
   final VoidCallback onToggleThemeMode;
 
@@ -34,18 +36,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    final role = UserRoleParsing.fromEmail(widget.email);
     _tabs = [
       DashboardTab(
         email: widget.email,
-        role: role,
+        role: widget.role,
         onViewMoreTodayVisits: _openVisitsTab,
       ),
       CalendarTab(
         email: widget.email,
-        role: role,
+        role: widget.role,
       ),
-      VisitsTab(email: widget.email, role: role),
+      VisitsTab(email: widget.email, role: widget.role),
       IncidentsTab(email: widget.email),
     ];
   }
@@ -239,7 +240,10 @@ class _NavItem extends StatelessWidget {
                       right: 14,
                       top: 6,
                       child: DecoratedBox(
-                        decoration: BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
                         child: SizedBox(width: 8, height: 8),
                       ),
                     ),
@@ -249,11 +253,10 @@ class _NavItem extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? AppColors.black : AppColors.gray500,
-              ),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: selected ? AppColors.black : AppColors.gray500,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
             ),
           ],
         ),
