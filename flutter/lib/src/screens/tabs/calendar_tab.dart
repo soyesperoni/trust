@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/user_role.dart';
@@ -25,7 +27,12 @@ class _CalendarTabState extends State<CalendarTab> {
 
   late DateTime _currentMonth;
   DateTime? _selectedDate;
-  late Future<List<Visit>> _visitsFuture;
+  static const Duration _refreshInterval = Duration(seconds: 1);
+
+  Timer? _refreshTimer;
+  List<Visit> _visits = const <Visit>[];
+  Object? _error;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -33,7 +40,15 @@ class _CalendarTabState extends State<CalendarTab> {
     final now = DateTime.now();
     _currentMonth = DateTime(now.year, now.month);
     _selectedDate = DateTime(now.year, now.month, now.day);
-    _visitsFuture = _repository.loadVisitsByMonth(widget.email, _currentMonth);
+    _refreshVisits(showLoader: true);
+    _refreshTimer = Timer.periodic(_refreshInterval, (_) => _refreshVisits());
+  }
+
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -42,23 +57,22 @@ class _CalendarTabState extends State<CalendarTab> {
 
     return Container(
       color: backgroundColor,
-      child: FutureBuilder<List<Visit>>(
-        future: _visitsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      child: Builder(
+        builder: (context) {
+          if (_isLoading && _visits.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.hasError) {
+          if (_error != null && _visits.isEmpty) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text('No se pudo cargar el calendario: ${snapshot.error}'),
+                child: Text('No se pudo cargar el calendario: $_error'),
               ),
             );
           }
 
-          final visits = snapshot.data ?? const <Visit>[];
+          final visits = _visits;
           final visitsByDay = _groupVisitsByDay(visits);
           final selectedDate = _resolveSelectedDate(visitsByDay);
           final dayVisits = visitsByDay[_dateKey(selectedDate)] ?? const <Visit>[];
@@ -117,7 +131,7 @@ class _CalendarTabState extends State<CalendarTab> {
                   ...dayVisits.map(
                     (visit) => Padding(
                       padding: const EdgeInsets.only(bottom: 14),
-                      child: _ActivityCard(visit: visit, role: widget.role, email: widget.email, onVisitCompleted: _refreshVisits),
+                      child: _ActivityCard(visit: visit, role: widget.role, email: widget.email, onVisitCompleted: () => _refreshVisits()),
                     ),
                   ),
               ],
@@ -274,10 +288,30 @@ class _CalendarTabState extends State<CalendarTab> {
   }
 
 
-  void _refreshVisits() {
-    setState(() {
-      _visitsFuture = _repository.loadVisitsByMonth(widget.email, _currentMonth);
-    });
+  Future<void> _refreshVisits({bool showLoader = false}) async {
+    if (showLoader && mounted) {
+      setState(() => _isLoading = true);
+    }
+
+    try {
+      final visits = await _repository.loadVisitsByMonth(widget.email, _currentMonth);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _visits = visits;
+        _error = null;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = error;
+        _isLoading = false;
+      });
+    }
   }
 
   void _changeMonth(int delta) {
@@ -285,9 +319,10 @@ class _CalendarTabState extends State<CalendarTab> {
     setState(() {
       _currentMonth = DateTime(next.year, next.month);
       _selectedDate = DateTime(_currentMonth.year, _currentMonth.month, 1);
-      _visitsFuture = _repository.loadVisitsByMonth(widget.email, _currentMonth);
     });
+    _refreshVisits();
   }
+
 
   DateTime _resolveSelectedDate(Map<String, List<Visit>> visitsByDay) {
     if (_selectedDate != null && _selectedDate!.year == _currentMonth.year && _selectedDate!.month == _currentMonth.month) {
