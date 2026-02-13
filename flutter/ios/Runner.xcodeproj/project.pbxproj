@@ -251,7 +251,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
+			shellScript = "set -e\n/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build\nFLUTTER_FRAMEWORK_PATH=\"${TARGET_BUILD_DIR}/Flutter.framework\"\nif [ -d \"$FLUTTER_FRAMEWORK_PATH\" ] && command -v xattr >/dev/null 2>&1; then\n  xattr -r -d com.apple.provenance \"$FLUTTER_FRAMEWORK_PATH\" 2>/dev/null || true\n  xattr -r -d com.apple.quarantine \"$FLUTTER_FRAMEWORK_PATH\" 2>/dev/null || true\nfi";
 		};
 /* End PBXShellScriptBuildPhase section */
 
