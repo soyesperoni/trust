@@ -709,7 +709,7 @@ class _IncidentCameraDialogState extends State<_IncidentCameraDialog> {
                 if (widget.mode == _EvidenceMode.video)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Text('Duración: ${_elapsed.inSeconds}s / 30s', style: TextStyle(color: _textSecondary)),
+                    child: Text('Duración: ${_elapsed.inSeconds}s / 30s', style: const TextStyle(color: Color(0xFF64748B))),
                   ),
                 const SizedBox(height: 12),
                 SizedBox(
