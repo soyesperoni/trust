@@ -112,8 +112,8 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
         .whereType<Map<String, dynamic>>()
         .toList(growable: false);
     final media = (visit['media'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>().toList(growable: false);
-    final photos = media.where((entry) => (entry['type'] as String? ?? '') == 'image').toList(growable: false);
-    final videos = media.where((entry) => (entry['type'] as String? ?? '') == 'video').toList(growable: false);
+    final photos = media.where(_isImageMedia).toList(growable: false);
+    final videos = media.where(_isVideoMedia).toList(growable: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -465,5 +465,15 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
       return fileUrl;
     }
     return 'https://trust.supplymax.net${fileUrl.startsWith('/') ? '' : '/'}$fileUrl';
+  }
+
+  bool _isImageMedia(Map<String, dynamic> entry) {
+    final mediaType = (entry['type'] as String? ?? '').toLowerCase();
+    return mediaType == 'image' || mediaType == 'photo';
+  }
+
+  bool _isVideoMedia(Map<String, dynamic> entry) {
+    final mediaType = (entry['type'] as String? ?? '').toLowerCase();
+    return mediaType == 'video';
   }
 }
