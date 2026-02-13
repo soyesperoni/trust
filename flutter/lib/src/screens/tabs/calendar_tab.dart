@@ -77,7 +77,7 @@ class _CalendarTabState extends State<CalendarTab> {
           final selectedDate = _resolveSelectedDate(visitsByDay);
           final dayVisits = visitsByDay[_dateKey(selectedDate)] ?? const <Visit>[];
 
-          return SingleChildScrollView(
+          return Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,26 +114,36 @@ class _CalendarTabState extends State<CalendarTab> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                if (dayVisits.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'No hay visitas programadas para este día.',
-                      style: TextStyle(color: Color(0xFF4B5563)),
-                    ),
-                  )
-                else
-                  ...dayVisits.map(
-                    (visit) => Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _ActivityCard(visit: visit, role: widget.role, email: widget.email, onVisitCompleted: () => _refreshVisits()),
-                    ),
-                  ),
+                Expanded(
+                  child: dayVisits.isEmpty
+                      ? Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'No hay visitas programadas para este día.',
+                            style: TextStyle(color: Color(0xFF4B5563)),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: dayVisits.length,
+                          itemBuilder: (context, index) {
+                            final visit = dayVisits[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: _ActivityCard(
+                                visit: visit,
+                                role: widget.role,
+                                email: widget.email,
+                                onVisitCompleted: () => _refreshVisits(),
+                              ),
+                            );
+                          },
+                        ),
+                ),
               ],
             ),
           );
