@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
         role: widget.role,
       ),
       VisitsTab(email: widget.email, role: widget.role),
-      IncidentsTab(email: widget.email),
+      IncidentsTab(email: widget.email, role: widget.role),
     ];
   }
 
