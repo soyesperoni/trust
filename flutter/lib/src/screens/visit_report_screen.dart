@@ -379,7 +379,7 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
         insetPadding: const EdgeInsets.all(16),
         clipBehavior: Clip.antiAlias,
         child: AspectRatio(
-          aspectRatio: isVideo ? 16 / 9 : 4 / 5,
+          aspectRatio: isVideo ? 9 / 16 : 4 / 5,
           child: isVideo ? _VideoEvidencePlayer(url: url) : _PhotoEvidenceViewer(url: url),
         ),
       ),
