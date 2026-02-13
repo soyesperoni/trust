@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../models/incident.dart';
+import '../../services/api_client.dart';
 import '../../services/trust_repository.dart';
 
 class IncidentDetailScreen extends StatefulWidget {
@@ -86,7 +87,13 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                           ),
                           _section(
                             title: 'Evidencias fotográficas',
-                            child: _buildImages(incident.media.where((m) => m.type == 'photo' && m.file != null).toList()),
+                            child: _buildImages(
+                              incident.media
+                                  .where(
+                                    (m) => _isImageMedia(m.type) && m.file != null,
+                                  )
+                                  .toList(),
+                            ),
                           ),
                           _section(
                             title: 'Evidencias en video',
@@ -147,7 +154,19 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
 
   String _toAbsoluteMediaUrl(String value) {
     if (value.startsWith('http://') || value.startsWith('https://')) return value;
-    return 'http://localhost:8000${value.startsWith('/') ? value : '/$value'}';
+
+    final backendBase = Uri.parse(ApiClient.baseUrl);
+    final origin = Uri(
+      scheme: backendBase.scheme,
+      host: backendBase.host,
+      port: backendBase.hasPort ? backendBase.port : null,
+    );
+    return origin.resolve(value).toString();
+  }
+
+  bool _isImageMedia(String type) {
+    final normalized = type.toLowerCase();
+    return normalized == 'photo' || normalized == 'image';
   }
 
   static String _friendlyDate(String raw) {
