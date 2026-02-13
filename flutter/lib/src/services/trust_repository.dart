@@ -67,17 +67,29 @@ class TrustRepository {
     required Map<String, dynamic> visitReport,
     List<http.MultipartFile> evidenceFiles = const [],
   }) async {
-    final response = await _apiClient.patchMultipart(
-      '/visits/$visitId/mobile-flow/',
-      email: email,
-      fields: {
-        'action': 'complete',
-        'end_latitude': latitude.toString(),
-        'end_longitude': longitude.toString(),
-        'visit_report': jsonEncode(visitReport),
-      },
-      files: evidenceFiles,
-    );
+    final hasEvidenceFiles = evidenceFiles.isNotEmpty;
+    final response = hasEvidenceFiles
+        ? await _apiClient.patchMultipart(
+            '/visits/$visitId/mobile-flow/',
+            email: email,
+            fields: {
+              'action': 'complete',
+              'end_latitude': latitude.toString(),
+              'end_longitude': longitude.toString(),
+              'visit_report': jsonEncode(visitReport),
+            },
+            files: evidenceFiles,
+          )
+        : await _apiClient.patchJson(
+            '/visits/$visitId/mobile-flow/',
+            email: email,
+            body: {
+              'action': 'complete',
+              'end_latitude': latitude,
+              'end_longitude': longitude,
+              'visit_report': visitReport,
+            },
+          );
     return Visit.fromJson(response);
   }
 
