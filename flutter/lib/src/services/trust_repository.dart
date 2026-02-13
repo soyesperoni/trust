@@ -12,6 +12,13 @@ class TrustRepository {
 
   final ApiClient _apiClient;
 
+  Future<Map<String, dynamic>> login({
+    required String email,
+    required String password,
+  }) {
+    return _apiClient.login(email: email, password: password);
+  }
+
   Future<DashboardStats> loadDashboardStats(String email) async {
     final json = await _apiClient.getJson('/dashboard/', email: email);
     return DashboardStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {});
