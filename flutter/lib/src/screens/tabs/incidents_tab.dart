@@ -1,14 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/incident.dart';
+import '../../models/user_role.dart';
 import '../../services/trust_repository.dart';
 
 class IncidentsTab extends StatefulWidget {
-  const IncidentsTab({required this.email, super.key});
+  const IncidentsTab({required this.email, required this.role, super.key});
 
   final String email;
+  final UserRole role;
 
   @override
   State<IncidentsTab> createState() => _IncidentsTabState();
@@ -26,6 +29,9 @@ class _IncidentsTabState extends State<IncidentsTab> {
   List<Incident> _incidents = const [];
   Object? _error;
   bool _isLoading = true;
+
+  static final Uri _newIncidentUrl =
+      Uri.parse('https://trust.supplymax.net/clientes/incidencias/nueva');
 
   @override
   void initState() {
@@ -53,8 +59,10 @@ class _IncidentsTabState extends State<IncidentsTab> {
 
     final filteredIncidents = _applyFilters(_incidents, _selectedFilter, _searchController.text);
 
-    return Column(
+    return Stack(
       children: [
+        Column(
+          children: [
         const SizedBox(height: 8),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -207,8 +215,32 @@ class _IncidentsTabState extends State<IncidentsTab> {
                   },
                 ),
         ),
+          ],
+        ),
+        if (widget.role.canCreateIncidents)
+          Positioned(
+            right: 20,
+            bottom: 20,
+            child: FloatingActionButton(
+              heroTag: 'incidents-create-fab',
+              backgroundColor: const Color(0xFFFBC02D),
+              foregroundColor: Colors.black,
+              onPressed: _openNewIncidentFlow,
+              child: const Icon(Icons.add),
+            ),
+          ),
       ],
     );
+  }
+
+
+  Future<void> _openNewIncidentFlow() async {
+    final opened = await launchUrl(_newIncidentUrl, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el flujo de nueva incidencia.')),
+      );
+    }
   }
 
   Future<void> _refreshIncidents({bool showLoader = false}) async {
