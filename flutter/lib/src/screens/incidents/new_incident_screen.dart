@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 
 import '../../services/trust_repository.dart';
 
@@ -98,12 +101,9 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
 
   bool get _canContinue {
     if (_step == 0) {
-      return _clientId != null && _branchId != null;
+      return _clientId != null && _branchId != null && _areaId != null && _dispenserId != null;
     }
-    if (_step == 1) {
-      return _areaId != null && _dispenserId != null && _descriptionController.text.trim().isNotEmpty;
-    }
-    return true;
+    return _descriptionController.text.trim().isNotEmpty;
   }
 
   InputDecoration _mobileInputDecoration(String label) {
@@ -132,19 +132,56 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
     );
   }
 
-  Future<void> _captureEvidence() async {
+  Future<void> _openEvidenceCapture() async {
+    final mode = await showModalBottomSheet<_EvidenceMode>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Capturar evidencia', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                const SizedBox(height: 6),
+                const Text('Selecciona el tipo de captura.', style: TextStyle(color: _textSecondary)),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(_EvidenceMode.photo),
+                        child: const Text('Foto'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(_EvidenceMode.video),
+                        child: const Text('Video'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (mode == null || !mounted) return;
+
     try {
-      final cameras = await availableCameras();
-      if (!mounted || cameras.isEmpty) return;
-
-      final file = await Navigator.of(context).push<File>(
-        MaterialPageRoute(
-          builder: (_) => _IncidentCameraScreen(camera: cameras.first),
-        ),
+      final file = await showDialog<XFile>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _IncidentCameraDialog(mode: mode),
       );
-
       if (file != null && mounted) {
-        setState(() => _evidenceFiles.add(file));
+        setState(() => _evidenceFiles.add(File(file.path)));
       }
     } catch (_) {
       if (!mounted) return;
@@ -168,12 +205,17 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
       final files = <http.MultipartFile>[];
       for (var i = 0; i < _evidenceFiles.length; i++) {
         final file = _evidenceFiles[i];
+        final bytes = await file.readAsBytes();
+        final mimeType = lookupMimeType(file.path, headerBytes: _headerBytes(bytes));
+        final mimeParts = mimeType?.split('/');
+        final mediaType = mimeParts != null && mimeParts.length == 2 ? MediaType(mimeParts[0], mimeParts[1]) : null;
+
         files.add(
-          await http.MultipartFile.fromPath(
+          http.MultipartFile.fromBytes(
             'evidence_files',
-            file.path,
-            filename: 'evidencia_${DateTime.now().millisecondsSinceEpoch}_$i.jpg',
-            contentType: MediaType('image', 'jpeg'),
+            bytes,
+            filename: 'evidencia_${DateTime.now().millisecondsSinceEpoch}_$i.${_fileExtension(file.path)}',
+            contentType: mediaType,
           ),
         );
       }
@@ -205,7 +247,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final progressValue = (_step + 1) / 3;
+    final progressValue = (_step + 1) / 2;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -223,7 +265,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Paso ${_step + 1} de 3',
+                                'Paso ${_step + 1} de 2',
                                 style: const TextStyle(
                                   color: _primaryColor,
                                   fontSize: 12,
@@ -292,13 +334,13 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                             onPressed: !_canContinue || _submitting
                                 ? null
                                 : () {
-                                    if (_step < 2) {
+                                    if (_step < 1) {
                                       setState(() => _step += 1);
                                     } else {
                                       _submit();
                                     }
                                   },
-                            child: Text(_step < 2 ? 'Siguiente' : (_submitting ? 'Guardando...' : 'Finalizar incidencia')),
+                            child: Text(_step < 1 ? 'Siguiente' : (_submitting ? 'Guardando...' : 'Finalizar incidencia')),
                           ),
                         ),
                       ],
@@ -317,7 +359,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
           const Text('Seleccionar ubicación', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _textPrimary)),
           const SizedBox(height: 8),
           const Text(
-            'Identifica dónde ocurrió el incidente para asignarlo correctamente.',
+            'Selecciona cliente, sucursal, área y dispensador para asignar la incidencia.',
             style: TextStyle(fontSize: 15, color: _textSecondary),
           ),
           const SizedBox(height: 20),
@@ -353,20 +395,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                     });
                   },
           ),
-        ],
-      );
-    }
-
-    if (_step == 1) {
-      return ListView(
-        children: [
-          const Text('Detalles del reporte', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _textPrimary)),
-          const SizedBox(height: 8),
-          const Text(
-            'Proporciona información específica sobre lo sucedido.',
-            style: TextStyle(fontSize: 15, color: _textSecondary),
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             value: _areaId,
             decoration: _mobileInputDecoration('Área'),
@@ -391,32 +420,32 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                 .toList(growable: false),
             onChanged: _areaId == null ? null : (value) => setState(() => _dispenserId = value),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _descriptionController,
-            minLines: 4,
-            maxLines: 6,
-            onChanged: (_) => setState(() {}),
-            decoration: _mobileInputDecoration('Descripción').copyWith(
-              hintText: 'Escribe los detalles aquí...',
-              alignLabelWithHint: true,
-            ),
-          ),
         ],
       );
     }
 
     return ListView(
       children: [
-        const Text('Adjuntar evidencia', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _textPrimary)),
+        const Text('Detalles del reporte', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _textPrimary)),
         const SizedBox(height: 8),
         const Text(
-          'Añade fotos para respaldar el reporte técnico.',
+          'Agrega la descripción del incidente y evidencia (foto o video).',
           style: TextStyle(fontSize: 15, color: _textSecondary),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 20),
+        TextField(
+          controller: _descriptionController,
+          minLines: 4,
+          maxLines: 6,
+          onChanged: (_) => setState(() {}),
+          decoration: _mobileInputDecoration('Descripción').copyWith(
+            hintText: 'Escribe los detalles aquí...',
+            alignLabelWithHint: true,
+          ),
+        ),
+        const SizedBox(height: 14),
         InkWell(
-          onTap: _evidenceFiles.length >= 4 ? null : _captureEvidence,
+          onTap: _evidenceFiles.length >= 4 ? null : _openEvidenceCapture,
           borderRadius: BorderRadius.circular(16),
           child: Ink(
             decoration: BoxDecoration(
@@ -430,16 +459,16 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                   width: 52,
                   height: 52,
                   decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
-                  child: const Icon(Icons.photo_camera_outlined, color: Color(0xFF475569), size: 28),
+                  child: const Icon(Icons.perm_media_outlined, color: Color(0xFF475569), size: 28),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  _evidenceFiles.length >= 4 ? 'Límite de evidencias alcanzado' : 'Tomar evidencia con cámara',
+                  _evidenceFiles.length >= 4 ? 'Límite de evidencias alcanzado' : 'Agregar evidencia',
                   style: const TextStyle(color: _primaryColor, fontWeight: FontWeight.w700, fontSize: 16),
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Captura una foto directamente en el flujo\n(máx. 4 imágenes)',
+                  'Captura foto o video directamente en el flujo\n(máx. 4 archivos)',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: _textSecondary, fontSize: 12),
                 ),
@@ -451,61 +480,89 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
         if (_evidenceFiles.isEmpty)
           const Text('No has agregado evidencias aún.', style: TextStyle(color: _textSecondary))
         else
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _evidenceFiles.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.25,
-            ),
-            itemBuilder: (context, index) {
-              final file = _evidenceFiles[index];
-              return Stack(
-                fit: StackFit.expand,
+          ..._evidenceFiles.asMap().entries.map((entry) {
+            final index = entry.key;
+            final file = entry.value;
+            final isVideo = _isVideoFile(file.path);
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(file, fit: BoxFit.cover),
-                  ),
-                  Positioned(
-                    right: 6,
-                    top: 6,
-                    child: IconButton.filled(
-                      onPressed: () => setState(() => _evidenceFiles.removeAt(index)),
-                      icon: const Icon(Icons.close, size: 14),
-                      style: IconButton.styleFrom(
-                        minimumSize: const Size(24, 24),
-                        backgroundColor: Colors.black87,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.zero,
-                      ),
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: isVideo
+                          ? const ColoredBox(
+                              color: Color(0xFF0F172A),
+                              child: Icon(Icons.videocam, color: Colors.white, size: 30),
+                            )
+                          : Image.file(file, fit: BoxFit.cover),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      isVideo ? 'Video adjunto' : 'Foto adjunta',
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: _textPrimary),
+                    ),
+                  ),
+                  IconButton.filledTonal(
+                    onPressed: () => setState(() => _evidenceFiles.removeAt(index)),
+                    icon: const Icon(Icons.delete_outline),
+                  ),
                 ],
-              );
-            },
-          ),
+              ),
+            );
+          }),
       ],
     );
   }
+
+  List<int>? _headerBytes(Uint8List bytes) {
+    if (bytes.isEmpty) return null;
+    final maxLength = bytes.length < 12 ? bytes.length : 12;
+    return bytes.sublist(0, maxLength);
+  }
+
+  String _fileExtension(String path) {
+    final name = path.split('/').last;
+    final parts = name.split('.');
+    if (parts.length < 2) return 'bin';
+    return parts.last.toLowerCase();
+  }
+
+  bool _isVideoFile(String path) {
+    final mimeType = lookupMimeType(path);
+    return mimeType?.startsWith('video/') ?? false;
+  }
 }
 
-class _IncidentCameraScreen extends StatefulWidget {
-  const _IncidentCameraScreen({required this.camera});
+class _IncidentCameraDialog extends StatefulWidget {
+  const _IncidentCameraDialog({required this.mode});
 
-  final CameraDescription camera;
+  final _EvidenceMode mode;
 
   @override
-  State<_IncidentCameraScreen> createState() => _IncidentCameraScreenState();
+  State<_IncidentCameraDialog> createState() => _IncidentCameraDialogState();
 }
 
-class _IncidentCameraScreenState extends State<_IncidentCameraScreen> {
+class _IncidentCameraDialogState extends State<_IncidentCameraDialog> {
+  static const Duration _maxVideoDuration = Duration(seconds: 30);
+
   CameraController? _controller;
-  bool _ready = false;
+  bool _initializing = true;
   bool _capturing = false;
+  bool _recording = false;
+  Duration _elapsed = Duration.zero;
+  StreamSubscription<int>? _timerSubscription;
+  String? _error;
 
   @override
   void initState() {
@@ -515,79 +572,161 @@ class _IncidentCameraScreenState extends State<_IncidentCameraScreen> {
 
   @override
   void dispose() {
+    _timerSubscription?.cancel();
     _controller?.dispose();
     super.dispose();
   }
 
   Future<void> _initCamera() async {
-    final controller = CameraController(widget.camera, ResolutionPreset.medium, enableAudio: false);
     try {
+      final cameras = await availableCameras();
+      final camera = cameras.firstWhere(
+        (item) => item.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+      final controller = CameraController(
+        camera,
+        ResolutionPreset.medium,
+        enableAudio: widget.mode == _EvidenceMode.video,
+      );
       await controller.initialize();
-      if (!mounted) {
-        await controller.dispose();
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _controller = controller;
-        _ready = true;
+        _initializing = false;
       });
-    } catch (_) {
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'No se pudo iniciar la cámara: $error';
+        _initializing = false;
+      });
     }
   }
 
-  Future<void> _takePicture() async {
+  Future<void> _capture() async {
     final controller = _controller;
-    if (controller == null || !_ready || _capturing) return;
+    if (controller == null || !controller.value.isInitialized || _capturing) return;
 
-    setState(() => _capturing = true);
     try {
-      final photo = await controller.takePicture();
-      if (!mounted) return;
-      Navigator.of(context).pop(File(photo.path));
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo capturar la foto.')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _capturing = false);
+      setState(() {
+        _capturing = true;
+        _error = null;
+      });
+
+      if (widget.mode == _EvidenceMode.photo) {
+        final file = await controller.takePicture();
+        if (!mounted) return;
+        Navigator.of(context).pop(file);
+        return;
       }
+
+      if (!_recording) {
+        await controller.startVideoRecording();
+        if (!mounted) return;
+        setState(() {
+          _capturing = false;
+          _recording = true;
+        });
+        _startVideoTimer();
+        return;
+      }
+
+      final file = await controller.stopVideoRecording();
+      _timerSubscription?.cancel();
+      if (!mounted) return;
+      Navigator.of(context).pop(file);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _capturing = false;
+        _recording = false;
+        _error = 'No se pudo capturar evidencia: $error';
+      });
     }
+  }
+
+  void _startVideoTimer() {
+    _elapsed = Duration.zero;
+    _timerSubscription?.cancel();
+    _timerSubscription = Stream.periodic(const Duration(seconds: 1), (i) => i + 1)
+        .take(_maxVideoDuration.inSeconds)
+        .listen((seconds) async {
+      if (!mounted || !_recording) return;
+      setState(() => _elapsed = Duration(seconds: seconds));
+      if (seconds >= _maxVideoDuration.inSeconds) {
+        await _capture();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
-      body: !_ready
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
+    final controller = _controller;
+    final canCapture = !_initializing && !_capturing && controller != null && controller.value.isInitialized;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 430),
+        child: SizedBox(
+          width: double.infinity,
+          height: MediaQuery.sizeOf(context).height * 0.82,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
               children: [
-                Positioned.fill(child: CameraPreview(_controller!)),
-                Positioned(
-                  bottom: 24,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: FloatingActionButton(
-                      onPressed: _takePicture,
-                      child: _capturing
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.camera_alt),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.mode == _EvidenceMode.photo ? 'Mini cámara (Foto)' : 'Mini cámara (Video 30s máx.)',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ),
+                    IconButton(
+                      onPressed: _recording ? null : () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AspectRatio(
+                        aspectRatio: 9 / 16,
+                        child: _initializing
+                            ? const Center(child: CircularProgressIndicator())
+                            : _error != null
+                                ? Center(child: Padding(padding: const EdgeInsets.all(8), child: Text(_error!, textAlign: TextAlign.center)))
+                                : CameraPreview(controller!),
+                      ),
+                    ),
+                  ),
+                ),
+                if (widget.mode == _EvidenceMode.video)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text('Duración: ${_elapsed.inSeconds}s / 30s', style: const TextStyle(color: _textSecondary)),
+                  ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: canCapture ? _capture : null,
+                    icon: Icon(widget.mode == _EvidenceMode.photo ? Icons.camera_alt_outlined : (_recording ? Icons.stop_circle_outlined : Icons.videocam_outlined)),
+                    label: Text(widget.mode == _EvidenceMode.photo ? 'Tomar foto' : (_recording ? 'Detener grabación' : 'Iniciar grabación')),
                   ),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
     );
   }
 }
+
+enum _EvidenceMode { photo, video }
