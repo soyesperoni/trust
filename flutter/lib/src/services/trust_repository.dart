@@ -125,6 +125,55 @@ class TrustRepository {
     return results.whereType<Map<String, dynamic>>().map(Visit.fromJson).toList(growable: false);
   }
 
+  Future<VisitReportData> loadVisitReportData({
+    required String email,
+    required int visitId,
+  }) async {
+    final responses = await Future.wait([
+      _apiClient.getJson('/visits/', email: email),
+      _apiClient.getJson('/dispensers/', email: email),
+    ]);
+
+    final visitsJson = responses[0];
+    final dispensersJson = responses[1];
+
+    final visits = (visitsJson['results'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
+
+    final visit = visits.firstWhere(
+      (entry) => (entry['id'] as int? ?? -1) == visitId,
+      orElse: () => <String, dynamic>{},
+    );
+
+    if (visit.isEmpty) {
+      throw Exception('No se encontró la visita.');
+    }
+
+    final areaId = visit['area_id'] as int?;
+    final dispensers = (dispensersJson['results'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .where((entry) {
+          if (areaId == null) return true;
+          final area = entry['area'];
+          if (area is Map<String, dynamic>) {
+            return area['id'] == areaId;
+          }
+          return false;
+        })
+        .toList(growable: false);
+
+    return VisitReportData(visit: visit, dispensers: dispensers);
+  }
+
+  Future<List<int>> downloadVisitReportPdf({
+    required String email,
+    required int visitId,
+  }) async {
+    final response = await _apiClient.getRaw('/visits/$visitId/report/', email: email);
+    return response.bodyBytes;
+  }
+
   Future<List<Incident>> loadIncidents(String email) async {
     final json = await _apiClient.getJson('/incidents/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);
@@ -170,4 +219,14 @@ class TrustRepository {
       },
     );
   }
+}
+
+class VisitReportData {
+  const VisitReportData({
+    required this.visit,
+    required this.dispensers,
+  });
+
+  final Map<String, dynamic> visit;
+  final List<Map<String, dynamic>> dispensers;
 }
