@@ -283,17 +283,10 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                                     }
                                     setState(() => _step -= 1);
                                   },
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(50),
-                              side: const BorderSide(color: Color(0xFFCBD5E1)),
-                              foregroundColor: _textPrimary,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                            ),
                             child: Text(_step == 0 ? 'Cancelar' : 'Atrás'),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: FilledButton(
                             onPressed: !_canContinue || _submitting
@@ -305,15 +298,6 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                                       _submit();
                                     }
                                   },
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(50),
-                              backgroundColor: _primaryColor,
-                              foregroundColor: Colors.black,
-                              disabledBackgroundColor: const Color(0xFFE2E8F0),
-                              disabledForegroundColor: const Color(0xFF64748B),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              textStyle: const TextStyle(fontWeight: FontWeight.w800),
-                            ),
                             child: Text(_step < 2 ? 'Siguiente' : (_submitting ? 'Guardando...' : 'Finalizar incidencia')),
                           ),
                         ),
