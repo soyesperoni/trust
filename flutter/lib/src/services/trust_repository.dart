@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -166,7 +167,7 @@ class TrustRepository {
     return VisitReportData(visit: visit, dispensers: dispensers);
   }
 
-  Future<List<int>> downloadVisitReportPdf({
+  Future<Uint8List> downloadVisitReportPdf({
     required String email,
     required int visitId,
   }) async {
