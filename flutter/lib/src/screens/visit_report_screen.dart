@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/trust_repository.dart';
 
@@ -107,10 +111,9 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
     final checklist = (report['checklist'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .toList(growable: false);
-    final photos = (visit['media'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .where((entry) => (entry['type'] as String? ?? '') == 'image')
-        .toList(growable: false);
+    final media = (visit['media'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>().toList(growable: false);
+    final photos = media.where((entry) => (entry['type'] as String? ?? '') == 'image').toList(growable: false);
+    final videos = media.where((entry) => (entry['type'] as String? ?? '') == 'video').toList(growable: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -157,16 +160,7 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
                   const SizedBox(height: 8),
                   Text('Comentarios: ${report['comments'] ?? 'Sin comentarios'}'),
                   const SizedBox(height: 12),
-                  if (report['responsible_signature'] != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        '${report['responsible_signature']}',
-                        height: 120,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
-                    ),
+                  _buildResponsibleSignature(report['responsible_signature'] as String?),
                 ],
               ),
             ),
@@ -192,50 +186,26 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
                     ),
             ),
             _section(
-              title: 'Dosificadores',
+              title: 'Dosificadores (modelo y productos)',
               child: _dispensers.isEmpty
                   ? const Text('No hay dosificadores registrados.')
                   : Column(
                       children: _dispensers
-                          .map(
-                            (item) => ListTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.local_drink_outlined),
-                              title: Text('${item['identifier'] ?? 'Sin código'}'),
-                              subtitle: Text('${item['model']?['name'] ?? 'Sin modelo'}'),
-                            ),
-                          )
+                          .map((item) => _buildDispenserCard(item))
                           .toList(growable: false),
                     ),
             ),
             _section(
               title: 'Evidencias fotográficas',
               child: photos.isEmpty
-                  ? const Text('No hay evidencias registradas.')
-                  : SizedBox(
-                      height: 120,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: photos.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
-                        itemBuilder: (context, index) {
-                          final url = _toAbsoluteMediaUrl(photos[index]['file'] as String?);
-                          return AspectRatio(
-                            aspectRatio: 1,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                color: const Color(0xFFF3F4F6),
-                                child: url == null
-                                    ? const Icon(Icons.image_not_supported_outlined)
-                                    : Image.network(url, fit: BoxFit.cover),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                  ? const Text('No hay fotos registradas.')
+                  : _buildMediaGallery(photos, isVideo: false),
+            ),
+            _section(
+              title: 'Evidencias de video',
+              child: videos.isEmpty
+                  ? const Text('No hay videos registrados.')
+                  : _buildMediaGallery(videos, isVideo: true),
             ),
             if (_error != null)
               Padding(
@@ -249,6 +219,187 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildResponsibleSignature(String? signatureValue) {
+    final imageBytes = _decodeDataImage(signatureValue);
+    if (imageBytes == null) {
+      return const SizedBox.shrink();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        color: const Color(0xFFF8FAFC),
+        padding: const EdgeInsets.all(10),
+        child: Image.memory(
+          imageBytes,
+          height: 120,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDispenserCard(Map<String, dynamic> item) {
+    final model = item['model'];
+    final products = (item['products'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>().toList(growable: false);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.local_drink_outlined),
+            title: Text('${item['identifier'] ?? 'Sin código'}'),
+            subtitle: Text('${model is Map<String, dynamic> ? model['name'] : 'Sin modelo'}'),
+          ),
+          if (model is Map<String, dynamic>)
+            _photoTile(
+              title: 'Foto del modelo',
+              photoUrl: _toAbsoluteMediaUrl(model['photo'] as String?),
+            ),
+          const SizedBox(height: 8),
+          const Text('Productos', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          if (products.isEmpty)
+            const Text('Sin productos asignados.')
+          else
+            Column(
+              children: products
+                  .map(
+                    (product) => _photoTile(
+                      title: '${product['name'] ?? 'Producto'}',
+                      photoUrl: _toAbsoluteMediaUrl(product['photo'] as String?),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _photoTile({required String title, required String? photoUrl}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 52,
+              height: 52,
+              color: const Color(0xFFE5E7EB),
+              child: photoUrl == null
+                  ? const Icon(Icons.image_not_supported_outlined, size: 18)
+                  : Image.network(
+                      photoUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Text(title)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMediaGallery(List<Map<String, dynamic>> items, {required bool isVideo}) {
+    return SizedBox(
+      height: 120,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final url = _toAbsoluteMediaUrl(items[index]['file'] as String?);
+          return AspectRatio(
+            aspectRatio: 1,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Material(
+                color: const Color(0xFFF3F4F6),
+                child: InkWell(
+                  onTap: url == null ? null : () => _openExternalMedia(url),
+                  child: url == null
+                      ? Icon(isVideo ? Icons.videocam_off_outlined : Icons.image_not_supported_outlined)
+                      : Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (isVideo)
+                              Container(
+                                color: const Color(0xFFE5E7EB),
+                                child: const Icon(Icons.play_circle_fill_rounded, size: 42),
+                              )
+                            else
+                              Image.network(url, fit: BoxFit.cover),
+                            Align(
+                              alignment: Alignment.bottomCenter,
+                              child: Container(
+                                width: double.infinity,
+                                color: Colors.black54,
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Text(
+                                  isVideo ? 'Abrir video' : 'Ver foto',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(color: Colors.white, fontSize: 11),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _openExternalMedia(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el archivo.')),
+      );
+    }
+  }
+
+  Uint8List? _decodeDataImage(String? source) {
+    if (source == null || source.isEmpty) {
+      return null;
+    }
+    if (!source.startsWith('data:image')) {
+      return null;
+    }
+
+    final marker = ';base64,';
+    final markerIndex = source.indexOf(marker);
+    if (markerIndex < 0) {
+      return null;
+    }
+
+    final base64Value = source.substring(markerIndex + marker.length);
+    try {
+      return base64Decode(base64Value);
+    } catch (_) {
+      return null;
+    }
   }
 
   String _readAreaName(Object? rawArea) {

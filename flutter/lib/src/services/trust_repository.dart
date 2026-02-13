@@ -171,7 +171,7 @@ class TrustRepository {
     required String email,
     required int visitId,
   }) async {
-    final response = await _apiClient.getRaw('/visits/$visitId/report/', email: email);
+    final response = await _apiClient.getRaw('/visits/$visitId/report', email: email);
     return response.bodyBytes;
   }
 
