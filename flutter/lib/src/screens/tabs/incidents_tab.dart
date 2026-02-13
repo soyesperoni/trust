@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/incident.dart';
 import '../../models/user_role.dart';
@@ -30,6 +31,8 @@ class _IncidentsTabState extends State<IncidentsTab> {
   Object? _error;
   bool _isLoading = true;
 
+  static final Uri _newIncidentUrl =
+      Uri.parse('https://trust.supplymax.net/clientes/incidencias/nueva');
 
   @override
   void initState() {
@@ -233,14 +236,11 @@ class _IncidentsTabState extends State<IncidentsTab> {
 
 
   Future<void> _openNewIncidentFlow() async {
-    final created = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => NewIncidentScreen(email: widget.email),
-      ),
-    );
-
-    if (created == true) {
-      _refreshIncidents(showLoader: true);
+    final opened = await launchUrl(_newIncidentUrl, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el flujo de nueva incidencia.')),
+      );
     }
   }
 
