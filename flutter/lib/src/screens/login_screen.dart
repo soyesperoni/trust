@@ -117,8 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 110),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                      child: Column(
-                        children: [
+                      children: [
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
@@ -203,8 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   )
                                 : const Text('Iniciar Sesión'),
                           ),
-                        ],
-                      ),
+                      ],
                     ),
                   ],
                 ),
