@@ -214,7 +214,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   child: FilledButton.icon(
                                     onPressed: _saving ? null : _saveProfile,
                                     icon: const Icon(Icons.save_outlined, size: 20),
-                                    label: Text(_saving ? 'Guardando...' : 'Guardar cambios'),
+                                    label: Text(_saving ? 'Guardando...' : 'Guardar'),
                                     style: FilledButton.styleFrom(
                                       backgroundColor: AppColors.yellow,
                                       foregroundColor: AppColors.black,

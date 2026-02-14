@@ -214,6 +214,13 @@ class TrustRepository {
     return response.bodyBytes;
   }
 
+
+  Future<List<Map<String, dynamic>>> loadNotifications(String email) async {
+    final json = await _apiClient.getJson('/notifications/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
   Future<List<Incident>> loadIncidents(String email) async {
     final json = await _apiClient.getJson('/incidents/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);

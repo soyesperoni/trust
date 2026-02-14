@@ -1,83 +1,68 @@
 import 'package:flutter/material.dart';
 
+import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  const NotificationsScreen({
+    required this.email,
+    super.key,
+  });
+
+  final String email;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final List<_NotificationItem> _todayItems = [
-    const _NotificationItem(
-      title: 'Visita programada',
-      message: 'Se ha asignado una nueva visita para la Sucursal Centro a las 09:00 AM.',
-      time: '2m',
-      icon: Icons.event,
-      iconBackground: Color(0xFFDBEAFE),
-      iconColor: Color(0xFF2563EB),
-      cardBackground: Color(0xFFEFF6FF),
-      unread: true,
-    ),
-    const _NotificationItem(
-      title: 'Incidencia crítica',
-      message: 'Reporte de seguridad en Plaza Satélite #105. Requiere atención inmediata.',
-      time: '45m',
-      icon: Icons.warning,
-      iconBackground: Color(0xFFFEE2E2),
-      iconColor: Color(0xFFDC2626),
-      cardBackground: Color(0xFFFEF2F2),
-      unread: true,
-    ),
-    const _NotificationItem(
-      title: 'Recordatorio del sistema',
-      message: 'No olvides sincronizar tus reportes antes de las 6:00 PM para el cierre del día.',
-      time: '2h',
-      icon: Icons.notifications_none_rounded,
-      iconBackground: AppColors.yellowSoft,
-      iconColor: Color(0xFFB45309),
-      cardBackground: Colors.white,
-    ),
-  ];
+  final TrustRepository _repository = TrustRepository();
 
-  final List<_NotificationItem> _previousItems = [
-    const _NotificationItem(
-      title: 'Reporte aprobado',
-      message: 'El supervisor aprobó tu visita a Almacén Norte #08.',
-      time: 'Ayer',
-      icon: Icons.check_circle,
-      iconBackground: Color(0xFFDCFCE7),
-      iconColor: Color(0xFF15803D),
-      cardBackground: Colors.white,
-    ),
-    const _NotificationItem(
-      title: 'Reunión de equipo',
-      message: 'Se ha reprogramado la reunión mensual de coordinadores para el próximo lunes.',
-      time: 'Hace 2 días',
-      icon: Icons.group,
-      iconBackground: Color(0xFFF3E8FF),
-      iconColor: Color(0xFF7E22CE),
-      cardBackground: Colors.white,
-    ),
-    const _NotificationItem(
-      title: 'Actualización disponible',
-      message: 'Una nueva versión de la aplicación está lista para descargar. Mejoras de rendimiento incluidas.',
-      time: 'Hace 3 días',
-      icon: Icons.settings,
-      iconBackground: Color(0xFFF3F4F6),
-      iconColor: Color(0xFF4B5563),
-      cardBackground: Colors.white,
-    ),
-  ];
+  bool _loading = true;
+  String? _error;
+  List<_NotificationItem> _items = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final payload = await _repository.loadNotifications(widget.email);
+      if (!mounted) return;
+      final now = DateTime.now();
+      final items = payload
+          .map((item) => _NotificationItem.fromJson(item, now: now))
+          .toList(growable: false);
+      setState(() {
+        _items = items;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: backgroundColor,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
@@ -85,13 +70,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.arrow_back),
-          color: AppColors.gray700,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         titleSpacing: 0,
-        title: const Text(
+        title: Text(
           'Notificaciones',
           style: TextStyle(
-            color: AppColors.gray900,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 28,
             fontWeight: FontWeight.w700,
           ),
@@ -111,72 +96,62 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-        children: [
-          _NotificationSection(title: 'Hoy', items: _todayItems),
-          const SizedBox(height: 22),
-          _NotificationSection(title: 'Anteriores', items: _previousItems),
-        ],
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadNotifications,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+                children: [
+                  if (_error != null)
+                    _StatusMessage(
+                      message: _error!,
+                      isDark: isDark,
+                    )
+                  else if (_items.isEmpty)
+                    _StatusMessage(
+                      message: 'No hay notificaciones.',
+                      isDark: isDark,
+                    )
+                  else
+                    ..._items.map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _NotificationCard(item: item),
+                        )),
+                ],
+              ),
+            ),
     );
   }
 
   void _clearAll() {
-    setState(() {
-      _todayItems.clear();
-      _previousItems.clear();
-    });
+    setState(() => _items = const []);
   }
 }
 
-class _NotificationSection extends StatelessWidget {
-  const _NotificationSection({required this.title, required this.items});
+class _StatusMessage extends StatelessWidget {
+  const _StatusMessage({required this.message, required this.isDark});
 
-  final String title;
-  final List<_NotificationItem> items;
+  final String message;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4),
-          child: Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.gray500,
-              letterSpacing: 0.8,
-            ),
-          ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : AppColors.gray50,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: isDark ? AppColors.darkCardBorder : AppColors.gray100),
+      ),
+      child: Text(
+        message,
+        style: TextStyle(
+          color: isDark ? AppColors.darkMuted : AppColors.gray500,
+          fontWeight: FontWeight.w500,
         ),
-        const SizedBox(height: 10),
-        if (items.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.gray50,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.gray100),
-            ),
-            child: const Text(
-              'No hay notificaciones.',
-              style: TextStyle(
-                color: AppColors.gray500,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          )
-        else
-          ...items.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _NotificationCard(item: item),
-              )),
-      ],
+      ),
     );
   }
 }
@@ -188,11 +163,15 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: item.cardBackground,
+        color: isDark ? AppColors.darkCard : item.cardBackground,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.darkCardBorder : Colors.transparent,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,8 +198,8 @@ class _NotificationCard extends StatelessWidget {
                         item.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.gray900,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
                         ),
@@ -230,7 +209,7 @@ class _NotificationCard extends StatelessWidget {
                     Text(
                       item.time,
                       style: TextStyle(
-                        color: item.unread ? const Color(0xFF2563EB) : AppColors.gray500,
+                        color: item.unread ? const Color(0xFF2563EB) : (isDark ? AppColors.darkMuted : AppColors.gray500),
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -242,8 +221,8 @@ class _NotificationCard extends StatelessWidget {
                   item.message,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.gray700,
+                  style: TextStyle(
+                    color: isDark ? AppColors.darkMuted : AppColors.gray700,
                     fontSize: 14,
                     height: 1.45,
                   ),
@@ -279,6 +258,25 @@ class _NotificationItem {
     this.unread = false,
   });
 
+  factory _NotificationItem.fromJson(Map<String, dynamic> json, {required DateTime now}) {
+    final title = (json['title'] as String?)?.trim();
+    final message = (json['message'] as String?)?.trim();
+    final type = (json['type'] as String?)?.trim().toLowerCase();
+    final createdAt = DateTime.tryParse((json['created_at'] as String?) ?? '');
+
+    final appearance = _appearanceForType(type);
+    return _NotificationItem(
+      title: (title == null || title.isEmpty) ? 'Notificación' : title,
+      message: (message == null || message.isEmpty) ? 'Sin detalle.' : message,
+      time: _timeAgo(createdAt, now),
+      icon: appearance.icon,
+      iconBackground: appearance.iconBackground,
+      iconColor: appearance.iconColor,
+      cardBackground: appearance.cardBackground,
+      unread: json['unread'] == true,
+    );
+  }
+
   final String title;
   final String message;
   final String time;
@@ -287,4 +285,39 @@ class _NotificationItem {
   final Color iconColor;
   final Color cardBackground;
   final bool unread;
+
+  static ({
+    IconData icon,
+    Color iconBackground,
+    Color iconColor,
+    Color cardBackground,
+  }) _appearanceForType(String? type) {
+    switch (type) {
+      case 'incident':
+        return (
+          icon: Icons.warning,
+          iconBackground: const Color(0xFFFEE2E2),
+          iconColor: const Color(0xFFDC2626),
+          cardBackground: const Color(0xFFFEF2F2),
+        );
+      case 'visit':
+      default:
+        return (
+          icon: Icons.event,
+          iconBackground: const Color(0xFFDBEAFE),
+          iconColor: const Color(0xFF2563EB),
+          cardBackground: const Color(0xFFEFF6FF),
+        );
+    }
+  }
+
+  static String _timeAgo(DateTime? date, DateTime now) {
+    if (date == null) return 'Ahora';
+    final difference = now.difference(date);
+    if (difference.inMinutes < 1) return 'Ahora';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m';
+    if (difference.inHours < 24) return '${difference.inHours}h';
+    if (difference.inDays == 1) return 'Ayer';
+    return 'Hace ${difference.inDays} días';
+  }
 }
