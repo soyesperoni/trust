@@ -25,6 +25,45 @@ class TrustRepository {
     return DashboardStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {});
   }
 
+
+
+  Future<Map<String, dynamic>> loadCurrentUser(String email) async {
+    final json = await _apiClient.getJson('/users/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? const []);
+    final normalizedEmail = email.trim().toLowerCase();
+
+    for (final entry in results) {
+      if (entry is! Map<String, dynamic>) {
+        continue;
+      }
+      final candidateEmail = (entry['email'] as String? ?? '').trim().toLowerCase();
+      if (candidateEmail == normalizedEmail) {
+        return entry;
+      }
+    }
+
+    throw Exception('No se encontró el usuario actual.');
+  }
+
+  Future<Map<String, dynamic>> updateUserProfile({
+    required String currentEmail,
+    required int userId,
+    required String fullName,
+    String? password,
+  }) {
+    final body = <String, dynamic>{
+      'full_name': fullName,
+    };
+    if (password != null && password.isNotEmpty) {
+      body['password'] = password;
+    }
+
+    return _apiClient.putJson(
+      '/users/$userId/',
+      email: currentEmail,
+      body: body,
+    );
+  }
   Future<List<Visit>> loadVisits(String email) async {
     final json = await _apiClient.getJson('/visits/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);
