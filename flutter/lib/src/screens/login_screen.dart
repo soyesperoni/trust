@@ -226,14 +226,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            onPressed: _isSubmitting ? null : _submit,
-                            child: _isSubmitting
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : const Text('Iniciar Sesión'),
                           ),
                           const SizedBox(height: 12),
                         ],
