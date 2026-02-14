@@ -6,6 +6,7 @@ import 'package:printing/printing.dart';
 import 'package:video_player/video_player.dart';
 
 import '../services/trust_repository.dart';
+import '../theme/app_colors.dart';
 
 class VisitReportScreen extends StatefulWidget {
   const VisitReportScreen({
@@ -230,7 +231,7 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        color: const Color(0xFFF8FAFC),
+        color: Colors.white,
         padding: const EdgeInsets.all(10),
         child: Image.memory(
           imageBytes,
@@ -242,6 +243,7 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
   }
 
   Widget _buildDispenserCard(Map<String, dynamic> item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final model = item['model'];
     final products = (item['products'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>().toList(growable: false);
 
@@ -249,8 +251,9 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: isDark ? AppColors.darkCard : const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.darkCardBorder : const Color(0xFFE5E7EB)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,6 +292,7 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
   }
 
   Widget _photoTile({required String title, required String? photoUrl}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -298,7 +302,7 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
             child: Container(
               width: 52,
               height: 52,
-              color: const Color(0xFFE5E7EB),
+              color: isDark ? AppColors.darkSurface : const Color(0xFFE5E7EB),
               child: photoUrl == null
                   ? const Icon(Icons.image_not_supported_outlined, size: 18)
                   : Image.network(
@@ -316,6 +320,7 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
   }
 
   Widget _buildMediaGallery(List<Map<String, dynamic>> items, {required bool isVideo}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       height: 120,
       child: ListView.separated(
@@ -329,7 +334,7 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Material(
-                color: const Color(0xFFF3F4F6),
+                color: isDark ? AppColors.darkCard : const Color(0xFFF3F4F6),
                 child: InkWell(
                   onTap: url == null ? null : () => _openMediaPopup(url, isVideo: isVideo),
                   child: url == null
@@ -339,7 +344,7 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
                           children: [
                             if (isVideo)
                               Container(
-                                color: const Color(0xFFE5E7EB),
+                                color: isDark ? AppColors.darkSurface : const Color(0xFFE5E7EB),
                                 child: const Icon(Icons.play_circle_fill_rounded, size: 42),
                               )
                             else
@@ -419,13 +424,14 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
   }
 
   Widget _section({required String title, required Widget child}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: isDark ? AppColors.darkCardBorder : const Color(0xFFE5E7EB)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,11 +448,12 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
   }
 
   Widget _chip(String label, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       constraints: const BoxConstraints(minWidth: 140),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: isDark ? AppColors.darkSurface : const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(

@@ -9,6 +9,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
 
 import '../../services/trust_repository.dart';
+import '../../theme/app_colors.dart';
 
 class NewIncidentScreen extends StatefulWidget {
   const NewIncidentScreen({required this.email, super.key});
@@ -106,24 +107,25 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
     return _descriptionController.text.trim().isNotEmpty;
   }
 
-  InputDecoration _mobileInputDecoration(String label) {
+  InputDecoration _mobileInputDecoration(BuildContext context, String label) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w600),
+      labelStyle: TextStyle(color: isDark ? AppColors.darkMuted : const Color(0xFF334155), fontWeight: FontWeight.w600),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: isDark ? AppColors.darkCard : Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+        borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+        borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB)),
       ),
       disabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : const Color(0xFFE5E7EB)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -248,9 +250,10 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
   @override
   Widget build(BuildContext context) {
     final progressValue = (_step + 1) / 2;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
@@ -275,7 +278,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                               ),
                               Text(
                                 '${(progressValue * 100).round()}%',
-                                style: const TextStyle(color: _textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                                style: TextStyle(color: isDark ? AppColors.darkMuted : _textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -285,7 +288,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                             child: LinearProgressIndicator(
                               value: progressValue,
                               minHeight: 6,
-                              backgroundColor: const Color(0xFFE2E8F0),
+                              backgroundColor: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0),
                               valueColor: const AlwaysStoppedAnimation<Color>(_primaryColor),
                             ),
                           ),
@@ -296,20 +299,20 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFEF2F2),
+                                color: isDark ? const Color(0xFF3F1D1D) : const Color(0xFFFEF2F2),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: const Color(0xFFFECACA)),
                               ),
                               child: Text(_error!, style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 13)),
                             ),
-                          Expanded(child: _buildStep()),
+                          Expanded(child: _buildStep(isDark)),
                         ],
                       ),
                     ),
                   ),
                   Container(
-                    decoration: const BoxDecoration(
-                      border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0))),
                     ),
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                     child: Row(
@@ -352,20 +355,20 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
     );
   }
 
-  Widget _buildStep() {
+  Widget _buildStep(bool isDark) {
     if (_step == 0) {
       return ListView(
         children: [
-          const Text('Seleccionar ubicación', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _textPrimary)),
+          Text('Seleccionar ubicación', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Selecciona cliente, sucursal, área y dispensador para asignar la incidencia.',
-            style: TextStyle(fontSize: 15, color: _textSecondary),
+            style: TextStyle(fontSize: 15, color: isDark ? AppColors.darkMuted : _textSecondary),
           ),
           const SizedBox(height: 20),
           DropdownButtonFormField<int>(
             value: _clientId,
-            decoration: _mobileInputDecoration('Cliente'),
+            decoration: _mobileInputDecoration(context, 'Cliente'),
             items: _clients
                 .map((c) => DropdownMenuItem<int>(value: c['id'] as int?, child: Text(c['name'] as String? ?? 'Cliente')))
                 .toList(growable: false),
@@ -381,7 +384,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             value: _branchId,
-            decoration: _mobileInputDecoration('Sucursal'),
+            decoration: _mobileInputDecoration(context, 'Sucursal'),
             items: _filteredBranches
                 .map((b) => DropdownMenuItem<int>(value: b['id'] as int?, child: Text(b['name'] as String? ?? 'Sucursal')))
                 .toList(growable: false),
@@ -398,7 +401,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             value: _areaId,
-            decoration: _mobileInputDecoration('Área'),
+            decoration: _mobileInputDecoration(context, 'Área'),
             items: _filteredAreas
                 .map((a) => DropdownMenuItem<int>(value: a['id'] as int?, child: Text(a['name'] as String? ?? 'Área')))
                 .toList(growable: false),
@@ -414,7 +417,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             value: _dispenserId,
-            decoration: _mobileInputDecoration('Dispensador'),
+            decoration: _mobileInputDecoration(context, 'Dispensador'),
             items: _filteredDispensers
                 .map((d) => DropdownMenuItem<int>(value: d['id'] as int?, child: Text(d['identifier'] as String? ?? 'Dispensador')))
                 .toList(growable: false),
@@ -426,11 +429,11 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
 
     return ListView(
       children: [
-        const Text('Detalles del reporte', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _textPrimary)),
+        Text('Detalles del reporte', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface)),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Agrega la descripción del incidente y evidencia (foto o video).',
-          style: TextStyle(fontSize: 15, color: _textSecondary),
+          style: TextStyle(fontSize: 15, color: isDark ? AppColors.darkMuted : _textSecondary),
         ),
         const SizedBox(height: 20),
         TextField(
@@ -438,7 +441,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
           minLines: 4,
           maxLines: 6,
           onChanged: (_) => setState(() {}),
-          decoration: _mobileInputDecoration('Descripción').copyWith(
+          decoration: _mobileInputDecoration(context, 'Descripción').copyWith(
             hintText: 'Escribe los detalles aquí...',
             alignLabelWithHint: true,
           ),
@@ -450,7 +453,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
           child: Ink(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
+              border: Border.all(color: isDark ? AppColors.darkCardBorder : const Color(0xFFCBD5E1)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             child: Column(
@@ -458,8 +461,8 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                 Container(
                   width: 52,
                   height: 52,
-                  decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
-                  child: const Icon(Icons.perm_media_outlined, color: Color(0xFF475569), size: 28),
+                  decoration: BoxDecoration(color: isDark ? AppColors.darkCard : const Color(0xFFF1F5F9), shape: BoxShape.circle),
+                  child: Icon(Icons.perm_media_outlined, color: isDark ? AppColors.darkMuted : const Color(0xFF475569), size: 28),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -467,10 +470,10 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                   style: const TextStyle(color: _primaryColor, fontWeight: FontWeight.w700, fontSize: 16),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Captura foto o video directamente en el flujo\n(máx. 4 archivos)',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: _textSecondary, fontSize: 12),
+                  style: TextStyle(color: isDark ? AppColors.darkMuted : _textSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -478,7 +481,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
         ),
         const SizedBox(height: 14),
         if (_evidenceFiles.isEmpty)
-          const Text('No has agregado evidencias aún.', style: TextStyle(color: _textSecondary))
+          Text('No has agregado evidencias aún.', style: TextStyle(color: isDark ? AppColors.darkMuted : _textSecondary))
         else
           ..._evidenceFiles.asMap().entries.map((entry) {
             final index = entry.key;
@@ -489,7 +492,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0)),
               ),
               child: Row(
                 children: [
@@ -510,7 +513,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
                   Expanded(
                     child: Text(
                       isVideo ? 'Video adjunto' : 'Foto adjunta',
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: _textPrimary),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                     ),
                   ),
                   IconButton.filledTonal(
