@@ -304,6 +304,17 @@ def _serialize_visit(visit: Visit) -> dict:
     }
 
 
+def _serialize_notification(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": item["id"],
+        "title": item["title"],
+        "message": item["message"],
+        "created_at": item["created_at"].isoformat(),
+        "type": item["type"],
+        "unread": bool(item.get("unread", False)),
+    }
+
+
 def _draw_page_background(pdf: canvas.Canvas):
     page_width, page_height = LETTER
     pdf.setFillColor(colors.HexColor("#f8fafc"))
@@ -1170,6 +1181,52 @@ def visit_report_public_detail(request, token: str):
     if visit is None:
         return JsonResponse({"error": "El enlace público del informe es inválido o expiró."}, status=404)
     return JsonResponse(_serialize_visit(visit))
+
+
+@require_GET
+def notifications(request):
+    current_user = _get_current_user(request)
+    if not current_user:
+        return JsonResponse({"error": "Usuario no autenticado."}, status=401)
+
+    scope = _build_access_scope(current_user)
+
+    visits_queryset = Visit.objects.select_related("area__branch__client", "inspector")
+    if current_user.role == User.Role.INSPECTOR:
+        visits_queryset = visits_queryset.filter(inspector_id=current_user.id)
+    else:
+        visits_queryset = _filter_queryset_by_scope(visits_queryset, scope, area_lookup="area_id")
+
+    incidents_queryset = Incident.objects.select_related("client", "branch", "area", "dispenser")
+    incidents_queryset = _filter_queryset_by_scope(incidents_queryset, scope, area_lookup="area_id")
+
+    items: list[dict[str, Any]] = []
+
+    for visit in visits_queryset.order_by("-visited_at")[:30]:
+        branch_name = visit.area.branch.name if visit.area_id else "sucursal"
+        status_label = visit.get_status_display().lower()
+        items.append({
+            "id": f"visit-{visit.id}",
+            "title": "Visita programada" if visit.status == Visit.Status.SCHEDULED else "Visita finalizada",
+            "message": f"{branch_name}: visita {status_label} para {visit.visited_at:%d/%m/%Y %H:%M}.",
+            "created_at": visit.visited_at,
+            "type": "visit",
+            "unread": False,
+        })
+
+    for incident in incidents_queryset.order_by("-created_at")[:30]:
+        items.append({
+            "id": f"incident-{incident.id}",
+            "title": "Nueva incidencia",
+            "message": f"{incident.branch.name} · {incident.dispenser.identifier}: {incident.description}",
+            "created_at": incident.created_at,
+            "type": "incident",
+            "unread": False,
+        })
+
+    items.sort(key=lambda item: item["created_at"], reverse=True)
+    payload = [_serialize_notification(item) for item in items[:50]]
+    return JsonResponse({"results": payload})
 
 
 @csrf_exempt

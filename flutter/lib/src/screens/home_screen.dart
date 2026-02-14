@@ -102,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
+                MaterialPageRoute<void>(builder: (_) => NotificationsScreen(email: widget.email)),
               );
             },
             icon: const Icon(Icons.notifications_none_rounded),
