@@ -22,8 +22,19 @@ class _TrustAppState extends State<TrustApp> {
 
   static const EdgeInsets _buttonPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 14);
 
-  ThemeMode _themeMode = ThemeMode.light;
+  ThemeMode _themeMode = ThemeMode.system;
   bool _showSplash = true;
+
+  bool get _isDarkMode {
+    if (_themeMode == ThemeMode.dark) {
+      return true;
+    }
+    if (_themeMode == ThemeMode.light) {
+      return false;
+    }
+
+    return WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+  }
 
   @override
   void initState() {
@@ -40,7 +51,7 @@ class _TrustAppState extends State<TrustApp> {
 
   void _toggleThemeMode() {
     setState(() {
-      _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+      _themeMode = _isDarkMode ? ThemeMode.light : ThemeMode.dark;
     });
   }
 
@@ -140,7 +151,7 @@ class _TrustAppState extends State<TrustApp> {
       home: _showSplash
           ? const TrustSplashScreen()
           : LoginScreen(
-              isDarkMode: _themeMode == ThemeMode.dark,
+              isDarkMode: _isDarkMode,
               onToggleThemeMode: _toggleThemeMode,
             ),
     );
