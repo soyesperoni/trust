@@ -147,10 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 60),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                          TextFormField(
+                        TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
@@ -183,8 +180,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 14),
-                          TextFormField(
+                        const SizedBox(height: 14),
+                        TextFormField(
                             controller: _passwordController,
                             obscureText: true,
                             decoration: InputDecoration(
@@ -214,22 +211,33 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: primary,
-                              disabledBackgroundColor: const Color(0xFFFFE680),
-                              foregroundColor: const Color(0xFF111827),
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              textStyle: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        const SizedBox(height: 20),
+                        FilledButton(
+                          onPressed: _isSubmitting ? null : _submit,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: primary,
+                            disabledBackgroundColor: const Color(0xFFFFE680),
+                            foregroundColor: const Color(0xFF111827),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            textStyle: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF111827)),
+                                  ),
+                                )
+                              : const Text('Iniciar sesión'),
+                        ),
+                        const SizedBox(height: 12),
                         ],
-                      ],
                     ),
                   ),
                 ),
