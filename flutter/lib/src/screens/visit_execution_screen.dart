@@ -634,7 +634,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
       final targetStep = _step + 1;
       try {
         if (targetStep == 3) {
-          await _ensureCapturePermissions(requireMicrophone: true);
+          await _ensureCapturePermissions(requireMicrophone: false);
         }
         if (targetStep == 4) {
           await _requestLocationPermission();
