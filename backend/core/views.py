@@ -67,21 +67,65 @@ def _get_current_user(request):
     return User.objects.filter(email__iexact=current_email, is_active=True).first()
 
 
-def _get_client_scope_ids(request):
-    current_user = _get_current_user(request)
-    if not current_user or current_user.role not in {
-        User.Role.ACCOUNT_ADMIN,
-        User.Role.INSPECTOR,
-    }:
+def _build_access_scope(current_user: User | None) -> dict[str, list[int]] | None:
+    if not current_user or current_user.role == User.Role.GENERAL_ADMIN:
         return None
-    return list(current_user.clients.values_list("id", flat=True))
+
+    role_assignments = {
+        User.Role.ACCOUNT_ADMIN: {
+            "clients": set(current_user.clients.values_list("id", flat=True)),
+            "branches": set(),
+            "areas": set(),
+        },
+        User.Role.BRANCH_ADMIN: {
+            "clients": set(),
+            "branches": set(current_user.branches.values_list("id", flat=True)),
+            "areas": set(),
+        },
+        User.Role.INSPECTOR: {
+            "clients": set(current_user.clients.values_list("id", flat=True)),
+            "branches": set(current_user.branches.values_list("id", flat=True)),
+            "areas": set(current_user.areas.values_list("id", flat=True)),
+        },
+    }
+    assignments = role_assignments.get(current_user.role, {"clients": set(), "branches": set(), "areas": set()})
+
+    clients = set(assignments["clients"])
+    branches = set(assignments["branches"])
+    areas = set(assignments["areas"])
+
+    if clients:
+        branches.update(Branch.objects.filter(client_id__in=clients).values_list("id", flat=True))
+    if branches:
+        areas.update(Area.objects.filter(branch_id__in=branches).values_list("id", flat=True))
+
+    if areas:
+        branches.update(Area.objects.filter(id__in=areas).values_list("branch_id", flat=True))
+    if branches:
+        clients.update(Branch.objects.filter(id__in=branches).values_list("client_id", flat=True))
+
+    return {
+        "client_ids": sorted(clients),
+        "branch_ids": sorted(branches),
+        "area_ids": sorted(areas),
+    }
 
 
-def _get_branch_scope_ids(request):
-    current_user = _get_current_user(request)
-    if not current_user or current_user.role != User.Role.BRANCH_ADMIN:
-        return None
-    return list(current_user.branches.values_list("id", flat=True))
+def _get_access_scope(request):
+    return _build_access_scope(_get_current_user(request))
+
+
+def _filter_queryset_by_scope(queryset, scope, *, client_lookup=None, branch_lookup=None, area_lookup=None):
+    if scope is None:
+        return queryset
+
+    if area_lookup is not None:
+        return queryset.filter(**{f"{area_lookup}__in": scope["area_ids"]})
+    if branch_lookup is not None:
+        return queryset.filter(**{f"{branch_lookup}__in": scope["branch_ids"]})
+    if client_lookup is not None:
+        return queryset.filter(**{f"{client_lookup}__in": scope["client_ids"]})
+    return queryset.none()
 
 
 
@@ -712,8 +756,7 @@ def csrf_token(request):
 @require_GET
 def dashboard(request):
     now = timezone.now()
-    client_scope_ids = _get_client_scope_ids(request)
-    branch_scope_ids = _get_branch_scope_ids(request)
+    scope = _get_access_scope(request)
 
     clients = Client.objects.all()
     branches = Branch.objects.all()
@@ -723,21 +766,13 @@ def dashboard(request):
     visits = Visit.objects.all()
     incidents = Incident.objects.all()
 
-    if client_scope_ids is not None:
-        clients = clients.filter(id__in=client_scope_ids)
-        branches = branches.filter(client_id__in=client_scope_ids)
-        areas = areas.filter(branch__client_id__in=client_scope_ids)
-        dispensers = dispensers.filter(area__branch__client_id__in=client_scope_ids)
-        products = products.filter(dispenser__area__branch__client_id__in=client_scope_ids)
-        visits = visits.filter(area__branch__client_id__in=client_scope_ids)
-        incidents = incidents.filter(client_id__in=client_scope_ids)
-    if branch_scope_ids is not None:
-        branches = branches.filter(id__in=branch_scope_ids)
-        areas = areas.filter(branch_id__in=branch_scope_ids)
-        dispensers = dispensers.filter(area__branch_id__in=branch_scope_ids)
-        products = products.filter(dispenser__area__branch_id__in=branch_scope_ids)
-        visits = visits.filter(area__branch_id__in=branch_scope_ids)
-        incidents = incidents.filter(branch_id__in=branch_scope_ids)
+    clients = _filter_queryset_by_scope(clients, scope, client_lookup="id")
+    branches = _filter_queryset_by_scope(branches, scope, branch_lookup="id")
+    areas = _filter_queryset_by_scope(areas, scope, area_lookup="id")
+    dispensers = _filter_queryset_by_scope(dispensers, scope, area_lookup="area_id")
+    products = _filter_queryset_by_scope(products, scope, area_lookup="dispenser__area_id")
+    visits = _filter_queryset_by_scope(visits, scope, area_lookup="area_id")
+    incidents = _filter_queryset_by_scope(incidents, scope, area_lookup="area_id")
 
     stats = {
         "clients": clients.count(),
@@ -777,9 +812,8 @@ def dashboard(request):
 def clients(request):
     if request.method == "GET":
         queryset = Client.objects.all()
-        client_scope_ids = _get_client_scope_ids(request)
-        if client_scope_ids is not None:
-            queryset = queryset.filter(id__in=client_scope_ids)
+        scope = _get_access_scope(request)
+        queryset = _filter_queryset_by_scope(queryset, scope, client_lookup="id")
         payload = [_serialize_client(client) for client in queryset]
         return JsonResponse({"results": payload})
 
@@ -812,9 +846,10 @@ def clients(request):
 @csrf_exempt
 @require_http_methods(["GET", "PUT"])
 def client_detail(request, client_id: int):
-    try:
-        client = Client.objects.get(pk=client_id)
-    except Client.DoesNotExist:
+    scope = _get_access_scope(request)
+    queryset = _filter_queryset_by_scope(Client.objects.all(), scope, client_lookup="id")
+    client = queryset.filter(pk=client_id).first()
+    if client is None:
         return JsonResponse({"error": "Cliente no encontrado."}, status=404)
 
     if request.method == "GET":
@@ -852,12 +887,8 @@ def client_detail(request, client_id: int):
 @require_GET
 def branches(request):
     queryset = Branch.objects.select_related("client")
-    client_scope_ids = _get_client_scope_ids(request)
-    branch_scope_ids = _get_branch_scope_ids(request)
-    if client_scope_ids is not None:
-        queryset = queryset.filter(client_id__in=client_scope_ids)
-    if branch_scope_ids is not None:
-        queryset = queryset.filter(id__in=branch_scope_ids)
+    scope = _get_access_scope(request)
+    queryset = _filter_queryset_by_scope(queryset, scope, branch_lookup="id")
     payload = [
         _serialize_branch(branch)
         for branch in queryset.all()
@@ -868,12 +899,8 @@ def branches(request):
 @require_GET
 def areas(request):
     queryset = Area.objects.select_related("branch__client")
-    client_scope_ids = _get_client_scope_ids(request)
-    branch_scope_ids = _get_branch_scope_ids(request)
-    if client_scope_ids is not None:
-        queryset = queryset.filter(branch__client_id__in=client_scope_ids)
-    if branch_scope_ids is not None:
-        queryset = queryset.filter(branch_id__in=branch_scope_ids)
+    scope = _get_access_scope(request)
+    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="id")
     payload = [
         _serialize_area(area)
         for area in queryset.all()
@@ -884,12 +911,8 @@ def areas(request):
 @require_GET
 def dispensers(request):
     queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
-    client_scope_ids = _get_client_scope_ids(request)
-    branch_scope_ids = _get_branch_scope_ids(request)
-    if client_scope_ids is not None:
-        queryset = queryset.filter(area__branch__client_id__in=client_scope_ids)
-    if branch_scope_ids is not None:
-        queryset = queryset.filter(area__branch_id__in=branch_scope_ids)
+    scope = _get_access_scope(request)
+    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
     payload = [
         _serialize_dispenser(dispenser)
         for dispenser in queryset.all()
@@ -900,12 +923,8 @@ def dispensers(request):
 @require_GET
 def products(request):
     queryset = Product.objects.select_related("dispenser__model")
-    client_scope_ids = _get_client_scope_ids(request)
-    branch_scope_ids = _get_branch_scope_ids(request)
-    if client_scope_ids is not None:
-        queryset = queryset.filter(dispenser__area__branch__client_id__in=client_scope_ids)
-    if branch_scope_ids is not None:
-        queryset = queryset.filter(dispenser__area__branch_id__in=branch_scope_ids)
+    scope = _get_access_scope(request)
+    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="dispenser__area_id")
     payload = [
         _serialize_product(product)
         for product in queryset.all()
@@ -925,12 +944,8 @@ def visits(request):
         queryset = Visit.objects.select_related(
             "area__branch__client", "inspector", "dispenser"
         )
-        client_scope_ids = _get_client_scope_ids(request)
-        branch_scope_ids = _get_branch_scope_ids(request)
-        if client_scope_ids is not None:
-            queryset = queryset.filter(area__branch__client_id__in=client_scope_ids)
-        if branch_scope_ids is not None:
-            queryset = queryset.filter(area__branch_id__in=branch_scope_ids)
+        scope = _get_access_scope(request)
+        queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
 
         month = (request.GET.get("month") or "").strip()
         if month:
@@ -1013,10 +1028,15 @@ def visit_mobile_flow(request, visit_id: int):
     if not current_user or current_user.role != User.Role.INSPECTOR:
         return JsonResponse({"error": "Solo un inspector puede realizar visitas programadas."}, status=403)
 
+    scope = _build_access_scope(current_user)
+
     try:
         visit = Visit.objects.select_related("inspector").get(pk=visit_id)
     except Visit.DoesNotExist:
         return JsonResponse({"error": "Visita no encontrada."}, status=404)
+
+    if scope is not None and visit.area_id not in scope["area_ids"]:
+        return JsonResponse({"error": "No tienes permiso para realizar esta visita."}, status=403)
 
     if visit.inspector_id and visit.inspector_id != current_user.id:
         return JsonResponse({"error": "Esta visita está asignada a otro inspector."}, status=403)
@@ -1112,11 +1132,14 @@ def visit_report_pdf(request, visit_id: int):
     if not current_user:
         return JsonResponse({"error": "Usuario no autenticado."}, status=401)
 
-    try:
-        visit = Visit.objects.select_related(
-            "area__branch__client", "inspector", "dispenser"
-        ).prefetch_related("media").get(pk=visit_id)
-    except Visit.DoesNotExist:
+    scope = _build_access_scope(current_user)
+
+    queryset = Visit.objects.select_related(
+        "area__branch__client", "inspector", "dispenser"
+    ).prefetch_related("media")
+    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
+    visit = queryset.filter(pk=visit_id).first()
+    if visit is None:
         return JsonResponse({"error": "Visita no encontrada."}, status=404)
 
     if visit.status != Visit.Status.COMPLETED:
@@ -1156,12 +1179,8 @@ def incidents(request):
 
     if request.method == "GET":
         queryset = Incident.objects.select_related("client", "branch", "area", "dispenser")
-        client_scope_ids = _get_client_scope_ids(request)
-        branch_scope_ids = _get_branch_scope_ids(request)
-        if client_scope_ids is not None:
-            queryset = queryset.filter(client_id__in=client_scope_ids)
-        if branch_scope_ids is not None:
-            queryset = queryset.filter(branch_id__in=branch_scope_ids)
+        scope = _get_access_scope(request)
+        queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
         payload = [
             _serialize_incident(incident)
             for incident in queryset.all()
@@ -1198,9 +1217,8 @@ def incidents(request):
     if branch.client_id != client.id or area.branch_id != branch.id or dispenser.area_id != area.id:
         return JsonResponse({"error": "La ubicación seleccionada no es consistente."}, status=400)
 
-    if current_user.role == User.Role.BRANCH_ADMIN:
-        branch_scope_ids = list(current_user.branches.values_list("id", flat=True))
-        if branch.id not in branch_scope_ids:
+    scope = _build_access_scope(current_user)
+    if scope is not None and area.id not in scope["area_ids"]:
             return JsonResponse({"error": "No tienes permiso sobre la sucursal seleccionada."}, status=403)
 
     incident = Incident.objects.create(
@@ -1231,13 +1249,8 @@ def incidents(request):
 @require_GET
 def incident_detail(request, incident_id: int):
     queryset = Incident.objects.select_related("client", "branch", "area", "dispenser")
-    client_scope_ids = _get_client_scope_ids(request)
-    branch_scope_ids = _get_branch_scope_ids(request)
-
-    if client_scope_ids is not None:
-        queryset = queryset.filter(client_id__in=client_scope_ids)
-    if branch_scope_ids is not None:
-        queryset = queryset.filter(branch_id__in=branch_scope_ids)
+    scope = _get_access_scope(request)
+    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
 
     incident = queryset.filter(pk=incident_id).first()
     if incident is None:

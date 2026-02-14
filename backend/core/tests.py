@@ -71,6 +71,7 @@ class VisitMobileFlowTests(TestCase):
             password="secret",
             role=User.Role.INSPECTOR,
         )
+        self.inspector.areas.add(self.area)
         self.visit = Visit.objects.create(
             area=self.area,
             inspector=self.inspector,
@@ -132,6 +133,7 @@ class VisitReportRouteTests(TestCase):
             password="secret",
             role=User.Role.INSPECTOR,
         )
+        self.inspector.areas.add(self.area)
         self.visit = Visit.objects.create(
             area=self.area,
             inspector=self.inspector,
@@ -244,3 +246,82 @@ class LoginApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["user"]["email"], self.user.email)
 
+
+class HierarchicalAccessScopeTests(TestCase):
+    def setUp(self):
+        self.client_a = Client.objects.create(name="Cliente A", code="CA")
+        self.client_b = Client.objects.create(name="Cliente B", code="CB")
+
+        self.branch_a1 = Branch.objects.create(client=self.client_a, name="Sucursal A1")
+        self.branch_b1 = Branch.objects.create(client=self.client_b, name="Sucursal B1")
+
+        self.area_a1 = Area.objects.create(branch=self.branch_a1, name="Área A1")
+        self.area_b1 = Area.objects.create(branch=self.branch_b1, name="Área B1")
+
+        self.visit_a1 = Visit.objects.create(area=self.area_a1)
+        self.visit_b1 = Visit.objects.create(area=self.area_b1)
+
+    def test_account_admin_gets_hierarchical_access_from_client_assignment(self):
+        user = User.objects.create_user(
+            username="acc-admin",
+            email="acc-admin@test.com",
+            password="secret",
+            role=User.Role.ACCOUNT_ADMIN,
+        )
+        user.clients.add(self.client_a)
+
+        branches_response = self.client.get(
+            "/api/branches/",
+            HTTP_X_CURRENT_USER_EMAIL=user.email,
+        )
+        self.assertEqual(branches_response.status_code, 200)
+        self.assertEqual(len(branches_response.json()["results"]), 1)
+        self.assertEqual(branches_response.json()["results"][0]["id"], self.branch_a1.id)
+
+        areas_response = self.client.get(
+            "/api/areas/",
+            HTTP_X_CURRENT_USER_EMAIL=user.email,
+        )
+        self.assertEqual(areas_response.status_code, 200)
+        self.assertEqual(len(areas_response.json()["results"]), 1)
+        self.assertEqual(areas_response.json()["results"][0]["id"], self.area_a1.id)
+
+    def test_branch_admin_gets_hierarchical_access_from_branch_assignment(self):
+        user = User.objects.create_user(
+            username="branch-admin",
+            email="branch-admin@test.com",
+            password="secret",
+            role=User.Role.BRANCH_ADMIN,
+        )
+        user.branches.add(self.branch_a1)
+
+        dashboard_response = self.client.get(
+            "/api/dashboard/",
+            HTTP_X_CURRENT_USER_EMAIL=user.email,
+        )
+        self.assertEqual(dashboard_response.status_code, 200)
+        stats = dashboard_response.json()["stats"]
+        self.assertEqual(stats["branches"], 1)
+        self.assertEqual(stats["areas"], 1)
+        self.assertEqual(stats["visits"], 1)
+
+    def test_inspector_can_access_by_assigned_area_only(self):
+        user = User.objects.create_user(
+            username="inspector-scope",
+            email="inspector-scope@test.com",
+            password="secret",
+            role=User.Role.INSPECTOR,
+        )
+        user.areas.add(self.area_a1)
+
+        allowed_response = self.client.get(
+            f"/api/visits/{self.visit_a1.id}/report",
+            HTTP_X_CURRENT_USER_EMAIL=user.email,
+        )
+        self.assertEqual(allowed_response.status_code, 400)
+
+        blocked_response = self.client.get(
+            f"/api/visits/{self.visit_b1.id}/report",
+            HTTP_X_CURRENT_USER_EMAIL=user.email,
+        )
+        self.assertEqual(blocked_response.status_code, 404)
