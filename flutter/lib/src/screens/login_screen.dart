@@ -84,131 +84,171 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     const primary = AppColors.yellow;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final background = isDark ? AppColors.darkBackground : AppColors.gray100;
-    final titleColor = isDark ? Colors.white : const Color(0xFF0B1736);
+    final background = isDark ? AppColors.darkBackground : Colors.white;
+    final titleColor = isDark ? Colors.white : primary;
     final inputFill = isDark ? AppColors.darkSurface : Colors.white;
     final inputBorder = isDark ? AppColors.darkCardBorder : AppColors.gray300;
     final hintColor = isDark ? AppColors.darkMuted : const Color(0xFF94A3B8);
+    final inputTextColor = isDark ? Colors.white : const Color(0xFF111827);
 
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 40),
-                    Text(
-                      'trust',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        color: titleColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 76,
-                        letterSpacing: -1,
-                      ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (!isDark)
+              Positioned(
+                top: -220,
+                right: -220,
+                child: Container(
+                  width: 600,
+                  height: 600,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [Color(0xCCF3F4F6), Color(0x00FFFFFF)],
                     ),
-                    const SizedBox(height: 110),
-                    Column(
+                  ),
+                ),
+              ),
+            if (!isDark)
+              Positioned(
+                bottom: -160,
+                left: -160,
+                child: Container(
+                  width: 500,
+                  height: 500,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0x99F3F4F6),
+                  ),
+                ),
+              ),
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 380),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: InputDecoration(
-                              hintText: 'Correo electrónico',
-                              hintStyle: TextStyle(color: hintColor, fontSize: 22, fontWeight: FontWeight.w500),
-                              filled: true,
-                              fillColor: inputFill,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 38, vertical: 32),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(color: inputBorder),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(color: inputBorder),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: const BorderSide(color: primary, width: 1.5),
-                              ),
-                            ),
-                            style: TextStyle(color: titleColor, fontSize: 22),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Ingresa tu correo electrónico';
-                              }
-                              if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim())) {
-                                return 'Ingresa un correo válido';
-                              }
-                              return null;
-                            },
+                        const SizedBox(height: 24),
+                        Text(
+                          'trust',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            color: titleColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 60,
+                            letterSpacing: -1,
                           ),
-                          const SizedBox(height: 14),
-                          TextFormField(
-                            controller: _passwordController,
-                            obscureText: true,
-                            decoration: InputDecoration(
-                              hintText: 'Contraseña',
-                              hintStyle: TextStyle(color: hintColor, fontSize: 22, fontWeight: FontWeight.w500),
-                              filled: true,
-                              fillColor: inputFill,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 38, vertical: 32),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(color: inputBorder),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(color: inputBorder),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: const BorderSide(color: primary, width: 1.5),
-                              ),
+                        ),
+                        const SizedBox(height: 60),
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            hintText: 'Correo electrónico',
+                            hintStyle: TextStyle(
+                              color: hintColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
                             ),
-                            style: TextStyle(color: titleColor, fontSize: 22),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Ingresa tu contraseña';
-                              }
-                              return null;
-                            },
-                          ),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: primary,
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(vertical: 30),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                              textStyle: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            filled: true,
+                            fillColor: inputFill,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: inputBorder),
                             ),
-                            onPressed: _isSubmitting ? null : _submit,
-                            child: _isSubmitting
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : const Text('Iniciar Sesión'),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: inputBorder),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: primary, width: 2),
+                            ),
                           ),
+                          style: TextStyle(color: inputTextColor, fontSize: 16),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Ingresa tu correo electrónico';
+                            }
+                            if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim())) {
+                              return 'Ingresa un correo válido';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            hintText: 'Contraseña',
+                            hintStyle: TextStyle(
+                              color: hintColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            filled: true,
+                            fillColor: inputFill,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: inputBorder),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: inputBorder),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: primary, width: 2),
+                            ),
+                          ),
+                          style: TextStyle(color: inputTextColor, fontSize: 16),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Ingresa tu contraseña';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: primary,
+                            disabledBackgroundColor: const Color(0xFFFFE680),
+                            foregroundColor: const Color(0xFF111827),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            textStyle: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          onPressed: _isSubmitting ? null : _submit,
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('Iniciar Sesión'),
+                        ),
+                        const SizedBox(height: 12),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
