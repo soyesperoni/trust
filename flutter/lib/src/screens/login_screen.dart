@@ -82,94 +82,98 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primary = AppColors.yellow;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final background = isDark ? AppColors.darkBackground : Colors.white;
-    final titleColor = isDark ? Colors.white : primary;
-    final inputFill = isDark ? AppColors.darkSurface : Colors.white;
-    final inputBorder = isDark ? AppColors.darkCardBorder : AppColors.gray300;
-    final hintColor = isDark ? AppColors.darkMuted : const Color(0xFF94A3B8);
-    final inputTextColor = isDark ? Colors.white : const Color(0xFF111827);
+    final background = Theme.of(context).scaffoldBackgroundColor;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final mutedTextColor = isDark ? AppColors.darkMuted : const Color(0xFF64748B);
 
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (!isDark)
-              Positioned(
-                top: -220,
-                right: -220,
-                child: Container(
-                  width: 600,
-                  height: 600,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [Color(0xCCF3F4F6), Color(0x00FFFFFF)],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 12),
+                    Text(
+                      'trust',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        color: AppColors.yellow,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 58,
+                        letterSpacing: -1,
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            if (!isDark)
-              Positioned(
-                bottom: -160,
-                left: -160,
-                child: Container(
-                  width: 500,
-                  height: 500,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0x99F3F4F6),
-                  ),
-                ),
-              ),
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 380),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 24),
-                        Text(
-                          'trust',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
-                            color: titleColor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 60,
-                            letterSpacing: -1,
-                          ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Accede a tu cuenta',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: mutedTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkCard : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0),
                         ),
-                        const SizedBox(height: 60),
-                        TextFormField(
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Datos de acceso',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.darkMuted : const Color(0xFF334155),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
+                              labelText: 'Correo electrónico',
                               hintText: 'Correo electrónico',
-                              hintStyle: TextStyle(color: hintColor, fontSize: 16, fontWeight: FontWeight.w500),
+                              labelStyle: TextStyle(
+                                color: isDark ? AppColors.darkMuted : const Color(0xFF334155),
+                                fontWeight: FontWeight.w600,
+                              ),
                               filled: true,
-                              fillColor: inputFill,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                              fillColor: isDark ? AppColors.darkSurface : Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(color: inputBorder),
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB),
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(color: inputBorder),
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB),
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: primary, width: 2),
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.yellow, width: 1.8),
                               ),
                             ),
-                            style: TextStyle(color: inputTextColor, fontSize: 16),
+                            style: TextStyle(color: onSurface, fontSize: 16),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Ingresa tu correo electrónico';
@@ -180,30 +184,38 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
-                        const SizedBox(height: 14),
-                        TextFormField(
+                          const SizedBox(height: 12),
+                          TextFormField(
                             controller: _passwordController,
                             obscureText: true,
                             decoration: InputDecoration(
+                              labelText: 'Contraseña',
                               hintText: 'Contraseña',
-                              hintStyle: TextStyle(color: hintColor, fontSize: 16, fontWeight: FontWeight.w500),
+                              labelStyle: TextStyle(
+                                color: isDark ? AppColors.darkMuted : const Color(0xFF334155),
+                                fontWeight: FontWeight.w600,
+                              ),
                               filled: true,
-                              fillColor: inputFill,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                              fillColor: isDark ? AppColors.darkSurface : Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(color: inputBorder),
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB),
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(color: inputBorder),
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB),
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: primary, width: 2),
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.yellow, width: 1.8),
                               ),
                             ),
-                            style: TextStyle(color: inputTextColor, fontSize: 16),
+                            style: TextStyle(color: onSurface, fontSize: 16),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Ingresa tu contraseña';
@@ -211,39 +223,37 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
-                        const SizedBox(height: 20),
-                        FilledButton(
-                          onPressed: _isSubmitting ? null : _submit,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: primary,
-                            disabledBackgroundColor: const Color(0xFFFFE680),
-                            foregroundColor: const Color(0xFF111827),
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            textStyle: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(height: 20),
+                          FilledButton(
+                            onPressed: _isSubmitting ? null : _submit,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.yellow,
+                              disabledBackgroundColor: const Color(0xFFFFE680),
+                              foregroundColor: AppColors.black,
+                              minimumSize: const Size.fromHeight(50),
+                              textStyle: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.4,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF111827)),
+                                    ),
+                                  )
+                                : const Text('Iniciar sesión'),
                           ),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF111827)),
-                                  ),
-                                )
-                              : const Text('Iniciar sesión'),
                         ),
-                        const SizedBox(height: 12),
-                        ],
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
