@@ -190,7 +190,7 @@ class VisitSummaryCard extends StatelessWidget {
                       textStyle: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     icon: const Icon(Icons.download_rounded, size: 18),
-                    label: const Text('Descargar PDF'),
+                    label: const Text('Descargar'),
                   ),
                 ),
               ],
