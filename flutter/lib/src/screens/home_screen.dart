@@ -242,6 +242,10 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final selectedChipColor = isDarkMode ? AppColors.yellow : AppColors.yellowSoft;
+    final selectedLabelColor = isDarkMode ? selectedChipColor : AppColors.black;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
@@ -255,7 +259,7 @@ class _NavItem extends StatelessWidget {
               height: 32,
               decoration: BoxDecoration(
                 color: selected
-                    ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFFF5F5C6) : AppColors.yellowSoft)
+                    ? selectedChipColor
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(999),
               ),
@@ -301,8 +305,8 @@ class _NavItem extends StatelessWidget {
               label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: selected
-                        ? AppColors.black
-                        : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500),
+                        ? selectedLabelColor
+                        : (isDarkMode ? AppColors.darkMuted : AppColors.gray500),
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
             ),
