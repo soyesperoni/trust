@@ -143,8 +143,8 @@ class _HomeScreenState extends State<HomeScreen> {
         top: false,
         child: Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).bottomAppBarTheme.color ?? Theme.of(context).colorScheme.surface,
-            border: const Border(top: BorderSide(color: AppColors.gray100)),
+            color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkBackground : (Theme.of(context).bottomAppBarTheme.color ?? Theme.of(context).colorScheme.surface),
+            border: Border(top: BorderSide(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray100)),
           ),
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
           child: Row(
@@ -254,7 +254,9 @@ class _NavItem extends StatelessWidget {
               width: 56,
               height: 32,
               decoration: BoxDecoration(
-                color: selected ? AppColors.yellowSoft : Colors.transparent,
+                color: selected
+                    ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFFF5F5C6) : AppColors.yellowSoft)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Stack(
@@ -264,7 +266,9 @@ class _NavItem extends StatelessWidget {
                     child: Icon(
                       icon,
                       size: 22,
-                      color: selected ? AppColors.black : AppColors.gray500,
+                      color: selected
+                          ? AppColors.black
+                          : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500),
                     ),
                   ),
                   if (badgeCount != null)
@@ -296,7 +300,9 @@ class _NavItem extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: selected ? AppColors.black : AppColors.gray500,
+                    color: selected
+                        ? AppColors.black
+                        : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500),
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
             ),

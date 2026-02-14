@@ -89,25 +89,25 @@ class _CalendarTabState extends State<CalendarTab> {
                     Expanded(
                       child: Text(
                         'Actividades del día ${selectedDate.day}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF111827),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
+                        color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         '${dayVisits.length} Eventos',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF6B7280),
+                          color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
                         ),
                       ),
                     ),
@@ -120,12 +120,12 @@ class _CalendarTabState extends State<CalendarTab> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF9FAFB),
+                            color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFF9FAFB),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Text(
+                          child: Text(
                             'No hay visitas programadas para este día.',
-                            style: TextStyle(color: Color(0xFF4B5563)),
+                            style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF4B5563)),
                           ),
                         )
                       : ListView.builder(
@@ -153,6 +153,7 @@ class _CalendarTabState extends State<CalendarTab> {
   }
 
   Widget _buildCalendarCard(Map<String, List<Visit>> visitsByDay, DateTime selectedDate) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const weekDays = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
     final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final leadingSlots = firstDayOfMonth.weekday - 1;
@@ -162,9 +163,9 @@ class _CalendarTabState extends State<CalendarTab> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _surfaceVariant.withValues(alpha: 0.65),
+        color: isDark ? AppColors.darkCard : _surfaceVariant.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: _outline.withValues(alpha: 0.5)),
+        border: Border.all(color: isDark ? AppColors.darkCardBorder : _outline.withValues(alpha: 0.5)),
       ),
       child: Column(
         children: [
@@ -178,10 +179,10 @@ class _CalendarTabState extends State<CalendarTab> {
                 child: Center(
                   child: Text(
                     '${_monthName(_currentMonth.month)} ${_currentMonth.year}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF111827),
+                      color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF111827),
                     ),
                   ),
                 ),
@@ -207,11 +208,11 @@ class _CalendarTabState extends State<CalendarTab> {
               return Center(
                 child: Text(
                   weekDays[index],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.6,
-                    color: Color(0xFF9CA3AF),
+                    color: isDark ? const Color(0xFF64748B) : const Color(0xFF9CA3AF),
                   ),
                 ),
               );
@@ -250,6 +251,7 @@ class _CalendarTabState extends State<CalendarTab> {
   }
 
   Widget _calendarButton(IconData icon, {required VoidCallback onTap}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -257,10 +259,10 @@ class _CalendarTabState extends State<CalendarTab> {
         height: 34,
         width: 34,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.55),
+          color: isDark ? AppColors.darkSurface : Colors.white.withValues(alpha: 0.55),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 20, color: const Color(0xFF4B5563)),
+        child: Icon(icon, size: 20, color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF4B5563)),
       ),
     );
   }
@@ -271,7 +273,10 @@ class _CalendarTabState extends State<CalendarTab> {
     required bool hasVisits,
     required VoidCallback onTap,
   }) {
-    final baseTextColor = hasVisits ? const Color(0xFF111827) : const Color(0xFF6B7280);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseTextColor = hasVisits
+        ? (isDark ? const Color(0xFFF8FAFC) : const Color(0xFF111827))
+        : (isDark ? AppColors.darkMuted : const Color(0xFF6B7280));
 
     return InkWell(
       onTap: onTap,
@@ -279,16 +284,16 @@ class _CalendarTabState extends State<CalendarTab> {
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? _primary : Colors.white.withValues(alpha: 0.6),
+          color: selected ? _primary : (isDark ? AppColors.darkSurface : Colors.white.withValues(alpha: 0.6)),
           shape: BoxShape.circle,
           border: hasVisits && !selected
-              ? Border.all(color: const Color(0xFFF59E0B), width: 1.2)
+              ? Border.all(color: isDark ? const Color(0xFFFDE68A) : const Color(0xFFF59E0B), width: 1.2)
               : null,
         ),
         child: Text(
           text,
           style: TextStyle(
-            color: selected ? Colors.white : baseTextColor,
+            color: selected ? AppColors.black : baseTextColor,
             fontSize: 14,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
           ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../models/user_role.dart';
 import '../models/visit.dart';
 import '../screens/visit_execution_screen.dart';
 import '../screens/visit_report_screen.dart';
+import '../theme/app_colors.dart';
 
 class VisitSummaryCard extends StatelessWidget {
   const VisitSummaryCard({
@@ -20,20 +22,26 @@ class VisitSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = _badgeForStatus(visit.status);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final status = _badgeForStatus(visit.status, isDark);
     final canStartVisit = !status.isCompleted && status.label == 'Programada' && role.isInspector;
+
+    final cardColor = isDark ? AppColors.darkCard : const Color(0xFFF9FAFB);
+    final borderColor = isDark ? AppColors.darkCardBorder : const Color(0xFFE5E7EB);
+    final titleColor = isDark ? const Color(0xFFF8FAFC) : const Color(0xFF111827);
+    final mutedColor = isDark ? AppColors.darkMuted : const Color(0xFF6B7280);
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: const [
+        border: Border.all(color: borderColor),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x12000000),
+            color: isDark ? const Color(0x55000000) : const Color(0x12000000),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -66,8 +74,8 @@ class VisitSummaryCard extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(
                       visit.client,
-                      style: const TextStyle(
-                        color: Color(0xFF111827),
+                      style: TextStyle(
+                        color: titleColor,
                         fontSize: 19,
                         fontWeight: FontWeight.w700,
                       ),
@@ -79,37 +87,37 @@ class VisitSummaryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? AppColors.darkSurface : Colors.white,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFF3F4F6)),
+                  border: Border.all(color: isDark ? AppColors.darkCardBorder : const Color(0xFFF3F4F6)),
                 ),
                 child: Text(
                   _formatTime(visit.visitedAt),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF4B5563),
+                    color: mutedColor,
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          _infoRow(Icons.storefront_outlined, 'Sucursal: ${visit.branch}'),
+          _infoRow(context, Icons.storefront_outlined, 'Sucursal: ${visit.branch}'),
           const SizedBox(height: 8),
-          _infoRow(Icons.place_outlined, 'Área: ${visit.area}'),
+          _infoRow(context, Icons.place_outlined, 'Área: ${visit.area}'),
           const SizedBox(height: 8),
-          _infoRow(Icons.water_drop_outlined, 'Dosificadores: ${visit.areaDispensersCount}'),
+          _infoRow(context, Icons.water_drop_outlined, 'Dosificadores: ${visit.areaDispensersCount}'),
           if (!status.isCompleted) ...[
             const SizedBox(height: 14),
-            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+            Divider(height: 1, color: borderColor),
             const SizedBox(height: 12),
             Row(
               children: [
                 Text(
                   canStartVisit ? 'Lista para iniciar' : 'Ver información de la visita',
-                  style: const TextStyle(
-                    color: Color(0xFF6B7280),
+                  style: TextStyle(
+                    color: mutedColor,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -127,8 +135,8 @@ class VisitSummaryCard extends StatelessWidget {
                     },
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
-                      backgroundColor: const Color(0xFF111827),
-                      foregroundColor: Colors.white,
+                      backgroundColor: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF111827),
+                      foregroundColor: isDark ? AppColors.darkBackground : Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       textStyle: const TextStyle(fontWeight: FontWeight.w700),
                     ),
@@ -144,12 +152,12 @@ class VisitSummaryCard extends StatelessWidget {
             ),
           ] else ...[
             const SizedBox(height: 14),
-            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+            Divider(height: 1, color: borderColor),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Informe de visita',
               style: TextStyle(
-                color: Color(0xFF6B7280),
+                color: mutedColor,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -161,8 +169,8 @@ class VisitSummaryCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _openReport(context),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF111827),
-                      side: const BorderSide(color: Color(0xFFD1D5DB)),
+                      foregroundColor: titleColor,
+                      side: BorderSide(color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB)),
                       minimumSize: const Size.fromHeight(44),
                       textStyle: const TextStyle(fontWeight: FontWeight.w600),
                     ),
@@ -176,8 +184,8 @@ class VisitSummaryCard extends StatelessWidget {
                     onPressed: () => _openReport(context, openWithDownload: true),
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
-                      backgroundColor: const Color(0xFF111827),
-                      foregroundColor: Colors.white,
+                      backgroundColor: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF111827),
+                      foregroundColor: isDark ? AppColors.darkBackground : Colors.white,
                       minimumSize: const Size.fromHeight(44),
                       textStyle: const TextStyle(fontWeight: FontWeight.w700),
                     ),
@@ -203,46 +211,47 @@ class VisitSummaryCard extends StatelessWidget {
         ),
       ),
     );
-
   }
 
-  Widget _infoRow(IconData icon, String text) {
+  Widget _infoRow(BuildContext context, IconData icon, String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Row(
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF9CA3AF)),
+        Icon(icon, size: 18, color: isDark ? const Color(0xFF64748B) : const Color(0xFF9CA3AF)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontSize: 14, color: Color(0xFF4B5563)),
+            style: TextStyle(fontSize: 14, color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF4B5563)),
           ),
         ),
       ],
     );
   }
 
-  _StatusBadge _badgeForStatus(String rawStatus) {
+  _StatusBadge _badgeForStatus(String rawStatus, bool isDark) {
     final status = rawStatus.toLowerCase();
     if (status.contains('complet') || status.contains('final')) {
-      return const _StatusBadge(
+      return _StatusBadge(
         label: 'Completada',
-        background: Color(0xFFDCFCE7),
-        foreground: Color(0xFF15803D),
+        background: isDark ? const Color(0x1F22C55E) : const Color(0xFFDCFCE7),
+        foreground: isDark ? const Color(0xFF86EFAC) : const Color(0xFF15803D),
         isCompleted: true,
       );
     }
     if (status.contains('pend')) {
-      return const _StatusBadge(
+      return _StatusBadge(
         label: 'Pendiente',
-        background: Color(0xFFE5E7EB),
-        foreground: Color(0xFF374151),
+        background: isDark ? const Color(0x1F94A3B8) : const Color(0xFFE5E7EB),
+        foreground: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF374151),
         isCompleted: false,
       );
     }
-    return const _StatusBadge(
+    return _StatusBadge(
       label: 'Programada',
-      background: Color(0xFFDBEAFE),
-      foreground: Color(0xFF1D4ED8),
+      background: isDark ? const Color(0x1F3B82F6) : const Color(0xFFDBEAFE),
+      foreground: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
       isCompleted: false,
     );
   }
