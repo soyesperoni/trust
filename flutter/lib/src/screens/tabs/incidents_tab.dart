@@ -6,6 +6,7 @@ import '../../models/user_role.dart';
 import '../../services/trust_repository.dart';
 import '../incidents/incident_detail_screen.dart';
 import '../incidents/new_incident_screen.dart';
+import '../../theme/app_colors.dart';
 
 class IncidentsTab extends StatefulWidget {
   const IncidentsTab({required this.email, required this.role, super.key});
@@ -63,21 +64,27 @@ class _IncidentsTabState extends State<IncidentsTab> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Row(
                   children: [
-                    const Icon(Icons.search, color: Color(0xFF6B7280)),
+                    Icon(Icons.search, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
                         controller: _searchController,
                         onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Buscar incidencias...',
+                          hintStyle: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
+                          ),
                           border: InputBorder.none,
+                        ),
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFF8FAFC) : const Color(0xFF111827),
                         ),
                       ),
                     ),
@@ -98,14 +105,14 @@ class _IncidentsTabState extends State<IncidentsTab> {
                         return Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFF3F4F6)),
-                            boxShadow: const [
+                            border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : const Color(0xFFF3F4F6)),
+                            boxShadow: [
                               BoxShadow(
-                                color: Color(0x14000000),
+                                color: Theme.of(context).brightness == Brightness.dark ? const Color(0x4D000000) : const Color(0x14000000),
                                 blurRadius: 6,
-                                offset: Offset(0, 2),
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -114,15 +121,15 @@ class _IncidentsTabState extends State<IncidentsTab> {
                             children: [
                               Text(
                                 'ID #INC-${incident.id.toString().padLeft(4, '0')}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
-                                  color: Color(0xFF6B7280),
+                                  color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: .4,
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              Text(incident.client, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
+                              Text(incident.client, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFF8FAFC) : const Color(0xFF111827))),
                               const SizedBox(height: 10),
                               _IncidentMetaRow(icon: Icons.store_rounded, text: 'Sucursal: ${incident.branch}'),
                               const SizedBox(height: 4),
@@ -132,7 +139,7 @@ class _IncidentsTabState extends State<IncidentsTab> {
                               const SizedBox(height: 4),
                               _IncidentMetaRow(icon: Icons.schedule, text: 'Creación: ${_friendlyDate(incident.createdAt)}'),
                               const SizedBox(height: 12),
-                              const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                              Divider(height: 1, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : const Color(0xFFF3F4F6)),
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: TextButton(
@@ -162,7 +169,7 @@ class _IncidentsTabState extends State<IncidentsTab> {
             bottom: 20,
             child: FloatingActionButton(
               heroTag: 'incidents-create-fab',
-              backgroundColor: const Color(0xFFFBC02D),
+              backgroundColor: AppColors.yellow,
               foregroundColor: Colors.black,
               onPressed: _openNewIncidentFlow,
               child: const Icon(Icons.add),
@@ -241,15 +248,17 @@ class _IncidentMetaRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Row(
       children: [
-        Icon(icon, size: 16, color: const Color(0xFF9CA3AF)),
+        Icon(icon, size: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF9CA3AF)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
-              color: Color(0xFF4B5563),
+            style: TextStyle(
+              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF4B5563),
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),

@@ -192,10 +192,16 @@ class _HistoryHeader extends StatelessWidget {
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
                     hintText: 'Buscar por cliente, sucursal o área...',
-                    hintStyle: const TextStyle(color: AppColors.gray500, fontSize: 15),
-                    prefixIcon: const Icon(Icons.search, color: AppColors.gray500),
+                    hintStyle: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500,
+                      fontSize: 15,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500,
+                    ),
                     filled: true,
-                    fillColor: AppColors.gray100,
+                    fillColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : AppColors.gray100,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(999),
                       borderSide: BorderSide.none,
@@ -210,8 +216,8 @@ class _HistoryHeader extends StatelessWidget {
                 icon: const Icon(Icons.restart_alt_rounded),
                 tooltip: 'Restaurar búsqueda',
                 style: IconButton.styleFrom(
-                  backgroundColor: AppColors.gray100,
-                  foregroundColor: AppColors.gray700,
+                  backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : AppColors.gray100,
+                  foregroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700,
                 ),
               ),
             ],
@@ -226,13 +232,17 @@ class _HistoryHeader extends StatelessWidget {
                       label: Text(filter.label),
                       selected: selectedFilter == filter,
                       showCheckmark: false,
-                      selectedColor: AppColors.black,
-                      backgroundColor: Colors.white,
+                      selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.black,
+                      backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
                       side: BorderSide(
-                        color: selectedFilter == filter ? AppColors.black : AppColors.gray300,
+                        color: selectedFilter == filter
+                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.black)
+                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
                       ),
                       labelStyle: TextStyle(
-                        color: selectedFilter == filter ? Colors.white : AppColors.gray700,
+                        color: selectedFilter == filter
+                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.black : Colors.white)
+                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700),
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),

@@ -7,6 +7,7 @@ import '../../models/user_role.dart';
 import '../../models/visit.dart';
 import '../../services/trust_repository.dart';
 import '../../widgets/visit_summary_card.dart';
+import '../../theme/app_colors.dart';
 
 class DashboardTab extends StatefulWidget {
   const DashboardTab({
@@ -74,7 +75,7 @@ class _DashboardTabState extends State<DashboardTab> {
                 child: _MetricCard(
                   label: 'Visitas Pendientes',
                   value: payload.stats.pendingVisits,
-                  cardColor: const Color(0xFFFFEDD5),
+                  cardColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFFFEDD5),
                 ),
               ),
               const SizedBox(width: 14),
@@ -82,7 +83,7 @@ class _DashboardTabState extends State<DashboardTab> {
                 child: _MetricCard(
                   label: 'Incidencias',
                   value: payload.stats.incidents,
-                  cardColor: const Color(0xFFFEE2E2),
+                  cardColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFFEE2E2),
                 ),
               ),
             ],
@@ -91,19 +92,19 @@ class _DashboardTabState extends State<DashboardTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Visitas de Hoy',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               TextButton(
                 onPressed: widget.onViewMoreTodayVisits,
                 style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFFDE7),
-                  foregroundColor: const Color(0xFFB45309),
+                  backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0x1FFACC15) : const Color(0xFFFFFDE7),
+                  foregroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFDE68A) : const Color(0xFFB45309),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
@@ -232,14 +233,16 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       constraints: const BoxConstraints(minHeight: 120),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 8, offset: Offset(0, 2)),
+        border: Border.all(color: isDark ? AppColors.darkCardBorder : const Color(0x00000000)),
+        boxShadow: [
+          BoxShadow(color: isDark ? const Color(0x4D000000) : const Color(0x0A000000), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -249,7 +252,7 @@ class _MetricCard extends StatelessWidget {
         children: [
           Text(
             '$value',
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Color(0xFF111827), height: 1),
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF111827), height: 1),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
@@ -257,7 +260,7 @@ class _MetricCard extends StatelessWidget {
             label,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF4B5563)),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? AppColors.darkMuted : const Color(0xFF4B5563)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -295,15 +298,22 @@ class _EmptyVisits extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : Colors.transparent,
+        ),
       ),
-      child: const Text(
+      child: Text(
         'No hay visitas para mostrar por ahora.',
-        style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+        style: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
+          fontSize: 14,
+        ),
       ),
     );
   }
