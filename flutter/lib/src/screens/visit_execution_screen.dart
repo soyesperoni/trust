@@ -758,21 +758,22 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   }
 
   Future<void> _requestLocationPermission() async {
-    var locationPermission = await Permission.locationWhenInUse.status;
-    if (locationPermission.isGranted) return;
+    var locationPermission = await Geolocator.checkPermission();
+    if (locationPermission == LocationPermission.denied) {
+      locationPermission = await Geolocator.requestPermission();
+    }
 
-    if (locationPermission.isPermanentlyDenied || locationPermission.isRestricted) {
-      final appSettingsOpened = await openAppSettings();
+    if (locationPermission == LocationPermission.denied) {
+      throw Exception('Debes otorgar permisos de ubicación para continuar.');
+    }
+
+    if (locationPermission == LocationPermission.deniedForever) {
+      final appSettingsOpened = await Geolocator.openAppSettings();
       throw Exception(
         appSettingsOpened
             ? 'El permiso de ubicación está bloqueado. Habilítalo desde ajustes y vuelve a la app.'
             : 'El permiso de ubicación está bloqueado. Habilítalo desde ajustes para continuar.',
       );
-    }
-
-    locationPermission = await Permission.locationWhenInUse.request();
-    if (!locationPermission.isGranted) {
-      throw Exception('Debes otorgar permisos de ubicación para continuar.');
     }
   }
 
