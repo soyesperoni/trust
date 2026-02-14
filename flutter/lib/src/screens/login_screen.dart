@@ -147,101 +147,88 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 60),
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            hintText: 'Correo electrónico',
-                            hintStyle: TextStyle(
-                              color: hintColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              hintText: 'Correo electrónico',
+                              hintStyle: TextStyle(color: hintColor, fontSize: 16, fontWeight: FontWeight.w500),
+                              filled: true,
+                              fillColor: inputFill,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(color: inputBorder),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(color: inputBorder),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(color: primary, width: 2),
+                              ),
                             ),
-                            filled: true,
-                            fillColor: inputFill,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide(color: inputBorder),
+                            style: TextStyle(color: inputTextColor, fontSize: 16),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Ingresa tu correo electrónico';
+                              }
+                              if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim())) {
+                                return 'Ingresa un correo válido';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              hintText: 'Contraseña',
+                              hintStyle: TextStyle(color: hintColor, fontSize: 16, fontWeight: FontWeight.w500),
+                              filled: true,
+                              fillColor: inputFill,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(color: inputBorder),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(color: inputBorder),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(color: primary, width: 2),
+                              ),
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide(color: inputBorder),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(color: primary, width: 2),
+                            style: TextStyle(color: inputTextColor, fontSize: 16),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Ingresa tu contraseña';
+                              }
+                              return null;
+                            },
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: primary,
+                              disabledBackgroundColor: const Color(0xFFFFE680),
+                              foregroundColor: const Color(0xFF111827),
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              textStyle: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                          style: TextStyle(color: inputTextColor, fontSize: 16),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Ingresa tu correo electrónico';
-                            }
-                            if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim())) {
-                              return 'Ingresa un correo válido';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 14),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          decoration: InputDecoration(
-                            hintText: 'Contraseña',
-                            hintStyle: TextStyle(
-                              color: hintColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            filled: true,
-                            fillColor: inputFill,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide(color: inputBorder),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide(color: inputBorder),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(color: primary, width: 2),
-                            ),
-                          ),
-                          style: TextStyle(color: inputTextColor, fontSize: 16),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Ingresa tu contraseña';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 14),
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: primary,
-                            disabledBackgroundColor: const Color(0xFFFFE680),
-                            foregroundColor: const Color(0xFF111827),
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            textStyle: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          onPressed: _isSubmitting ? null : _submit,
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Iniciar Sesión'),
-                        ),
-                        const SizedBox(height: 12),
+                          const SizedBox(height: 12),
+                        ],
                       ],
                     ),
                   ),
