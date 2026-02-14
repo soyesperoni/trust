@@ -85,6 +85,10 @@ class _LoginScreenState extends State<LoginScreen> {
     const primary = AppColors.yellow;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final background = isDark ? AppColors.darkBackground : AppColors.gray100;
+    final titleColor = isDark ? Colors.white : const Color(0xFF0B1736);
+    final inputFill = isDark ? AppColors.darkSurface : Colors.white;
+    final inputBorder = isDark ? AppColors.darkCardBorder : AppColors.gray300;
+    final hintColor = isDark ? AppColors.darkMuted : const Color(0xFF94A3B8);
 
     return Scaffold(
       backgroundColor: background,
@@ -99,51 +103,45 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const SizedBox(height: 40),
                     Text(
                       'trust',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
-                        color: primary,
+                        color: titleColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 49.4,
+                        fontSize: 76,
                         letterSpacing: -1,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkSurface : Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: isDark ? AppColors.darkCardBorder : Colors.transparent),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark ? const Color(0x4D000000) : const Color.fromRGBO(0, 0, 0, 0.06),
-                            blurRadius: 20,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: 110),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
-                              labelText: 'Correo electrónico',
-                              hintText: 'tu_correo@empresa.com',
+                              hintText: 'Correo electrónico',
+                              hintStyle: TextStyle(color: hintColor, fontSize: 22, fontWeight: FontWeight.w500),
                               filled: true,
-                              fillColor: isDark ? AppColors.darkCard : AppColors.gray50,
+                              fillColor: inputFill,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 38, vertical: 32),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.gray300),
+                                borderRadius: BorderRadius.circular(28),
+                                borderSide: BorderSide(color: inputBorder),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.gray300),
+                                borderRadius: BorderRadius.circular(28),
+                                borderSide: BorderSide(color: inputBorder),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(28),
+                                borderSide: const BorderSide(color: primary, width: 1.5),
                               ),
                             ),
+                            style: TextStyle(color: titleColor, fontSize: 22),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Ingresa tu correo electrónico';
@@ -159,19 +157,25 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: _passwordController,
                             obscureText: true,
                             decoration: InputDecoration(
-                              labelText: 'Contraseña',
-                              hintText: '••••••••',
+                              hintText: 'Contraseña',
+                              hintStyle: TextStyle(color: hintColor, fontSize: 22, fontWeight: FontWeight.w500),
                               filled: true,
-                              fillColor: isDark ? AppColors.darkCard : AppColors.gray50,
+                              fillColor: inputFill,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 38, vertical: 32),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.gray300),
+                                borderRadius: BorderRadius.circular(28),
+                                borderSide: BorderSide(color: inputBorder),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.gray300),
+                                borderRadius: BorderRadius.circular(28),
+                                borderSide: BorderSide(color: inputBorder),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(28),
+                                borderSide: const BorderSide(color: primary, width: 1.5),
                               ),
                             ),
+                            style: TextStyle(color: titleColor, fontSize: 22),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Ingresa tu contraseña';
@@ -183,11 +187,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: FilledButton.styleFrom(
                               backgroundColor: primary,
                               foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 30),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                               textStyle: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                letterSpacing: 0.8,
                               ),
                             ),
                             onPressed: _isSubmitting ? null : _submit,
@@ -197,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     height: 18,
                                     child: CircularProgressIndicator(strokeWidth: 2),
                                   )
-                                : const Text('INICIAR SESIÓN'),
+                                : const Text('Iniciar Sesión'),
                           ),
                         ],
                       ),
