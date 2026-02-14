@@ -109,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         letterSpacing: -1,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
@@ -133,7 +133,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: InputDecoration(
                               labelText: 'Correo electrónico',
                               hintText: 'tu_correo@empresa.com',
-                              prefixIcon: Icon(Icons.mail_outline_rounded, color: isDark ? AppColors.darkMuted : null),
                               filled: true,
                               fillColor: isDark ? AppColors.darkCard : AppColors.gray50,
                               border: OutlineInputBorder(
@@ -162,7 +161,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: InputDecoration(
                               labelText: 'Contraseña',
                               hintText: '••••••••',
-                              prefixIcon: Icon(Icons.lock_outline_rounded, color: isDark ? AppColors.darkMuted : null),
                               filled: true,
                               fillColor: isDark ? AppColors.darkCard : AppColors.gray50,
                               border: OutlineInputBorder(
@@ -181,14 +179,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {},
-                              child: const Text('¿Olvidaste tu contraseña?'),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
                           FilledButton(
                             style: FilledButton.styleFrom(
                               backgroundColor: primary,
@@ -209,39 +199,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   )
                                 : const Text('INICIAR SESIÓN'),
                           ),
-                          const SizedBox(height: 18),
-                          const Divider(height: 1),
-                          const SizedBox(height: 14),
-                          Text.rich(
-                            TextSpan(
-                              text: '¿No tienes cuenta? ',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: isDark ? AppColors.darkMuted : AppColors.gray500,
-                                  ),
-                              children: [
-                                TextSpan(
-                                  text: 'Contacta al Administrador',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white : AppColors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 28),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 16,
-                      children: [
-                        Text('Política de Privacidad', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkMuted : AppColors.gray500)),
-                        Text('Términos de Servicio', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkMuted : AppColors.gray500)),
-                        Text('Ayuda', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkMuted : AppColors.gray500)),
-                      ],
                     ),
                   ],
                 ),
