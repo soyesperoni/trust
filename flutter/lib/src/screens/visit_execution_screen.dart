@@ -72,6 +72,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   @override
   Widget build(BuildContext context) {
     final progress = _step * 0.25;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Realizar visita')),
@@ -85,23 +86,23 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Paso $_step de 4', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.yellowDark)),
-                        Text('${(progress * 100).round()}%', style: const TextStyle(color: AppColors.gray500)),
+                        Text('Paso $_step de 4', style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? AppColors.yellow : AppColors.yellowDark)),
+                        Text('${(progress * 100).round()}%', style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500)),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    LinearProgressIndicator(value: progress, color: AppColors.yellow, backgroundColor: AppColors.gray300),
+                    LinearProgressIndicator(value: progress, color: AppColors.yellow, backgroundColor: isDark ? AppColors.darkCardBorder : AppColors.gray300),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(10)),
+                        decoration: BoxDecoration(color: isDark ? const Color(0xFF3F1D1D) : const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(10)),
                         child: Text(_error!, style: const TextStyle(color: Color(0xFFB91C1C))),
                       ),
                     ],
                     const SizedBox(height: 14),
-                    Expanded(child: _buildStep()),
+                    Expanded(child: _buildStep(isDark)),
                     const SizedBox(height: 12),
                     _buildFooter(),
                   ],
@@ -111,20 +112,20 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     );
   }
 
-  Widget _buildStep() {
+  Widget _buildStep(bool isDark) {
     switch (_step) {
       case 1:
-        return _buildLocationStep();
+        return _buildLocationStep(isDark);
       case 2:
-        return _buildChecklistStep();
+        return _buildChecklistStep(isDark);
       case 3:
-        return _buildEvidenceStep();
+        return _buildEvidenceStep(isDark);
       default:
-        return _buildSignatureStep();
+        return _buildSignatureStep(isDark);
     }
   }
 
-  Widget _buildLocationStep() {
+  Widget _buildLocationStep(bool isDark) {
     final visit = _visit ?? widget.visit;
     final center = _startPosition == null
         ? const LatLng(-12.046374, -77.042793)
@@ -134,9 +135,9 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
       children: [
         const Text('Iniciar Visita', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 24)),
         const SizedBox(height: 4),
-        const Text('Valida tu ubicación para comenzar la inspección.', style: TextStyle(color: AppColors.gray500)),
+        Text('Valida tu ubicación para comenzar la inspección.', style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500)),
         const SizedBox(height: 12),
-        _infoCard(visit),
+        _infoCard(visit, isDark),
         const SizedBox(height: 12),
         ClipRRect(
           borderRadius: BorderRadius.circular(16),
@@ -179,10 +180,10 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     );
   }
 
-  Widget _infoCard(Visit visit) {
+  Widget _infoCard(Visit visit, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.gray300)),
+      decoration: BoxDecoration(color: isDark ? AppColors.darkCard : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? AppColors.darkCardBorder : AppColors.gray300)),
       child: Column(
         children: [
           _kvRow('Hora', _formatTime(visit.visitedAt), isHeader: true),
@@ -196,20 +197,21 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   }
 
   Widget _kvRow(String key, String value, {bool isHeader = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        SizedBox(width: 80, child: Text(key, style: TextStyle(color: AppColors.gray500, fontWeight: isHeader ? FontWeight.w700 : FontWeight.w500))),
+        SizedBox(width: 80, child: Text(key, style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500, fontWeight: isHeader ? FontWeight.w700 : FontWeight.w500))),
         Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700))),
       ],
     );
   }
 
-  Widget _buildChecklistStep() {
+  Widget _buildChecklistStep(bool isDark) {
     return ListView(
       children: [
         const Text('Revisión de Dosificadores', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 24)),
         const SizedBox(height: 4),
-        const Text('Marca cada elemento verificado en el área.', style: TextStyle(color: AppColors.gray500)),
+        Text('Marca cada elemento verificado en el área.', style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500)),
         const SizedBox(height: 12),
         ..._checklistDispensers.map(_buildDispenserCard),
       ],
@@ -217,10 +219,11 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   }
 
   Widget _buildDispenserCard(_ChecklistDispenser item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.gray50, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.gray300)),
+      decoration: BoxDecoration(color: isDark ? AppColors.darkCard : AppColors.gray50, borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? AppColors.darkCardBorder : AppColors.gray300)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -232,7 +235,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
                   children: [
                     Text(item.identifier, style: const TextStyle(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
-                    Text(item.location, style: const TextStyle(color: AppColors.gray500, fontSize: 12)),
+                    Text(item.location, style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500, fontSize: 12)),
                   ],
                 ),
               ),
@@ -243,8 +246,8 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
                   height: 30,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: item.checked ? AppColors.yellow : Colors.white,
-                    border: Border.all(color: item.checked ? AppColors.yellowDark : AppColors.gray300, width: 2),
+                    color: item.checked ? AppColors.yellow : (isDark ? AppColors.darkSurface : Colors.white),
+                    border: Border.all(color: item.checked ? AppColors.yellowDark : (isDark ? AppColors.darkCardBorder : AppColors.gray300), width: 2),
                   ),
                   child: Icon(Icons.check, size: 18, color: item.checked ? AppColors.black : Colors.transparent),
                 ),
@@ -263,9 +266,9 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
             ),
           ] else ...[
             const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.only(left: 16),
-              child: Text('Este dosificador no tiene productos registrados.', style: TextStyle(color: AppColors.gray500, fontSize: 12)),
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Text('Este dosificador no tiene productos registrados.', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500, fontSize: 12)),
             ),
           ],
         ],
@@ -274,9 +277,10 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   }
 
   Widget _buildReferenceTile({required String title, required String name, String? imageUrl}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.gray300)),
+      decoration: BoxDecoration(color: isDark ? AppColors.darkSurface : Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: isDark ? AppColors.darkCardBorder : AppColors.gray300)),
       child: Row(
         children: [
           ClipRRect(
@@ -286,17 +290,17 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
               height: 48,
               child: imageUrl == null || imageUrl.isEmpty
                   ? Container(
-                      color: AppColors.gray50,
+                      color: isDark ? AppColors.darkCard : AppColors.gray50,
                       alignment: Alignment.center,
-                      child: const Text('Sin\nfoto', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: AppColors.gray500)),
+                      child: Text('Sin\nfoto', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: isDark ? AppColors.darkMuted : AppColors.gray500)),
                     )
                   : Image.network(
                       imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
-                        color: AppColors.gray50,
+                        color: isDark ? AppColors.darkCard : AppColors.gray50,
                         alignment: Alignment.center,
-                        child: const Text('Sin\nfoto', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: AppColors.gray500)),
+                        child: Text('Sin\nfoto', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: isDark ? AppColors.darkMuted : AppColors.gray500)),
                       ),
                     ),
             ),
@@ -306,7 +310,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AppColors.gray500, fontSize: 11)),
+                Text(title, style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500, fontSize: 11)),
                 Text(name, style: const TextStyle(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
               ],
             ),
@@ -316,12 +320,12 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     );
   }
 
-  Widget _buildEvidenceStep() {
+  Widget _buildEvidenceStep(bool isDark) {
     return ListView(
       children: [
         const Text('Hallazgos y Evidencias', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 24)),
         const SizedBox(height: 4),
-        const Text('Registra comentarios y captura evidencias de la inspección.', style: TextStyle(color: AppColors.gray500)),
+        Text('Registra comentarios y captura evidencias de la inspección.', style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500)),
         const SizedBox(height: 12),
         TextField(
           controller: _commentsController,
@@ -358,19 +362,19 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     );
   }
 
-  Widget _buildSignatureStep() {
+  Widget _buildSignatureStep(bool isDark) {
     return ListView(
       children: [
         const Text('Finalizar Inspección', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 24)),
         const SizedBox(height: 4),
-        const Text('Firma del responsable del área.', style: TextStyle(color: AppColors.gray500)),
+        Text('Firma del responsable del área.', style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500)),
         const SizedBox(height: 12),
         Container(
           height: 210,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.gray300),
-            color: AppColors.gray50,
+            border: Border.all(color: isDark ? AppColors.darkCardBorder : AppColors.gray300),
+            color: Colors.white,
           ),
           child: Signature(controller: _signatureController, backgroundColor: Colors.transparent),
         ),

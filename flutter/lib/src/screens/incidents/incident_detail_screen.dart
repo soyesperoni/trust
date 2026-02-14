@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 import '../../models/incident.dart';
 import '../../services/api_client.dart';
 import '../../services/trust_repository.dart';
+import '../../theme/app_colors.dart';
 
 class IncidentDetailScreen extends StatefulWidget {
   const IncidentDetailScreen({
@@ -106,13 +107,14 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
   }
 
   Widget _section({required String title, required Widget child}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: isDark ? AppColors.darkCardBorder : const Color(0xFFE5E7EB)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
