@@ -250,6 +250,29 @@ class ApiClient {
     return decoded;
   }
 
+  Future<Map<String, dynamic>> putJson(
+    String path, {
+    required String email,
+    required Map<String, dynamic> body,
+  }) async {
+    await _ensureCsrfToken();
+    final uri = Uri.parse('$_normalizedBaseUrl$path');
+    final response = await _client.put(
+      uri,
+      headers: _authHeaders(email, includeCsrf: true),
+      body: jsonEncode(body),
+    );
+
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError: 'Error ${response.statusCode} al actualizar $path',
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(decoded['error'] ?? 'Error ${response.statusCode} al actualizar $path');
+    }
+    return decoded;
+  }
+
   Future<Map<String, dynamic>> patchMultipart(
     String path, {
     required String email,

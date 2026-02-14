@@ -83,7 +83,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     const primary = AppColors.yellow;
-    const background = AppColors.gray100;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = isDark ? AppColors.darkBackground : AppColors.gray100;
 
     return Scaffold(
       backgroundColor: background,
@@ -112,13 +113,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? AppColors.darkSurface : Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: const [
+                        border: Border.all(color: isDark ? AppColors.darkCardBorder : Colors.transparent),
+                        boxShadow: [
                           BoxShadow(
-                            color: Color.fromRGBO(0, 0, 0, 0.06),
+                            color: isDark ? const Color(0x4D000000) : const Color.fromRGBO(0, 0, 0, 0.06),
                             blurRadius: 20,
-                            offset: Offset(0, 6),
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
@@ -131,16 +133,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: InputDecoration(
                               labelText: 'Correo electrónico',
                               hintText: 'tu_correo@empresa.com',
-                              prefixIcon: const Icon(Icons.mail_outline_rounded),
+                              prefixIcon: Icon(Icons.mail_outline_rounded, color: isDark ? AppColors.darkMuted : null),
                               filled: true,
-                              fillColor: AppColors.gray50,
+                              fillColor: isDark ? AppColors.darkCard : AppColors.gray50,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: const BorderSide(color: AppColors.gray300),
+                                borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.gray300),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: const BorderSide(color: AppColors.gray300),
+                                borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.gray300),
                               ),
                             ),
                             validator: (value) {
@@ -160,16 +162,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: InputDecoration(
                               labelText: 'Contraseña',
                               hintText: '••••••••',
-                              prefixIcon: const Icon(Icons.lock_outline_rounded),
+                              prefixIcon: Icon(Icons.lock_outline_rounded, color: isDark ? AppColors.darkMuted : null),
                               filled: true,
-                              fillColor: AppColors.gray50,
+                              fillColor: isDark ? AppColors.darkCard : AppColors.gray50,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: const BorderSide(color: AppColors.gray300),
+                                borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.gray300),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: const BorderSide(color: AppColors.gray300),
+                                borderSide: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.gray300),
                               ),
                             ),
                             validator: (value) {
@@ -214,14 +216,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             TextSpan(
                               text: '¿No tienes cuenta? ',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.gray500,
+                                    color: isDark ? AppColors.darkMuted : AppColors.gray500,
                                   ),
-                              children: const [
+                              children: [
                                 TextSpan(
                                   text: 'Contacta al Administrador',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.black,
+                                    color: isDark ? Colors.white : AppColors.black,
                                   ),
                                 ),
                               ],
@@ -235,10 +237,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     Wrap(
                       alignment: WrapAlignment.center,
                       spacing: 16,
-                      children: const [
-                        Text('Política de Privacidad', style: TextStyle(fontSize: 12, color: AppColors.gray500)),
-                        Text('Términos de Servicio', style: TextStyle(fontSize: 12, color: AppColors.gray500)),
-                        Text('Ayuda', style: TextStyle(fontSize: 12, color: AppColors.gray500)),
+                      children: [
+                        Text('Política de Privacidad', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkMuted : AppColors.gray500)),
+                        Text('Términos de Servicio', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkMuted : AppColors.gray500)),
+                        Text('Ayuda', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkMuted : AppColors.gray500)),
                       ],
                     ),
                   ],
