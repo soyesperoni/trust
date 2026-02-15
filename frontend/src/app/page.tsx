@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import BrandLogo from "./components/BrandLogo";
@@ -69,6 +70,20 @@ export default function Home() {
               Iniciar Sesión
             </button>
           </form>
+        </div>
+        <div className="text-center space-y-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          <p>
+            Al continuar, aceptas nuestros{" "}
+            <Link className="font-semibold text-primary hover:underline" href="/terminos-condiciones">
+              Términos y Condiciones
+            </Link>
+            {" "}y la{" "}
+            <Link className="font-semibold text-primary hover:underline" href="/politica-privacidad">
+              Política de Privacidad
+            </Link>
+            .
+          </p>
+          <p className="text-[11px] sm:text-xs">by SupplyMax de Panamá</p>
         </div>
       </div>
     </div>

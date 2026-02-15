@@ -82,13 +82,31 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
 
-  Future<void> _openSupplyMaxUrl() async {
-    final uri = Uri.parse('https://supplymax.net/');
+  Future<void> _openExternalUrl(String url, String errorMessage) async {
+    final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir SupplyMax.')),
+        SnackBar(content: Text(errorMessage)),
       );
     }
+  }
+
+  Future<void> _openSupplyMaxUrl() async {
+    await _openExternalUrl('https://supplymax.net/', 'No se pudo abrir SupplyMax.');
+  }
+
+  Future<void> _openPrivacyPolicyUrl() async {
+    await _openExternalUrl(
+      'https://trust.supplymax.net/politica-privacidad',
+      'No se pudo abrir la Política de Privacidad.',
+    );
+  }
+
+  Future<void> _openTermsUrl() async {
+    await _openExternalUrl(
+      'https://trust.supplymax.net/terminos-condiciones',
+      'No se pudieron abrir los Términos y Condiciones.',
+    );
   }
 
   @override
@@ -256,6 +274,53 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 18),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            Text(
+                              'Al continuar aceptas',
+                              style: TextStyle(
+                                color: mutedTextColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: _openTermsUrl,
+                              child: const Text(
+                                'Términos y Condiciones',
+                                style: TextStyle(
+                                  color: AppColors.yellow,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              'y',
+                              style: TextStyle(
+                                color: mutedTextColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: _openPrivacyPolicyUrl,
+                              child: const Text(
+                                'Política de Privacidad',
+                                style: TextStyle(
+                                  color: AppColors.yellow,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         Center(
                           child: GestureDetector(
                             onTap: _openSupplyMaxUrl,
