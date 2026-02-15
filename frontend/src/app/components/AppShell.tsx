@@ -14,6 +14,7 @@ import {
   isBranchAdminAllowedPath,
   isInspectorAllowedPath,
 } from "../lib/permissions";
+import { getSessionUserEmail } from "../lib/session";
 import DashboardSidebar from "./DashboardSidebar";
 import MobileBottomNav from "./MobileBottomNav";
 
@@ -50,6 +51,9 @@ const resolveActivePath = (path: string) => {
   return matched;
 };
 
+const isPublicPath = (path: string) =>
+  path === "/" || path === "/terminos-condiciones" || path === "/politica-privacidad";
+
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -57,9 +61,17 @@ export default function AppShell({ children }: AppShellProps) {
   const isMobileIncidentCreation = pathname === "/clientes/incidencias/nueva";
   const isMobileVisitFlow = pathname.includes("/clientes/visitas/") && pathname.endsWith("/realizar");
   const isPublicVisitReport = pathname.startsWith("/visits/report/public/");
+  const isPublicPage = isPublicPath(pathname) || isPublicVisitReport;
+
+  const hasSession = isPublicPage ? true : Boolean(getSessionUserEmail());
 
   useEffect(() => {
-    if (!pathname || pathname === "/" || isLoading || isPublicVisitReport) return;
+    if (!pathname || isLoading || isPublicPage) return;
+    if (hasSession === false) {
+      router.replace("/");
+      return;
+    }
+
     if (user?.role === ACCOUNT_ADMIN_ROLE && !isAccountAdminAllowedPath(pathname)) {
       router.replace("/dashboard");
       return;
@@ -71,11 +83,13 @@ export default function AppShell({ children }: AppShellProps) {
     if (user?.role === INSPECTOR_ROLE && !isInspectorAllowedPath(pathname)) {
       router.replace("/dashboard");
     }
-  }, [isLoading, isPublicVisitReport, pathname, router, user?.role]);
+  }, [hasSession, isLoading, isPublicPage, pathname, router, user?.role]);
 
-  if (!pathname || pathname === "/" || isPublicVisitReport) {
+  if (!pathname || isPublicPage) {
     return <>{children}</>;
   }
+
+  if (!hasSession) return null;
 
   const activePath = resolveActivePath(pathname);
 
