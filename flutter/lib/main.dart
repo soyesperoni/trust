@@ -22,6 +22,31 @@ class _TrustAppState extends State<TrustApp> {
 
   static const EdgeInsets _buttonPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 14);
 
+
+  static InputDecorationTheme _inputDecorationTheme({required bool isDark}) {
+    return InputDecorationTheme(
+      filled: true,
+      fillColor: isDark ? AppColors.darkSurface : Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB),
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.yellow, width: 1.8),
+      ),
+    );
+  }
+
   ThemeMode _themeMode = ThemeMode.system;
   bool _showSplash = true;
 
@@ -74,6 +99,19 @@ class _TrustAppState extends State<TrustApp> {
           outline: AppColors.gray300,
         ),
         scaffoldBackgroundColor: AppColors.gray50,
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          margin: EdgeInsets.zero,
+        ),
+        inputDecorationTheme: _inputDecorationTheme(isDark: false),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             shape: _buttonShape,
@@ -119,6 +157,19 @@ class _TrustAppState extends State<TrustApp> {
           outline: AppColors.darkCardBorder,
         ),
         scaffoldBackgroundColor: AppColors.darkBackground,
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          color: AppColors.darkCard,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          margin: EdgeInsets.zero,
+        ),
+        inputDecorationTheme: _inputDecorationTheme(isDark: true),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             shape: _buttonShape,

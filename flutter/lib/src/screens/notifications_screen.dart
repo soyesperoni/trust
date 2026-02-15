@@ -70,55 +70,53 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.arrow_back),
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
-        titleSpacing: 0,
-        title: Text(
+        title: const Text(
           'Notificaciones',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w600),
         ),
         actions: [
           TextButton(
             onPressed: _clearAll,
-            child: const Text(
-              'Limpiar todo',
-              style: TextStyle(
-                color: Color(0xFF2563EB),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: const Text('Limpiar todo'),
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadNotifications,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-                children: [
-                  if (_error != null)
-                    _StatusMessage(
-                      message: _error!,
-                      isDark: isDark,
-                    )
-                  else if (_items.isEmpty)
-                    _StatusMessage(
-                      message: 'No hay notificaciones.',
-                      isDark: isDark,
-                    )
-                  else
-                    ..._items.map((item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _NotificationCard(item: item),
-                        )),
-                ],
+          : SafeArea(
+              child: RefreshIndicator(
+                onRefresh: _loadNotifications,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  children: [
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 460),
+                      child: Column(
+                        children: [
+                          if (_error != null)
+                            _StatusMessage(
+                              message: _error!,
+                              isDark: isDark,
+                              isError: true,
+                            )
+                          else if (_items.isEmpty)
+                            _StatusMessage(
+                              message: 'No hay notificaciones.',
+                              isDark: isDark,
+                            )
+                          else
+                            ..._items.map((item) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _NotificationCard(item: item),
+                                )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
     );
@@ -130,26 +128,40 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 }
 
 class _StatusMessage extends StatelessWidget {
-  const _StatusMessage({required this.message, required this.isDark});
+  const _StatusMessage({
+    required this.message,
+    required this.isDark,
+    this.isError = false,
+  });
 
   final String message;
   final bool isDark;
+  final bool isError;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.gray50,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: isDark ? AppColors.darkCardBorder : AppColors.gray100),
+        color: isError
+            ? (isDark ? const Color(0xFF3F1D1D) : const Color(0xFFFEF2F2))
+            : (isDark ? AppColors.darkCard : AppColors.gray50),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isError
+              ? const Color(0xFFFECACA)
+              : (isDark ? AppColors.darkCardBorder : AppColors.gray100),
+        ),
       ),
       child: Text(
         message,
         style: TextStyle(
-          color: isDark ? AppColors.darkMuted : AppColors.gray500,
-          fontWeight: FontWeight.w500,
+          color: isError
+              ? const Color(0xFFB91C1C)
+              : (isDark ? AppColors.darkMuted : AppColors.gray500),
+          fontSize: 13,
         ),
       ),
     );
