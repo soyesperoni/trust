@@ -300,6 +300,7 @@ class _EmptyVisits extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFF9FAFB),
