@@ -143,7 +143,7 @@ class _ScheduleVisitFromIncidentScreenState extends State<ScheduleVisitFromIncid
                   _readonlyField(context, 'Dosificador', widget.incident.dispenser),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<int>(
-                    value: _inspectorId,
+                    initialValue: _inspectorId,
                     decoration: _inputDecoration(context, 'Inspector'),
                     items: _inspectors
                         .map(

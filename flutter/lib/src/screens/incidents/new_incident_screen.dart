@@ -41,7 +41,6 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
   final List<File> _evidenceFiles = [];
 
   static const _primaryColor = Color(0xFFFACC15);
-  static const _textPrimary = Color(0xFF0F172A);
   static const _textSecondary = Color(0xFF64748B);
 
   @override
@@ -367,7 +366,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
           ),
           const SizedBox(height: 20),
           DropdownButtonFormField<int>(
-            value: _clientId,
+            initialValue: _clientId,
             decoration: _mobileInputDecoration(context, 'Cliente'),
             items: _clients
                 .map((c) => DropdownMenuItem<int>(value: c['id'] as int?, child: Text(c['name'] as String? ?? 'Cliente')))
@@ -383,7 +382,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
-            value: _branchId,
+            initialValue: _branchId,
             decoration: _mobileInputDecoration(context, 'Sucursal'),
             items: _filteredBranches
                 .map((b) => DropdownMenuItem<int>(value: b['id'] as int?, child: Text(b['name'] as String? ?? 'Sucursal')))
@@ -400,7 +399,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
-            value: _areaId,
+            initialValue: _areaId,
             decoration: _mobileInputDecoration(context, 'Área'),
             items: _filteredAreas
                 .map((a) => DropdownMenuItem<int>(value: a['id'] as int?, child: Text(a['name'] as String? ?? 'Área')))
@@ -416,7 +415,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
-            value: _dispenserId,
+            initialValue: _dispenserId,
             decoration: _mobileInputDecoration(context, 'Dispensador'),
             items: _filteredDispensers
                 .map((d) => DropdownMenuItem<int>(value: d['id'] as int?, child: Text(d['identifier'] as String? ?? 'Dispensador')))
