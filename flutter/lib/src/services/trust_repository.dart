@@ -237,6 +237,34 @@ class TrustRepository {
   }
 
 
+  Future<List<Map<String, dynamic>>> loadInspectors(String email) async {
+    final json = await _apiClient.getJson('/users/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? const []);
+    return results
+        .whereType<Map<String, dynamic>>()
+        .where((entry) => (entry['role'] as String? ?? '').toLowerCase() == 'inspector')
+        .toList(growable: false);
+  }
+
+  Future<Map<String, dynamic>> scheduleVisitFromIncident({
+    required String email,
+    required int incidentId,
+    required int inspectorId,
+    required DateTime visitedAt,
+    String notes = '',
+  }) {
+    return _apiClient.postJson(
+      '/incidents/$incidentId/schedule-visit/',
+      email: email,
+      body: {
+        'inspector_id': inspectorId,
+        'visited_at': visitedAt.toUtc().toIso8601String(),
+        'notes': notes,
+      },
+    );
+  }
+
+
   Future<Map<String, dynamic>> createIncident({
     required String email,
     required int clientId,

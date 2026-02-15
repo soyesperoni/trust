@@ -1318,6 +1318,58 @@ def incident_detail(request, incident_id: int):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+def incident_schedule_visit(request, incident_id: int):
+    current_user = _get_current_user(request)
+    if not current_user or current_user.role != User.Role.GENERAL_ADMIN:
+        return JsonResponse({"error": "Solo el Administrador general puede programar visitas desde incidencias."}, status=403)
+
+    data, _ = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    incident = Incident.objects.select_related("area", "dispenser").filter(pk=incident_id).first()
+    if incident is None:
+        return JsonResponse({"error": "No se encontró la incidencia."}, status=404)
+
+    scope = _build_access_scope(current_user)
+    if scope is not None and incident.area_id not in scope["area_ids"]:
+        return JsonResponse({"error": "No tienes permiso sobre esta incidencia."}, status=403)
+
+    inspector = None
+    inspector_id = data.get("inspector_id")
+    if inspector_id:
+        try:
+            inspector = User.objects.get(pk=int(inspector_id), role=User.Role.INSPECTOR)
+        except (User.DoesNotExist, TypeError, ValueError):
+            return JsonResponse({"error": "Inspector no válido."}, status=400)
+
+    visited_at_raw = str(data.get("visited_at") or "").strip()
+    if not visited_at_raw:
+        return JsonResponse({"error": "La fecha/hora de la visita es obligatoria."}, status=400)
+
+    try:
+        visited_at = datetime.fromisoformat(visited_at_raw.replace("Z", "+00:00"))
+    except ValueError:
+        return JsonResponse({"error": "La fecha/hora de la visita no tiene un formato válido."}, status=400)
+
+    notes = str(data.get("notes") or "").strip()
+
+    visit = Visit.objects.create(
+        area=incident.area,
+        dispenser=incident.dispenser,
+        inspector=inspector,
+        visited_at=visited_at,
+        notes=f"[INCIDENCIA #{incident.id}] {notes}".strip(),
+        status=Visit.Status.SCHEDULED,
+    )
+
+    incident.delete()
+
+    return JsonResponse(_serialize_visit(visit), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def login(request):
     try:
         data = json.loads(request.body or "{}")

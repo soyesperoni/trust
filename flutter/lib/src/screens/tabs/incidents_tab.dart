@@ -6,6 +6,7 @@ import '../../models/user_role.dart';
 import '../../services/trust_repository.dart';
 import '../incidents/incident_detail_screen.dart';
 import '../incidents/new_incident_screen.dart';
+import '../incidents/schedule_visit_from_incident_screen.dart';
 import '../../theme/app_colors.dart';
 
 class IncidentsTab extends StatefulWidget {
@@ -140,20 +141,31 @@ class _IncidentsTabState extends State<IncidentsTab> {
                               _IncidentMetaRow(icon: Icons.schedule, text: 'Creación: ${_friendlyDate(incident.createdAt)}'),
                               const SizedBox(height: 12),
                               Divider(height: 1, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : const Color(0xFFF3F4F6)),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () => Navigator.of(context).push(
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => IncidentDetailScreen(
-                                        email: widget.email,
-                                        incidentId: incident.id,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  if (widget.role == UserRole.generalAdmin)
+                                    TextButton(
+                                      onPressed: () => _openScheduleFromIncident(incident),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: const Color(0xFFF59E0B),
+                                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                                      ),
+                                      child: const Text('Programar cita'),
+                                    ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => IncidentDetailScreen(
+                                          email: widget.email,
+                                          incidentId: incident.id,
+                                        ),
                                       ),
                                     ),
+                                    style: TextButton.styleFrom(foregroundColor: const Color(0xFFFBC02D), textStyle: const TextStyle(fontWeight: FontWeight.w700)),
+                                    child: const Text('Ver detalle'),
                                   ),
-                                  style: TextButton.styleFrom(foregroundColor: const Color(0xFFFBC02D), textStyle: const TextStyle(fontWeight: FontWeight.w700)),
-                                  child: const Text('Ver detalle'),
-                                ),
+                                ],
                               ),
                             ],
                           ),
@@ -177,6 +189,22 @@ class _IncidentsTabState extends State<IncidentsTab> {
           ),
       ],
     );
+  }
+
+
+  Future<void> _openScheduleFromIncident(Incident incident) async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => ScheduleVisitFromIncidentScreen(
+          email: widget.email,
+          incident: incident,
+        ),
+      ),
+    );
+
+    if (created == true) {
+      await _refreshIncidents(showLoader: true);
+    }
   }
 
   Future<void> _openNewIncidentFlow() async {

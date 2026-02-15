@@ -162,7 +162,7 @@ export default function IncidenciasPage() {
               {canScheduleFromIncident && !isAccountAdmin ? (
                 <Link
                   className="text-primary font-semibold text-sm px-3 py-2 hover:bg-yellow-50 rounded-full transition-colors"
-                  href="/clientes/incidencias/agendar"
+                  href={`/clientes/incidencias/agendar?incidentId=${incident.id}`}
                 >
                   Agendar visita
                 </Link>
@@ -223,7 +223,7 @@ export default function IncidenciasPage() {
                           {canScheduleFromIncident && !isAccountAdmin ? (
                             <Link
                               className="bg-slate-900 text-white hover:bg-slate-700 px-3 py-1.5 rounded text-xs font-medium"
-                              href="/clientes/incidencias/agendar"
+                              href={`/clientes/incidencias/agendar?incidentId=${incident.id}`}
                             >
                               Agendar visita
                             </Link>
