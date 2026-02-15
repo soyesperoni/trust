@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import DashboardHeader from "../../../components/DashboardHeader";
@@ -28,7 +28,7 @@ const now = new Date();
 const initialDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 const initialTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-export default function AgendarVisitaPage() {
+function AgendarVisitaPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading: isLoadingUser } = useCurrentUser();
@@ -207,5 +207,19 @@ export default function AgendarVisitaPage() {
         </div>
       </PageTransition>
     </>
+  );
+}
+
+export default function AgendarVisitaPage() {
+  return (
+    <Suspense
+      fallback={
+        <PageTransition className="flex-1 p-6 md:p-8">
+          <p className="text-slate-500">Cargando formulario...</p>
+        </PageTransition>
+      }
+    >
+      <AgendarVisitaPageContent />
+    </Suspense>
   );
 }
