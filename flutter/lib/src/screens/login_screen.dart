@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'home_screen.dart';
 import '../services/trust_repository.dart';
@@ -80,6 +81,16 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+
+  Future<void> _openSupplyMaxUrl() async {
+    final uri = Uri.parse('https://supplymax.net/');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir SupplyMax.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -137,15 +148,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Text(
-                                'Datos de acceso',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? AppColors.darkMuted : const Color(0xFF334155),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
                               TextFormField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
@@ -253,6 +255,20 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 18),
+                        Center(
+                          child: GestureDetector(
+                            onTap: _openSupplyMaxUrl,
+                            child: const Text(
+                              'by SupplyMax de Panamá',
+                              style: TextStyle(
+                                color: AppColors.yellow,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+
                       ],
                     ),
                   ),
