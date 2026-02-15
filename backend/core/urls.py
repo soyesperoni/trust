@@ -10,6 +10,7 @@ from .views import (
     health,
     incidents,
     incident_detail,
+    incident_schedule_visit,
     csrf_token,
     login,
     notifications,
@@ -43,6 +44,7 @@ urlpatterns = [
     path("incidents/", incidents, name="incidents"),
     path("notifications/", notifications, name="notifications"),
     path("incidents/<int:incident_id>/", incident_detail, name="incident_detail"),
+    path("incidents/<int:incident_id>/schedule-visit/", incident_schedule_visit, name="incident_schedule_visit"),
     path("users/", users, name="users"),
     path("users/<int:user_id>/", user_detail, name="user_detail"),
 ]
