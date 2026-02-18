@@ -50,7 +50,7 @@ class ClientApiTests(TestCase):
         self.assertEqual(client.name, "Nuevo Nombre")
         self.assertEqual(client.notes, "Notas nuevas")
 
-    def test_account_admin_creating_client_gains_access_to_it(self):
+    def test_account_admin_cannot_create_client(self):
         account_admin = User.objects.create_user(
             username="account-admin",
             email="account-admin@test.com",
@@ -71,18 +71,8 @@ class ClientApiTests(TestCase):
             HTTP_X_CURRENT_USER_EMAIL=account_admin.email,
         )
 
-        self.assertEqual(response.status_code, 201)
-        created_client = Client.objects.get(code="CLI-ASSIGNED")
-        self.assertTrue(account_admin.clients.filter(id=created_client.id).exists())
-
-        list_response = self.client.get(
-            "/api/clients/",
-            HTTP_X_CURRENT_USER_EMAIL=account_admin.email,
-        )
-        self.assertEqual(list_response.status_code, 200)
-        payload = list_response.json()
-        self.assertEqual(len(payload["results"]), 1)
-        self.assertEqual(payload["results"][0]["id"], created_client.id)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Client.objects.filter(code="CLI-ASSIGNED").count(), 0)
 
 
 class ProductionSettingsTests(TestCase):
@@ -448,3 +438,62 @@ class BranchApiTests(TestCase):
         self.assertEqual(branch.name, "Sucursal Norte 2")
         self.assertEqual(branch.address, "Calle 1")
         self.assertEqual(branch.city, "CDMX")
+
+
+class IncidentPermissionsTests(TestCase):
+    def setUp(self):
+        self.client_entity = Client.objects.create(name="Cliente Inc", code="CL-INC")
+        self.branch = Branch.objects.create(client=self.client_entity, name="Sucursal Inc")
+        self.area = Area.objects.create(branch=self.branch, name="Área Inc")
+        self.model = DispenserModel.objects.create(name="Modelo Inc")
+        self.dispenser = Dispenser.objects.create(model=self.model, identifier="D-INC", area=self.area)
+        self.branch_admin = User.objects.create_user(
+            username="branch-admin",
+            email="branch-admin@test.com",
+            password="secret123",
+            role=User.Role.BRANCH_ADMIN,
+        )
+        self.branch_admin.branches.add(self.branch)
+        self.account_admin = User.objects.create_user(
+            username="account-admin-2",
+            email="account-admin-2@test.com",
+            password="secret123",
+            role=User.Role.ACCOUNT_ADMIN,
+        )
+        self.account_admin.clients.add(self.client_entity)
+
+    def test_branch_admin_can_create_incident(self):
+        response = self.client.post(
+            "/api/incidents/",
+            data=json.dumps(
+                {
+                    "client_id": self.client_entity.id,
+                    "branch_id": self.branch.id,
+                    "area_id": self.area.id,
+                    "dispenser_id": self.dispenser.id,
+                    "description": "Fuga detectada",
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.branch_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_account_admin_cannot_create_incident(self):
+        response = self.client.post(
+            "/api/incidents/",
+            data=json.dumps(
+                {
+                    "client_id": self.client_entity.id,
+                    "branch_id": self.branch.id,
+                    "area_id": self.area.id,
+                    "dispenser_id": self.dispenser.id,
+                    "description": "Fuga detectada",
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.account_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 403)
