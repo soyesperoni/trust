@@ -1141,16 +1141,60 @@ def dispenser_models(request):
     return JsonResponse({"results": payload})
 
 
-@require_GET
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def products(request):
-    queryset = Product.objects.select_related("dispenser__model")
     scope = _get_access_scope(request)
-    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="dispenser__area_id")
-    payload = [
-        _serialize_product(product)
-        for product in queryset.all()
-    ]
-    return JsonResponse({"results": payload})
+    if request.method == "GET":
+        queryset = Product.objects.select_related("dispenser__model")
+        queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="dispenser__area_id")
+        payload = [
+            _serialize_product(product)
+            for product in queryset.all()
+        ]
+        return JsonResponse({"results": payload})
+
+    current_user = _get_current_user(request)
+    if current_user and current_user.role == User.Role.INSPECTOR:
+        return JsonResponse({"error": "No tienes permisos para crear productos."}, status=403)
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    name = str(data.get("name") or "").strip()
+    description = str(data.get("description") or "").strip()
+
+    try:
+        dispenser_id = int(data.get("dispenser_id") or 0)
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Dosificador inválido."}, status=400)
+
+    if not name or not dispenser_id:
+        return JsonResponse({"error": "Dosificador y nombre son obligatorios."}, status=400)
+
+    dispenser = _filter_queryset_by_scope(
+        Dispenser.objects.select_related("model", "area__branch__client"),
+        scope,
+        area_lookup="area_id",
+    ).filter(pk=dispenser_id).first()
+    if dispenser is None:
+        return JsonResponse({"error": "Dosificador no encontrado."}, status=404)
+
+    if Product.objects.filter(dispenser=dispenser, name=name).exists():
+        return JsonResponse(
+            {"error": "Ya existe un producto con ese nombre para el dosificador seleccionado."},
+            status=400,
+        )
+
+    if Product.objects.filter(dispenser=dispenser).count() >= 4:
+        return JsonResponse(
+            {"error": "Cada dosificador puede tener máximo 4 productos."},
+            status=400,
+        )
+
+    product = Product.objects.create(dispenser=dispenser, name=name, description=description)
+    return JsonResponse(_serialize_product(product), status=201)
 
 
 @csrf_exempt
