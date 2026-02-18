@@ -89,7 +89,7 @@ export default function ClientesPage() {
         action={(
           <Link
             className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
-            href="/clientes/nuevo-usuario"
+            href="/usuarios/nuevo-usuario"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
             Nuevo Usuario
@@ -219,7 +219,7 @@ export default function ClientesPage() {
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
-                          href={`/clientes/${user.id}`}
+                          href={`/usuarios/${user.id}`}
                           title="Editar"
                         >
                           <span className="material-symbols-outlined text-[20px]">

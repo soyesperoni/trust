@@ -26,7 +26,7 @@ type DashboardSidebarProps = {
 
 const navItems: NavItem[] = [
   { icon: "dashboard", label: "Dashboard", href: "/dashboard", accountAdminOnly: true, branchAdminOnly: true },
-  { icon: "group", label: "Usuarios", href: "/clientes", hiddenForInspector: true },
+  { icon: "group", label: "Usuarios", href: "/usuarios", hiddenForInspector: true },
   { icon: "apartment", label: "Clientes", href: "/clientes/data" },
   { icon: "storefront", label: "Sucursales", href: "/clientes/sucursales", accountAdminOnly: true },
   { icon: "map", label: "Áreas", href: "/clientes/areas", accountAdminOnly: true , branchAdminOnly: true },
