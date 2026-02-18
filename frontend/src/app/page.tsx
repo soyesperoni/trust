@@ -6,24 +6,39 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import BrandLogo from "./components/BrandLogo";
-
-const SESSION_USER_KEY = "trust.currentUser";
+import { setSessionUser } from "./lib/session";
 
 export default function Home() {
   const router = useRouter();
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
 
-    if (email) {
-      window.localStorage.setItem(
-        SESSION_USER_KEY,
-        JSON.stringify({ email }),
-      );
-    }
+    const password = String(formData.get("password") ?? "");
 
-    router.push("/dashboard");
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "No se pudo iniciar sesión.");
+      }
+
+      if (payload.user) {
+        setSessionUser(payload.user);
+      } else if (email) {
+        setSessionUser({ email });
+      }
+
+      router.push("/dashboard");
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "No se pudo iniciar sesión.");
+    }
   };
 
   return (
@@ -58,6 +73,7 @@ export default function Home() {
               <input
                 className="form-input block w-full px-4 h-14 rounded-xl text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 placeholder:text-slate-400 focus:border-professional-green focus:ring-professional-green shadow-input transition-all duration-200 ease-in-out"
                 id="password"
+                name="password"
                 placeholder="••••••••"
                 required
                 type="password"

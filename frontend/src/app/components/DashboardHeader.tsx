@@ -12,7 +12,7 @@ import {
   getUnreadNotificationCount,
   NOTIFICATIONS_UPDATED_EVENT,
 } from "../lib/notifications";
-import { SESSION_USER_KEY } from "../hooks/useCurrentUser";
+import { clearSessionUser } from "../lib/session";
 
 import BrandLogo from "./BrandLogo";
 import ThemeToggleButton from "./ThemeToggleButton";
@@ -43,7 +43,7 @@ export default function DashboardHeader({
   const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = () => {
-    window.localStorage.removeItem(SESSION_USER_KEY);
+    clearSessionUser();
     router.push("/");
   };
 
