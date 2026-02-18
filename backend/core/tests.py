@@ -50,6 +50,40 @@ class ClientApiTests(TestCase):
         self.assertEqual(client.name, "Nuevo Nombre")
         self.assertEqual(client.notes, "Notas nuevas")
 
+    def test_account_admin_creating_client_gains_access_to_it(self):
+        account_admin = User.objects.create_user(
+            username="account-admin",
+            email="account-admin@test.com",
+            password="secret123",
+            role=User.Role.ACCOUNT_ADMIN,
+        )
+
+        response = self.client.post(
+            "/api/clients/",
+            data=json.dumps(
+                {
+                    "name": "Cliente Asignado",
+                    "code": "CLI-ASSIGNED",
+                    "notes": "Creado por admin de cuentas",
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=account_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        created_client = Client.objects.get(code="CLI-ASSIGNED")
+        self.assertTrue(account_admin.clients.filter(id=created_client.id).exists())
+
+        list_response = self.client.get(
+            "/api/clients/",
+            HTTP_X_CURRENT_USER_EMAIL=account_admin.email,
+        )
+        self.assertEqual(list_response.status_code, 200)
+        payload = list_response.json()
+        self.assertEqual(len(payload["results"]), 1)
+        self.assertEqual(payload["results"][0]["id"], created_client.id)
+
 
 class ProductionSettingsTests(TestCase):
     def test_default_storage_is_configured_for_media_uploads(self):

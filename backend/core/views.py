@@ -851,6 +851,10 @@ def clients(request):
         )
 
     client = Client.objects.create(name=name, code=code, notes=notes)
+
+    if current_user and current_user.role != User.Role.GENERAL_ADMIN:
+        current_user.clients.add(client)
+
     return JsonResponse(_serialize_client(client), status=201)
 
 
