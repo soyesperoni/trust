@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendBaseUrl } from "../../lib/backend";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const backendBaseUrl =
-  process.env.BACKEND_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+const backendBaseUrl = getBackendBaseUrl();
 
 const readJsonSafely = async (response: Response) => {
   try {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendBaseUrl } from "../../../../lib/backend";
 
-const backendBaseUrl =
-  process.env.BACKEND_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+const backendBaseUrl = getBackendBaseUrl();
 
 type Params = {
   params: Promise<{ id: string }>;
