@@ -14,6 +14,11 @@ type FormState = {
   notes: string;
 };
 
+type CreateClientResponse = {
+  id?: number;
+  error?: string;
+};
+
 const initialState: FormState = {
   name: "",
   code: "",
@@ -50,8 +55,8 @@ export default function NuevoClientePage() {
         body: JSON.stringify(formState),
       });
 
-      const payload = await response.json();
-      if (!response.ok) {
+      const payload = (await response.json()) as CreateClientResponse;
+      if (!response.ok || payload.error || typeof payload.id !== "number") {
         throw new Error(payload.error || "No se pudo crear el cliente.");
       }
 
