@@ -44,6 +44,7 @@ def _serialize_user(user: User) -> dict:
         "id": user.id,
         "full_name": full_name or user.username,
         "email": user.email,
+        "username": user.username,
         "role": user.role,
         "role_label": user.get_role_display(),
         "is_active": user.is_active,
@@ -1824,6 +1825,13 @@ def user_detail(request, user_id: int):
 
     if "email" in data:
         user.email = str(data.get("email") or "").strip()
+    if "username" in data:
+        username = str(data.get("username") or "").strip()
+        if not username:
+            return JsonResponse({"error": "El nombre de usuario es obligatorio."}, status=400)
+        if User.objects.exclude(pk=user.pk).filter(username__iexact=username).exists():
+            return JsonResponse({"error": "Ya existe un usuario con ese nombre de usuario."}, status=400)
+        user.username = username
     current_user = _get_current_user(request)
     if "role" in data and _is_general_admin(request):
         if not current_user or current_user.id != user.id:

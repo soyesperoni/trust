@@ -11,6 +11,7 @@ type UserRecord = {
   id: number;
   full_name: string;
   email: string;
+  username: string;
   role: string;
   role_label: string;
   is_active: boolean;
@@ -43,12 +44,12 @@ export default function EditarUsuarioPage() {
   const [formState, setFormState] = useState({
     full_name: "",
     email: "",
+    username: "",
     role: "",
     is_active: true,
     selectedClientId: "",
     selectedBranchId: "",
     selectedAreaId: "",
-    readOnlyAccess: false,
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,6 +102,7 @@ export default function EditarUsuarioPage() {
         setFormState({
           full_name: resolvedUser.full_name,
           email: resolvedUser.email,
+          username: resolvedUser.username,
           role: resolvedUser.role,
           is_active: resolvedUser.is_active,
           selectedClientId: resolvedUser.client_ids?.[0]
@@ -112,7 +114,6 @@ export default function EditarUsuarioPage() {
           selectedAreaId: resolvedUser.area_ids?.[0]
             ? String(resolvedUser.area_ids[0])
             : "",
-          readOnlyAccess: false,
         });
         setPhotoFile(null);
         setClients(clientsData.results ?? []);
@@ -177,6 +178,7 @@ export default function EditarUsuarioPage() {
       const body = new FormData();
       body.append("full_name", formState.full_name);
       body.append("email", formState.email);
+      body.append("username", formState.username);
       body.append("role", formState.role);
       body.append("is_active", String(formState.is_active));
       if (formState.selectedClientId) body.append("client_ids", formState.selectedClientId);
@@ -241,6 +243,19 @@ export default function EditarUsuarioPage() {
                     placeholder="Ej. Juan Pérez"
                     type="text"
                     value={formState.full_name}
+                  />
+                </label>
+
+
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300">
+                  Usuario
+                  <input
+                    className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                    name="username"
+                    onChange={handleChange}
+                    placeholder="usuario"
+                    type="text"
+                    value={formState.username}
                   />
                 </label>
 
@@ -344,17 +359,6 @@ export default function EditarUsuarioPage() {
                       </option>
                     ))}
                   </select>
-                </label>
-
-                <label className="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                  <input
-                    className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
-                    name="readOnlyAccess"
-                    checked={formState.readOnlyAccess}
-                    onChange={handleChange}
-                    type="checkbox"
-                  />
-                  Acceso solo lectura
                 </label>
               </div>
 

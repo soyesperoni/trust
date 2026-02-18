@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "application/json";
   const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
+  const body = await request.arrayBuffer();
 
   const response = await fetch(`${backendBaseUrl}/api/products/`, {
     method: "POST",
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       "Content-Type": contentType,
       "X-Current-User-Email": currentUserEmail,
     },
-    body: await request.text(),
+    body,
   });
 
   let payload: unknown;
