@@ -168,28 +168,31 @@ export default function AreasPage() {
       <DashboardHeader
         title="Gestión de Áreas"
         description="Administra las zonas y espacios monitoreados."
-        action={canManageAreas ? (
-          <Link
-            href="/clientes/areas/nueva"
-            className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            Nueva Área
-          </Link>
-        ) : null}
+        showSearch={false}
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
           <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="relative w-full md:w-96">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
-                search
-              </span>
-              <input
-                className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                placeholder="Buscar área..."
-                type="text"
-              />
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+              {canManageAreas ? (
+                <Link
+                  href="/clientes/areas/nueva"
+                  className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2 shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-[20px]">add</span>
+                  Nueva Área
+                </Link>
+              ) : null}
+              <div className="relative w-full md:w-96">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
+                  search
+                </span>
+                <input
+                  className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  placeholder="Buscar área..."
+                  type="text"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <div className="relative">
