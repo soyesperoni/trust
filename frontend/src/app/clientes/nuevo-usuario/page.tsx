@@ -104,9 +104,17 @@ export default function NuevoUsuarioPage() {
     setError(null);
 
     try {
+      const currentUserEmail =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("sessionEmail") ?? ""
+          : "";
+
       const response = await fetch("/api/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-current-user-email": currentUserEmail,
+        },
         body: JSON.stringify({
           full_name: formState.full_name,
           email: formState.email,
@@ -130,7 +138,8 @@ export default function NuevoUsuarioPage() {
         throw new Error(payload.error || "No se pudo crear el usuario.");
       }
 
-      router.push("/clientes");
+      router.replace("/clientes");
+      router.refresh();
     } catch (submitError) {
       setError(
         submitError instanceof Error
