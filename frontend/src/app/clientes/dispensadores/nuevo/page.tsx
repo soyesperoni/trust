@@ -6,16 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
-type AreaApi = {
-  id: number;
-  name: string;
-  branch: {
-    id: number;
-    name: string;
-    client: string;
-  };
-};
-
 type DispenserApi = {
   id: number;
   model: {
@@ -25,36 +15,28 @@ type DispenserApi = {
 };
 
 export default function NuevoDosificadorPage() {
-  const [areas, setAreas] = useState<AreaApi[]>([]);
   const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
+  const [selectedModelId, setSelectedModelId] = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
     const loadOptions = async () => {
       try {
-        const [areasResponse, dispensersResponse] = await Promise.all([
-          fetch("/api/areas", { cache: "no-store" }),
-          fetch("/api/dispensers", { cache: "no-store" }),
-        ]);
+        const dispensersResponse = await fetch("/api/dispensers", { cache: "no-store" });
 
-        if (!areasResponse.ok || !dispensersResponse.ok) return;
+        if (!dispensersResponse.ok) return;
 
-        const [areasData, dispensersData] = await Promise.all([
-          areasResponse.json(),
-          dispensersResponse.json(),
-        ]);
+        const dispensersData = await dispensersResponse.json();
 
         if (!isMounted) return;
 
-        const areaList = (areasData.results ?? []) as AreaApi[];
         const dispensers = (dispensersData.results ?? []) as DispenserApi[];
 
         const uniqueModels = Array.from(
           new Map(dispensers.map((item) => [item.model.id, item.model])).values(),
         );
 
-        setAreas(areaList);
         setModels(uniqueModels);
       } catch {
         // UI-only fallback sin bloquear render
@@ -100,15 +82,28 @@ export default function NuevoDosificadorPage() {
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="model">
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="model_id">
                 Modelo
-                <input
+                <select
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  id="model"
-                  placeholder="Ej. EcoPro 2000"
+                  id="model_id"
+                  name="model_id"
                   required
-                  type="text"
-                />
+                  value={selectedModelId}
+                  onChange={(event) => setSelectedModelId(event.target.value)}
+                >
+                  <option value="">Seleccione un modelo</option>
+                  {models.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
+                </select>
+                {!hasModelOptions ? (
+                  <span className="text-xs text-amber-600 dark:text-amber-400">
+                    No hay modelos disponibles todavía.
+                  </span>
+                ) : null}
               </label>
 
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="client">
