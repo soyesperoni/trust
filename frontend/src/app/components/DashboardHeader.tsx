@@ -21,6 +21,7 @@ type DashboardHeaderProps = {
   title: string;
   description?: string;
   action?: ReactNode;
+  showSearch?: boolean;
   searchPlaceholder?: string;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -30,6 +31,7 @@ export default function DashboardHeader({
   title,
   description,
   action,
+  showSearch = true,
   searchPlaceholder = "Buscar...",
   searchValue,
   onSearchChange,
@@ -127,16 +129,18 @@ export default function DashboardHeader({
         </div>
         <div className="flex items-center gap-4">
           {action ? <div className="hidden md:flex">{action}</div> : null}
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
-              search
-            </span>
-            <input
-              {...searchProps}
-              onChange={onSearchChange ? handleSearchChange : undefined}
-              value={typeof searchValue === "string" ? searchValue : undefined}
-            />
-          </div>
+          {showSearch ? (
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
+                search
+              </span>
+              <input
+                {...searchProps}
+                onChange={onSearchChange ? handleSearchChange : undefined}
+                value={typeof searchValue === "string" ? searchValue : undefined}
+              />
+            </div>
+          ) : null}
           <ThemeToggleButton />
           <Link
             href="/dashboard/notificaciones"

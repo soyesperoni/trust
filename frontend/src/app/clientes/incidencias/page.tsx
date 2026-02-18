@@ -144,17 +144,7 @@ export default function IncidenciasPage() {
       <DashboardHeader
         title="Incidencias"
         description="Gestión y seguimiento de reportes técnicos."
-        action={
-          canCreateIncidentsFromHeader ? (
-            <Link
-              className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
-              href="/clientes/incidencias/nueva"
-            >
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              Nueva Incidencia
-            </Link>
-          ) : null
-        }
+        showSearch={false}
       />
 
       <div className="md:hidden px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 dark:bg-[#161e27]/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
@@ -250,7 +240,16 @@ export default function IncidenciasPage() {
       <PageTransition className="hidden flex-1 flex-col overflow-y-auto md:flex">
         <div className="hidden shrink-0 px-4 pb-2 pt-6 md:block md:px-8">
           <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27] lg:flex-row">
-            <div className="flex w-full flex-col gap-4 lg:flex-row">
+            <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center">
+              {canCreateIncidentsFromHeader ? (
+                <Link
+                  className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2 shadow-sm"
+                  href="/clientes/incidencias/nueva"
+                >
+                  <span className="material-symbols-outlined text-[20px]">add</span>
+                  Nueva Incidencia
+                </Link>
+              ) : null}
               <div className="relative w-full lg:w-80">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">
                   search

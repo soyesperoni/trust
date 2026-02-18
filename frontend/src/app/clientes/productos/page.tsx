@@ -120,20 +120,34 @@ export default function ProductosPage() {
       <DashboardHeader
         title="Gestión de Productos"
         description="Administra el catálogo de productos disponibles."
-        searchPlaceholder="Buscar producto, SKU..."
-        action={canManageProducts ? (
-          <Link
-            className="bg-professional-green hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium shadow-sm"
-            href="/clientes/productos/nuevo"
-          >
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            Nuevo Producto
-          </Link>
-        ) : null}
+        showSearch={false}
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+              {canManageProducts ? (
+                <Link
+                  className="bg-professional-green hover:bg-yellow-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2 transition-colors font-medium shadow-sm"
+                  href="/clientes/productos/nuevo"
+                >
+                  <span className="material-symbols-outlined text-[20px]">add</span>
+                  Nuevo Producto
+                </Link>
+              ) : null}
+              <div className="relative w-full md:w-96">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
+                  search
+                </span>
+                <input
+                  className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  placeholder="Buscar producto, SKU..."
+                  type="text"
+                />
+              </div>
+            </div>
+          </div>
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse">
               <thead>
