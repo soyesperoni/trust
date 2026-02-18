@@ -1,12 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
+import { getSessionUserEmail } from "../../../lib/session";
+
+type CreateDispenserResponse = {
+  id?: number;
+  error?: string;
+};
 
 export default function NuevoDosificadorPage() {
+  const router = useRouter();
   const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
   const [clients, setClients] = useState<Array<{ id: number; name: string }>>([]);
   const [branches, setBranches] = useState<
@@ -19,6 +27,10 @@ export default function NuevoDosificadorPage() {
   const [selectedClientId, setSelectedClientId] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedAreaId, setSelectedAreaId] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -85,6 +97,50 @@ export default function NuevoDosificadorPage() {
     [areas, selectedBranchId],
   );
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const currentUserEmail = getSessionUserEmail().trim().toLowerCase();
+      if (!currentUserEmail) {
+        throw new Error("No se pudo identificar tu sesión. Cierra sesión y vuelve a ingresar.");
+      }
+
+      const response = await fetch("/api/dispensers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-current-user-email": currentUserEmail,
+        },
+        body: JSON.stringify({
+          identifier: identifier.trim(),
+          model_id: Number(selectedModelId),
+          area_id: selectedAreaId ? Number(selectedAreaId) : null,
+          notes: notes.trim(),
+        }),
+      });
+
+      const payload = (await response.json()) as CreateDispenserResponse;
+      if (!response.ok || payload.error || typeof payload.id !== "number") {
+        throw new Error(
+          payload.error || "No se confirmó la creación del dosificador. Intenta nuevamente.",
+        );
+      }
+
+      router.push("/clientes/dispensadores");
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "No se pudo crear el dosificador.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <>
       <DashboardHeader
@@ -102,16 +158,19 @@ export default function NuevoDosificadorPage() {
             </p>
           </div>
 
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="identifier">
                 Identificador
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
                   id="identifier"
+                  name="identifier"
+                  onChange={(event) => setIdentifier(event.target.value)}
                   placeholder="Ej. DISP-001"
                   required
                   type="text"
+                  value={identifier}
                 />
               </label>
 
@@ -204,9 +263,13 @@ export default function NuevoDosificadorPage() {
                 <textarea
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-24"
                   id="notes"
+                  name="notes"
+                  onChange={(event) => setNotes(event.target.value)}
                   placeholder="Observaciones técnicas del equipo..."
+                  value={notes}
                 />
               </label>
+              {error ? <p className="text-sm text-red-500 md:col-span-2">{error}</p> : null}
             </div>
 
             <div className="flex items-center justify-end gap-3">
@@ -218,10 +281,11 @@ export default function NuevoDosificadorPage() {
               </Link>
               <button
                 className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700 flex items-center gap-2"
+                disabled={isSaving}
                 type="submit"
               >
                 <span className="material-symbols-outlined text-[20px]">save</span>
-                Guardar Dosificador
+                {isSaving ? "Guardando..." : "Guardar Dosificador"}
               </button>
             </div>
           </form>

@@ -8,7 +8,7 @@ from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.utils import timezone
 
 from config import settings_prod
-from .models import Area, Branch, Client, User, Visit
+from .models import Area, Branch, Client, Dispenser, DispenserModel, User, Visit
 
 
 class ClientApiTests(TestCase):
@@ -154,6 +154,42 @@ class VisitMobileFlowTests(TestCase):
         self.assertEqual(self.visit.end_longitude, -77.040001)
         self.assertEqual(self.visit.visit_report["responsible_name"], "Juan")
         create_media_mock.assert_called_once()
+
+
+class DispenserApiTests(TestCase):
+    def setUp(self):
+        self.client_entity = Client.objects.create(name="Cliente", code="CL-DISP")
+        self.branch = Branch.objects.create(client=self.client_entity, name="Sucursal")
+        self.area = Area.objects.create(branch=self.branch, name="Área")
+        self.model = DispenserModel.objects.create(name="Modelo X", manufacturer="Marca")
+        self.general_admin = User.objects.create_user(
+            username="ga",
+            email="ga@test.com",
+            password="secret123",
+            role=User.Role.GENERAL_ADMIN,
+        )
+
+    def test_create_dispenser(self):
+        response = self.client.post(
+            "/api/dispensers/",
+            data=json.dumps(
+                {
+                    "identifier": "DISP-001",
+                    "model_id": self.model.id,
+                    "area_id": self.area.id,
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Dispenser.objects.count(), 1)
+        created = Dispenser.objects.first()
+        assert created is not None
+        self.assertEqual(created.identifier, "DISP-001")
+        self.assertEqual(created.model_id, self.model.id)
+        self.assertEqual(created.area_id, self.area.id)
 
 
 class VisitReportRouteTests(TestCase):
