@@ -29,13 +29,24 @@ export default function Home() {
         body: JSON.stringify({ email, password }),
       });
 
-      const payload = await response.json();
+      const contentType = response.headers.get("content-type") ?? "";
+      const responseText = await response.text();
+      const payload = contentType.includes("application/json")
+        ? JSON.parse(responseText)
+        : null;
+
       if (response.ok) {
-        return payload;
+        return payload ?? {};
       }
 
       if (response.status !== 404) {
-        lastError = payload.error || lastError;
+        if (payload && typeof payload === "object" && "error" in payload) {
+          const backendError = payload.error;
+          if (typeof backendError === "string" && backendError.trim()) {
+            lastError = backendError;
+          }
+        }
+
         break;
       }
     }
