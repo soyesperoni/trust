@@ -1122,10 +1122,68 @@ def area_detail(request, area_id: int):
     return JsonResponse(_serialize_area(area))
 
 
-@require_GET
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def dispensers(request):
-    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
     scope = _get_access_scope(request)
+    if request.method == "POST":
+        current_user = _get_current_user(request)
+        if current_user and current_user.role == User.Role.INSPECTOR:
+            return JsonResponse({"error": "No tienes permisos para crear dosificadores."}, status=403)
+
+        data, files = _extract_user_data(request)
+        if data is None:
+            return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+        identifier = str(data.get("identifier") or "").strip()
+        notes = str(data.get("notes") or "").strip()
+
+        try:
+            model_id = int(data.get("model_id") or 0)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Modelo inválido."}, status=400)
+
+        area_id = data.get("area_id")
+        area = None
+        if area_id not in (None, ""):
+            try:
+                resolved_area_id = int(area_id)
+            except (TypeError, ValueError):
+                return JsonResponse({"error": "Área inválida."}, status=400)
+            area = _filter_queryset_by_scope(
+                Area.objects.select_related("branch__client"),
+                scope,
+                area_lookup="id",
+            ).filter(pk=resolved_area_id).first()
+            if area is None:
+                return JsonResponse({"error": "Área no encontrada."}, status=404)
+
+        if not identifier or not model_id:
+            return JsonResponse({"error": "Modelo e identificador son obligatorios."}, status=400)
+
+        model = DispenserModel.objects.filter(pk=model_id).first()
+        if model is None:
+            return JsonResponse({"error": "Modelo no encontrado."}, status=404)
+
+        if Dispenser.objects.filter(model=model, identifier=identifier).exists():
+            return JsonResponse(
+                {"error": "Ya existe un dosificador con ese identificador para el modelo seleccionado."},
+                status=400,
+            )
+
+        dispenser = Dispenser.objects.create(
+            model=model,
+            identifier=identifier,
+            area=area,
+        )
+
+        if notes:
+            # Campo reservado para compatibilidad de payload sin persistencia actual en el modelo.
+            _ = notes
+
+        return JsonResponse(_serialize_dispenser(dispenser), status=201)
+
+    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
     queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
     payload = [
         _serialize_dispenser(dispenser)
