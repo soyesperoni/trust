@@ -14,6 +14,7 @@ type ProductApi = {
   id: number;
   name: string;
   description: string;
+  photo: string | null;
   dispenser: {
     id: number;
     identifier: string;
@@ -28,6 +29,7 @@ type ProductRow = {
   name: string;
   sku: string;
   description: string;
+  photo: string | null;
   dispenserCode: string;
   dispenserModel: string;
   status: ProductStatus;
@@ -73,6 +75,7 @@ export default function ProductosPage() {
             name: product.name,
             sku: `#${product.id}`,
             description: product.description || "Sin descripción registrada.",
+            photo: product.photo,
             dispenserCode: hasDispenser
               ? product.dispenser.identifier
               : "Sin dosificador",
@@ -155,9 +158,17 @@ export default function ProductosPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
-                            <span className="material-symbols-outlined">
-                              inventory_2
-                            </span>
+                            {product.photo ? (
+                              <img
+                                alt={`Foto de ${product.name}`}
+                                className="h-full w-full rounded-lg object-cover"
+                                src={product.photo}
+                              />
+                            ) : (
+                              <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-200">
+                                {product.name.slice(0, 2).toUpperCase()}
+                              </span>
+                            )}
                           </div>
                           <div>
                             <div className="font-semibold text-slate-900 dark:text-white">
