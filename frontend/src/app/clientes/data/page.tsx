@@ -106,11 +106,11 @@ export default function ClientesListadoPage() {
           dispensersResponse,
           usersResponse,
         ] = await Promise.all([
-          fetch("/api/clients", { cache: "no-store" }),
-          fetch("/api/branches", { cache: "no-store" }),
-          fetch("/api/areas", { cache: "no-store" }),
-          fetch("/api/dispensers", { cache: "no-store" }),
-          fetch("/api/users", { cache: "no-store" }),
+          fetch("/api/clients/", { cache: "no-store" }),
+          fetch("/api/branches/", { cache: "no-store" }),
+          fetch("/api/areas/", { cache: "no-store" }),
+          fetch("/api/dispensers/", { cache: "no-store" }),
+          fetch("/api/users/", { cache: "no-store" }),
         ]);
         if (
           !clientsResponse.ok ||

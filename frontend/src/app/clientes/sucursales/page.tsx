@@ -81,9 +81,9 @@ export default function SucursalesPage() {
         const currentUserEmail = getSessionUserEmail();
         const [branchesResponse, areasResponse, dispensersResponse] =
           await Promise.all([
-            fetch("/api/branches", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
-            fetch("/api/areas", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
-            fetch("/api/dispensers", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+            fetch("/api/branches/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+            fetch("/api/areas/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+            fetch("/api/dispensers/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
           ]);
         if (
           !branchesResponse.ok ||

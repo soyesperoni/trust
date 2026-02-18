@@ -65,19 +65,19 @@ export default function NuevaIncidenciaPage() {
       try {
         const currentUserEmail = getSessionUserEmail();
         const [clientsResponse, branchesResponse, areasResponse, dispensersResponse] = await Promise.all([
-          fetch("/api/clients", {
+          fetch("/api/clients/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch("/api/branches", {
+          fetch("/api/branches/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch("/api/areas", {
+          fetch("/api/areas/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch("/api/dispensers", {
+          fetch("/api/dispensers/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
@@ -381,7 +381,7 @@ export default function NuevaIncidenciaPage() {
       });
 
       const currentUserEmail = getSessionUserEmail();
-      const response = await fetch("/api/incidents", {
+      const response = await fetch("/api/incidents/", {
         method: "POST",
         headers: { "x-current-user-email": currentUserEmail },
         body: formData,

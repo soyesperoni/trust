@@ -41,11 +41,11 @@ export default function NuevaAreaPage() {
       try {
         const currentUserEmail = getSessionUserEmail();
         const [clientsResponse, branchesResponse] = await Promise.all([
-          fetch("/api/clients", {
+          fetch("/api/clients/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch("/api/branches", {
+          fetch("/api/branches/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
@@ -101,7 +101,7 @@ export default function NuevaAreaPage() {
     setIsSaving(true);
 
     try {
-      const response = await fetch("/api/areas", {
+      const response = await fetch("/api/areas/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

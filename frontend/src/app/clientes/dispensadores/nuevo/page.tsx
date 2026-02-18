@@ -38,10 +38,10 @@ export default function NuevoDosificadorPage() {
     const loadOptions = async () => {
       try {
         const [modelsResponse, clientsResponse, branchesResponse, areasResponse] = await Promise.all([
-          fetch("/api/dispenser-models", { cache: "no-store" }),
-          fetch("/api/clients", { cache: "no-store" }),
-          fetch("/api/branches", { cache: "no-store" }),
-          fetch("/api/areas", { cache: "no-store" }),
+          fetch("/api/dispenser-models/", { cache: "no-store" }),
+          fetch("/api/clients/", { cache: "no-store" }),
+          fetch("/api/branches/", { cache: "no-store" }),
+          fetch("/api/areas/", { cache: "no-store" }),
         ]);
 
         if (!modelsResponse.ok || !clientsResponse.ok || !branchesResponse.ok || !areasResponse.ok) {
@@ -108,7 +108,7 @@ export default function NuevoDosificadorPage() {
         throw new Error("No se pudo identificar tu sesión. Cierra sesión y vuelve a ingresar.");
       }
 
-      const response = await fetch("/api/dispensers", {
+      const response = await fetch("/api/dispensers/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -37,7 +37,7 @@ export default function IncidentDetailPage() {
     const load = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const response = await fetch(`/api/incidents/${params.id}`, {
+        const response = await fetch(`/api/incidents/${params.id}/`, {
           cache: "no-store",
           headers: { "x-current-user-email": currentUserEmail },
         });

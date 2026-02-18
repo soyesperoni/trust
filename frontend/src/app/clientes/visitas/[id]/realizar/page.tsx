@@ -139,7 +139,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
       try {
         setLoadingVisit(true);
         const currentUserEmail = getSessionUserEmail();
-        const response = await fetch("/api/visits", {
+        const response = await fetch("/api/visits/", {
           cache: "no-store",
           headers: { "x-current-user-email": currentUserEmail },
         });
@@ -155,7 +155,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           return;
         }
         setVisit(found);
-        const dispensersResponse = await fetch("/api/dispensers", {
+        const dispensersResponse = await fetch("/api/dispensers/", {
           cache: "no-store",
           headers: { "x-current-user-email": currentUserEmail },
         });
@@ -654,7 +654,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
       formData.append("visit_report", JSON.stringify(payload.visit_report ?? {}));
       files?.forEach((file) => formData.append("evidence_files", file));
 
-      response = await fetch(`/api/visits/${visitId}/mobile-flow`, {
+      response = await fetch(`/api/visits/${visitId}/mobile-flow/`, {
         method: "PATCH",
         headers: {
           "x-current-user-email": currentUserEmail,
@@ -662,7 +662,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
         body: formData,
       });
     } else {
-      response = await fetch(`/api/visits/${visitId}/mobile-flow`, {
+      response = await fetch(`/api/visits/${visitId}/mobile-flow/`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

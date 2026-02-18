@@ -46,11 +46,11 @@ export default function EditarSucursalPage() {
       try {
         const currentUserEmail = getSessionUserEmail();
         const [clientsResponse, branchResponse] = await Promise.all([
-          fetch("/api/clients", {
+          fetch("/api/clients/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch(`/api/branches/${branchId}`, {
+          fetch(`/api/branches/${branchId}/`, {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
@@ -101,7 +101,7 @@ export default function EditarSucursalPage() {
     setIsSaving(true);
 
     try {
-      const response = await fetch(`/api/branches/${branchId}`, {
+      const response = await fetch(`/api/branches/${branchId}/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

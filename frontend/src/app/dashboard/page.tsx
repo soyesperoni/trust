@@ -46,11 +46,11 @@ export default function DashboardPage() {
       try {
         const currentUserEmail = getSessionUserEmail();
         const [dashboardResponse, visitsResponse] = await Promise.all([
-          fetch("/api/dashboard", {
+          fetch("/api/dashboard/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch("/api/visits", {
+          fetch("/api/visits/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),

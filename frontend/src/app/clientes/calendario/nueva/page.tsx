@@ -44,11 +44,11 @@ export default function NuevaVisitaPage() {
       try {
         const [clientsResponse, branchesResponse, areasResponse, dispensersResponse, usersResponse] =
           await Promise.all([
-            fetch("/api/clients", { cache: "no-store" }),
-            fetch("/api/branches", { cache: "no-store" }),
-            fetch("/api/areas", { cache: "no-store" }),
-            fetch("/api/dispensers", { cache: "no-store" }),
-            fetch("/api/users", { cache: "no-store" }),
+            fetch("/api/clients/", { cache: "no-store" }),
+            fetch("/api/branches/", { cache: "no-store" }),
+            fetch("/api/areas/", { cache: "no-store" }),
+            fetch("/api/dispensers/", { cache: "no-store" }),
+            fetch("/api/users/", { cache: "no-store" }),
           ]);
 
         if (

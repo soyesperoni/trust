@@ -62,7 +62,7 @@ export default function ProductosPage() {
     const loadProducts = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const response = await fetch("/api/products", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } });
+        const response = await fetch("/api/products/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } });
         if (!response.ok) {
           throw new Error("No se pudieron cargar los productos.");
         }

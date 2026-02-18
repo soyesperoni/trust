@@ -46,8 +46,8 @@ export default function EditarDosificadorPage() {
     const loadFormData = async () => {
       try {
         const [areasResponse, dispensersResponse] = await Promise.all([
-          fetch("/api/areas", { cache: "no-store" }),
-          fetch("/api/dispensers", { cache: "no-store" }),
+          fetch("/api/areas/", { cache: "no-store" }),
+          fetch("/api/dispensers/", { cache: "no-store" }),
         ]);
 
         if (!areasResponse.ok || !dispensersResponse.ok) return;

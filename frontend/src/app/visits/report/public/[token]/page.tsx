@@ -76,7 +76,7 @@ export default function PublicVisitReportPage({ params }: { params: Promise<{ to
     const load = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/visits/report/public/${token}`, { cache: "no-store" });
+        const response = await fetch(`/api/visits/report/public/${token}/`, { cache: "no-store" });
         if (!response.ok) {
           const payload = await response.json().catch(() => ({ error: "No se pudo cargar el informe." }));
           throw new Error(payload.error ?? "No se pudo cargar el informe.");
