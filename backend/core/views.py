@@ -1,6 +1,7 @@
 import base64
 import json
 import textwrap
+from django.db import IntegrityError
 from datetime import datetime
 from io import BytesIO
 from typing import Any
@@ -1420,15 +1421,26 @@ def users(request):
     last_name = name_parts[1] if len(name_parts) > 1 else ""
     username = str(data.get("username") or email)
 
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password,
-        first_name=first_name,
-        last_name=last_name,
-        role=role,
-        is_active=bool(data.get("is_active", True)),
-    )
+    if User.objects.filter(email__iexact=email).exists():
+        return JsonResponse({"error": "Ya existe un usuario con ese email."}, status=400)
+    if User.objects.filter(username__iexact=username).exists():
+        return JsonResponse({"error": "Ya existe un usuario con ese nombre de usuario."}, status=400)
+
+    try:
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            is_active=bool(data.get("is_active", True)),
+        )
+    except IntegrityError:
+        return JsonResponse(
+            {"error": "No se pudo crear el usuario. Verifica que el email y usuario sean únicos."},
+            status=400,
+        )
     profile_photo = files.get("profile_photo") if files else None
     if profile_photo is not None:
         user.profile_photo = profile_photo
