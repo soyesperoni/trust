@@ -44,7 +44,10 @@ export default function NuevoClientePage() {
     setError(null);
 
     try {
-      const currentUserEmail = getSessionUserEmail();
+      const currentUserEmail = getSessionUserEmail().trim().toLowerCase();
+      if (!currentUserEmail) {
+        throw new Error("No se pudo identificar tu sesión. Cierra sesión y vuelve a ingresar.");
+      }
 
       const response = await fetch("/api/clients", {
         method: "POST",
@@ -56,8 +59,10 @@ export default function NuevoClientePage() {
       });
 
       const payload = (await response.json()) as CreateClientResponse;
-      if (!response.ok || payload.error) {
-        throw new Error(payload.error || "No se pudo crear el cliente.");
+      if (!response.ok || payload.error || typeof payload.id !== "number") {
+        throw new Error(
+          payload.error || "No se confirmó la creación del cliente. Intenta nuevamente.",
+        );
       }
 
       router.push("/clientes/data");
