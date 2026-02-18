@@ -26,7 +26,6 @@ export default function NuevaVisitaPage() {
   const [dispensers, setDispensers] = useState<Dispenser[]>([]);
   const [inspectors, setInspectors] = useState<User[]>([]);
 
-  const [visitType, setVisitType] = useState("mantenimiento");
   const [clientId, setClientId] = useState("");
   const [branchId, setBranchId] = useState("");
   const [areaId, setAreaId] = useState("");
@@ -135,7 +134,7 @@ export default function NuevaVisitaPage() {
           dispenser_id: dispenserId ? Number(dispenserId) : null,
           inspector_id: inspectorId ? Number(inspectorId) : null,
           visited_at: visitDateTime.toISOString(),
-          notes: `${visitType === "emergencia" ? "[EMERGENCIA] " : ""}${notes}`.trim(),
+          notes: notes.trim(),
         }),
       });
 
@@ -171,26 +170,6 @@ export default function NuevaVisitaPage() {
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label className="block text-sm text-slate-600 dark:text-slate-300 mb-2">Tipo de visita</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <label className="relative">
-                      <input checked={visitType === "mantenimiento"} className="peer hidden" name="visit_type" onChange={() => setVisitType("mantenimiento")} type="radio" value="mantenimiento" />
-                      <span className="flex flex-col items-center justify-center p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 peer-checked:border-primary peer-checked:bg-yellow-50 dark:peer-checked:bg-yellow-900/10 transition-all">
-                        <span className="material-symbols-outlined text-3xl mb-2 text-slate-400 peer-checked:text-yellow-600 dark:peer-checked:text-yellow-400">build_circle</span>
-                        <span className="font-medium text-slate-600 dark:text-slate-300 peer-checked:text-slate-900 dark:peer-checked:text-white">Mantenimiento</span>
-                      </span>
-                    </label>
-                    <label className="relative">
-                      <input checked={visitType === "emergencia"} className="peer hidden" name="visit_type" onChange={() => setVisitType("emergencia")} type="radio" value="emergencia" />
-                      <span className="flex flex-col items-center justify-center p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 peer-checked:border-red-500 peer-checked:bg-red-50 dark:peer-checked:bg-red-900/10 transition-all">
-                        <span className="material-symbols-outlined text-3xl mb-2 text-slate-400 peer-checked:text-red-600 dark:peer-checked:text-red-400">warning</span>
-                        <span className="font-medium text-slate-600 dark:text-slate-300 peer-checked:text-slate-900 dark:peer-checked:text-white">Emergencia</span>
-                      </span>
-                    </label>
-                  </div>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="client">
