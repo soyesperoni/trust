@@ -1260,8 +1260,10 @@ def products(request):
 def visits(request):
     current_user = _get_current_user(request)
     if request.method == "POST":
-        if not current_user or current_user.role != User.Role.GENERAL_ADMIN:
-            return JsonResponse({"error": "Solo el Administrador general puede agendar visitas."}, status=403)
+        if not current_user:
+            return JsonResponse({"error": "No se pudo identificar tu sesión de usuario."}, status=401)
+        if current_user.role == User.Role.INSPECTOR:
+            return JsonResponse({"error": "No tienes permisos para agendar visitas."}, status=403)
 
     if request.method == "GET":
         queryset = Visit.objects.select_related(
@@ -1299,6 +1301,10 @@ def visits(request):
         area = Area.objects.get(pk=int(area_id))
     except (Area.DoesNotExist, ValueError, TypeError):
         return JsonResponse({"error": "Área no válida."}, status=400)
+
+    scope = _build_access_scope(current_user)
+    if scope is not None and area.id not in scope["area_ids"]:
+        return JsonResponse({"error": "No tienes permiso para agendar visitas en esta área."}, status=403)
 
     dispenser = None
     dispenser_id = data.get("dispenser_id")
@@ -1632,8 +1638,10 @@ def incident_detail(request, incident_id: int):
 @require_http_methods(["POST"])
 def incident_schedule_visit(request, incident_id: int):
     current_user = _get_current_user(request)
-    if not current_user or current_user.role != User.Role.GENERAL_ADMIN:
-        return JsonResponse({"error": "Solo el Administrador general puede programar visitas desde incidencias."}, status=403)
+    if not current_user:
+        return JsonResponse({"error": "No se pudo identificar tu sesión de usuario."}, status=401)
+    if current_user.role == User.Role.INSPECTOR:
+        return JsonResponse({"error": "No tienes permisos para programar visitas desde incidencias."}, status=403)
 
     data, _ = _extract_user_data(request)
     if data is None:
