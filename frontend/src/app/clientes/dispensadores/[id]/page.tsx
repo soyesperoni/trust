@@ -2,12 +2,101 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
+type AreaApi = {
+  id: number;
+  name: string;
+  branch: {
+    id: number;
+    name: string;
+    client: string;
+  };
+};
+
+type DispenserApi = {
+  id: number;
+  identifier: string;
+  model: {
+    id: number;
+    name: string;
+  };
+  area: {
+    id: number;
+    name: string;
+    branch: string;
+  } | null;
+};
+
 export default function EditarDosificadorPage() {
   const params = useParams<{ id: string }>();
+  const dispenserId = Number(params.id);
+
+  const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
+  const [identifier, setIdentifier] = useState("");
+  const [selectedModelId, setSelectedModelId] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [areaName, setAreaName] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFormData = async () => {
+      try {
+        const [areasResponse, dispensersResponse] = await Promise.all([
+          fetch("/api/areas", { cache: "no-store" }),
+          fetch("/api/dispensers", { cache: "no-store" }),
+        ]);
+
+        if (!areasResponse.ok || !dispensersResponse.ok) return;
+
+        const [areasData, dispensersData] = await Promise.all([
+          areasResponse.json(),
+          dispensersResponse.json(),
+        ]);
+
+        if (!isMounted) return;
+
+        const areaList = (areasData.results ?? []) as AreaApi[];
+        const dispensers = (dispensersData.results ?? []) as DispenserApi[];
+        const currentDispenser = dispensers.find((item) => item.id === dispenserId);
+
+        const uniqueModels = Array.from(
+          new Map(dispensers.map((item) => [item.model.id, item.model])).values(),
+        );
+
+        setModels(uniqueModels);
+
+        if (!currentDispenser) return;
+
+        setIdentifier(currentDispenser.identifier);
+        setSelectedModelId(String(currentDispenser.model.id));
+        setAreaName(currentDispenser.area?.name ?? "");
+
+        if (currentDispenser.area?.id) {
+          const linkedArea = areaList.find((item) => item.id === currentDispenser.area?.id);
+          setClientName(linkedArea?.branch.client ?? "");
+          return;
+        }
+
+        setClientName("");
+      } catch {
+        // UI-only fallback sin bloquear render
+      }
+    };
+
+    loadFormData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [dispenserId]);
+
+  const hasModelOptions = useMemo(() => models.length > 0, [models.length]);
+  const displayIdentifier = identifier || `DISP-${params.id}`;
 
   return (
     <>
@@ -32,30 +121,45 @@ export default function EditarDosificadorPage() {
                 Identificador
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  defaultValue={`DISP-${params.id}`}
+                  value={displayIdentifier}
                   id="identifier"
+                  onChange={(event) => setIdentifier(event.target.value)}
                   required
                   type="text"
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="model">
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="model_id">
                 Modelo
-                <input
+                <select
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  defaultValue="EcoPro 2000"
-                  id="model"
+                  id="model_id"
+                  name="model_id"
+                  onChange={(event) => setSelectedModelId(event.target.value)}
                   required
-                  type="text"
-                />
+                  value={selectedModelId}
+                >
+                  <option value="">Seleccione un modelo</option>
+                  {models.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
+                </select>
+                {!hasModelOptions ? (
+                  <span className="text-xs text-amber-600 dark:text-amber-400">
+                    No hay modelos disponibles todavía.
+                  </span>
+                ) : null}
               </label>
 
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="client">
                 Cliente
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  defaultValue="Cliente asociado"
+                  value={clientName}
                   id="client"
+                  onChange={(event) => setClientName(event.target.value)}
                   type="text"
                 />
               </label>
@@ -64,8 +168,9 @@ export default function EditarDosificadorPage() {
                 Área
                 <input
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
-                  defaultValue="Área principal"
+                  value={areaName}
                   id="area"
+                  onChange={(event) => setAreaName(event.target.value)}
                   type="text"
                 />
               </label>
