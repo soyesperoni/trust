@@ -126,7 +126,7 @@ export default function NuevaVisitaPage() {
     try {
       const visitDateTime = new Date(`${date}T${time}:00`);
       const currentUserEmail = getSessionUserEmail();
-      const response = await fetch("/api/visits", {
+      const response = await fetch("/api/visits/", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-current-user-email": currentUserEmail },
         body: JSON.stringify({
