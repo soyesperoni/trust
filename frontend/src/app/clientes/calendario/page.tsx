@@ -483,7 +483,7 @@ export default function CalendarioPage() {
                           : "bg-yellow-50 text-professional-green dark:bg-yellow-900/30 dark:text-yellow-300"
                       }`}
                     >
-                      {emergency ? "Emergencia" : "Mantenimiento"}
+                      {visit.client || "Sin cliente"}
                     </span>
                     <span className="text-xs font-semibold text-slate-400">{formatTime(visit.visited_at)}</span>
                   </div>
