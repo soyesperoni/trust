@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
+import { getSessionUserEmail } from "../../lib/session";
 
 type FormState = {
   name: string;
@@ -38,9 +39,14 @@ export default function NuevoClientePage() {
     setError(null);
 
     try {
+      const currentUserEmail = getSessionUserEmail();
+
       const response = await fetch("/api/clients", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-current-user-email": currentUserEmail,
+        },
         body: JSON.stringify(formState),
       });
 
