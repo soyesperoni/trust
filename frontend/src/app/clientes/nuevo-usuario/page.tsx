@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
+import { getSessionUserEmail } from "../../lib/session";
 
 type Client = { id: number; name: string };
 type Branch = { id: number; name: string; client: { id: number; name: string } };
@@ -104,10 +105,7 @@ export default function NuevoUsuarioPage() {
     setError(null);
 
     try {
-      const currentUserEmail =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem("sessionEmail") ?? ""
-          : "";
+      const currentUserEmail = getSessionUserEmail();
 
       const response = await fetch("/api/users", {
         method: "POST",
