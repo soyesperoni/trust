@@ -138,40 +138,14 @@ export default function NuevaVisitaPage() {
         }),
       });
 
-      const rawBody = await response.text();
-      let payload: { id?: number; error?: string } | null = null;
-
-      if (rawBody) {
-        try {
-          payload = JSON.parse(rawBody) as { id?: number; error?: string };
-        } catch {
-          payload = null;
-        }
-      }
-
+      const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        const detailedMessage = payload?.error
-          ?? (rawBody
-            ? `No se pudo agendar la visita (HTTP ${response.status}): ${rawBody}`
-            : `No se pudo agendar la visita (HTTP ${response.status}).`);
-        console.error("Error al agendar visita", {
-          status: response.status,
-          statusText: response.statusText,
-          payload,
-          rawBody,
-        });
-        throw new Error(detailedMessage);
+        throw new Error(payload?.error ?? "No se pudo agendar la visita.");
       }
 
       if (typeof payload?.id !== "number") {
-        console.error("Respuesta inválida al crear visita", {
-          status: response.status,
-          statusText: response.statusText,
-          payload,
-          rawBody,
-        });
         throw new Error(
-          `No se confirmó la creación de la visita (HTTP ${response.status}). Revisa la consola para más detalle.`,
+          "No se confirmó la creación de la visita. Intenta nuevamente y verifica en el calendario.",
         );
       }
 
