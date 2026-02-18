@@ -370,7 +370,7 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Responsable del área</h2>
             <p className="mt-2 text-sm text-slate-500">Nombre registrado</p>
             <p className="text-base font-semibold text-slate-900 dark:text-white">{responsible}</p>
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-[#0f172a]">
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-300 dark:bg-white">
               {responsibleSignature ? (
                 <img alt={`Firma de ${responsible}`} className="h-36 w-full object-contain" src={responsibleSignature} />
               ) : (
