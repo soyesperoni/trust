@@ -22,8 +22,8 @@ export default function NuevoProductoPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [dispenserId, setDispenserId] = useState("");
-  const [isLoadingDispensers, setIsLoadingDispensers] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isLoadingDispensers, setIsLoadingDispensers] = useState(true);  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,17 +67,18 @@ export default function NuevoProductoPage() {
     setIsSaving(true);
 
     try {
+      const body = new FormData();
+      body.append("name", name);
+      body.append("description", description);
+      body.append("dispenser_id", String(Number(dispenserId)));
+      if (photoFile) body.append("photo", photoFile);
+
       const response = await fetch("/api/products/", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "x-current-user-email": getSessionUserEmail(),
         },
-        body: JSON.stringify({
-          name,
-          description,
-          dispenser_id: Number(dispenserId),
-        }),
+        body,
       });
 
       const payload = await response.json();
@@ -167,6 +168,19 @@ export default function NuevoProductoPage() {
                   placeholder="Descripción técnica o comercial del producto..."
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
+                  disabled={isSaving}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="photo">
+                Imagen del producto
+                <input
+                  accept="image/*"
+                  className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 file:mr-4 file:rounded-md file:border-0 file:bg-professional-green file:px-3 file:py-1.5 file:text-sm file:text-white hover:file:bg-yellow-700 focus:ring-2 focus:ring-primary outline-none"
+                  id="photo"
+                  name="photo"
+                  type="file"
+                  onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
                   disabled={isSaving}
                 />
               </label>
