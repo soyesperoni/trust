@@ -249,7 +249,7 @@ class TrustRepository {
   Future<Map<String, dynamic>> scheduleVisitFromIncident({
     required String email,
     required int incidentId,
-    required int inspectorId,
+    required int? inspectorId,
     required DateTime visitedAt,
     String notes = '',
   }) {
@@ -257,7 +257,7 @@ class TrustRepository {
       '/incidents/$incidentId/schedule-visit/',
       email: email,
       body: {
-        'inspector_id': inspectorId,
+        if (inspectorId != null) 'inspector_id': inspectorId,
         'visited_at': visitedAt.toUtc().toIso8601String(),
         'notes': notes,
       },

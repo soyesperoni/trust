@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/incident.dart';
+import '../../models/user_role.dart';
 import '../../services/trust_repository.dart';
 import '../../theme/app_colors.dart';
 
@@ -26,13 +27,14 @@ class _ScheduleVisitFromIncidentScreenState extends State<ScheduleVisitFromIncid
   int? _inspectorId;
   DateTime _selectedDateTime = DateTime.now();
   bool _loading = true;
+  bool _isCurrentUserInspector = false;
   bool _submitting = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadInspectors();
+    _loadFormData();
   }
 
   @override
@@ -41,12 +43,21 @@ class _ScheduleVisitFromIncidentScreenState extends State<ScheduleVisitFromIncid
     super.dispose();
   }
 
-  Future<void> _loadInspectors() async {
+  Future<void> _loadFormData() async {
     try {
-      final inspectors = await _repository.loadInspectors(widget.email);
+      final responses = await Future.wait([
+        _repository.loadInspectors(widget.email),
+        _repository.loadCurrentUser(widget.email),
+      ]);
       if (!mounted) return;
+
+      final inspectors = responses[0] as List<Map<String, dynamic>>;
+      final currentUser = responses[1] as Map<String, dynamic>;
+      final role = UserRoleParsing.fromBackendRole(currentUser['role'] as String?);
+
       setState(() {
         _inspectors = inspectors;
+        _isCurrentUserInspector = role == UserRole.inspector;
         _loading = false;
       });
     } catch (error) {
@@ -79,7 +90,7 @@ class _ScheduleVisitFromIncidentScreenState extends State<ScheduleVisitFromIncid
   }
 
   Future<void> _submit() async {
-    if (_inspectorId == null) {
+    if (!_isCurrentUserInspector && _inspectorId == null) {
       setState(() => _error = 'Seleccione un inspector.');
       return;
     }
@@ -93,7 +104,7 @@ class _ScheduleVisitFromIncidentScreenState extends State<ScheduleVisitFromIncid
       await _repository.scheduleVisitFromIncident(
         email: widget.email,
         incidentId: widget.incident.id,
-        inspectorId: _inspectorId!,
+        inspectorId: _inspectorId,
         visitedAt: _selectedDateTime,
         notes: _notesController.text.trim(),
       );
@@ -142,20 +153,22 @@ class _ScheduleVisitFromIncidentScreenState extends State<ScheduleVisitFromIncid
                   _readonlyField(context, 'Área', widget.incident.area),
                   _readonlyField(context, 'Dosificador', widget.incident.dispenser),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<int>(
-                    initialValue: _inspectorId,
-                    decoration: _inputDecoration(context, 'Inspector'),
-                    items: _inspectors
-                        .map(
-                          (inspector) => DropdownMenuItem<int>(
-                            value: inspector['id'] as int?,
-                            child: Text((inspector['full_name'] as String?) ?? 'Inspector'),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) => setState(() => _inspectorId = value),
-                  ),
-                  const SizedBox(height: 12),
+                  if (!_isCurrentUserInspector) ...[
+                    DropdownButtonFormField<int>(
+                      initialValue: _inspectorId,
+                      decoration: _inputDecoration(context, 'Inspector'),
+                      items: _inspectors
+                          .map(
+                            (inspector) => DropdownMenuItem<int>(
+                              value: inspector['id'] as int?,
+                              child: Text((inspector['full_name'] as String?) ?? 'Inspector'),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) => setState(() => _inspectorId = value),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   InkWell(
                     onTap: _pickDateTime,
                     child: InputDecorator(

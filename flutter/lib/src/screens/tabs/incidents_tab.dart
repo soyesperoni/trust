@@ -144,14 +144,14 @@ class _IncidentsTabState extends State<IncidentsTab> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
-                                  if (widget.role == UserRole.generalAdmin)
+                                  if (widget.role == UserRole.generalAdmin || widget.role == UserRole.inspector)
                                     TextButton(
                                       onPressed: () => _openScheduleFromIncident(incident),
                                       style: TextButton.styleFrom(
                                         foregroundColor: const Color(0xFFF59E0B),
                                         textStyle: const TextStyle(fontWeight: FontWeight.w700),
                                       ),
-                                      child: const Text('Programar cita'),
+                                      child: const Text('Programar visita'),
                                     ),
                                   TextButton(
                                     onPressed: () => Navigator.of(context).push(

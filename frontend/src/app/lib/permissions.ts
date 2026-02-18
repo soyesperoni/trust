@@ -25,7 +25,6 @@ const INSPECTOR_BLOCKED_PATH_PREFIXES = [
   "/clientes/areas/nueva",
   "/clientes/calendario/nueva",
   "/clientes/incidencias/nueva",
-  "/clientes/incidencias/agendar",
 ];
 
 export const ACCOUNT_ADMIN_ALLOWED_PATH_PREFIXES = [
