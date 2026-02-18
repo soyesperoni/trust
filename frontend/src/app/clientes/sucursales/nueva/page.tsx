@@ -29,7 +29,7 @@ export default function NuevaSucursalPage() {
 
     const loadClients = async () => {
       try {
-        const response = await fetch("/api/clients", {
+        const response = await fetch("/api/clients/", {
           cache: "no-store",
           headers: { "x-current-user-email": getSessionUserEmail() },
         });
@@ -64,7 +64,7 @@ export default function NuevaSucursalPage() {
     setIsSaving(true);
 
     try {
-      const response = await fetch("/api/branches", {
+      const response = await fetch("/api/branches/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

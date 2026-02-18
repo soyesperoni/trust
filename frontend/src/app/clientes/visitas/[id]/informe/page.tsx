@@ -147,11 +147,11 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
         setIsLoading(true);
         const currentUserEmail = getSessionUserEmail();
         const [visitsResponse, dispensersResponse] = await Promise.all([
-          fetch("/api/visits", {
+          fetch("/api/visits/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch("/api/dispensers", {
+          fetch("/api/dispensers/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
@@ -267,7 +267,7 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
 
     try {
       const currentUserEmail = getSessionUserEmail();
-      const response = await fetch(`/api/visits/${visitId}/report`, {
+      const response = await fetch(`/api/visits/${visitId}/report/`, {
         method: "GET",
         headers: { "x-current-user-email": currentUserEmail },
       });

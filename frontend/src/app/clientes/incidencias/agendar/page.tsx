@@ -58,11 +58,11 @@ function AgendarVisitaPageContent() {
       try {
         const currentUserEmail = getSessionUserEmail();
         const [incidentResponse, usersResponse] = await Promise.all([
-          fetch(`/api/incidents/${incidentId}`, {
+          fetch(`/api/incidents/${incidentId}/`, {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch("/api/users", {
+          fetch("/api/users/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
@@ -113,7 +113,7 @@ function AgendarVisitaPageContent() {
     try {
       const currentUserEmail = getSessionUserEmail();
       const visitedAt = new Date(`${date}T${time}:00`).toISOString();
-      const response = await fetch(`/api/incidents/${incident.id}/schedule-visit`, {
+      const response = await fetch(`/api/incidents/${incident.id}/schedule-visit/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

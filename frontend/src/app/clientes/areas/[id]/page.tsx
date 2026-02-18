@@ -56,15 +56,15 @@ export default function EditarAreaPage() {
       try {
         const currentUserEmail = getSessionUserEmail();
         const [clientsResponse, branchesResponse, areaResponse] = await Promise.all([
-          fetch("/api/clients", {
+          fetch("/api/clients/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch("/api/branches", {
+          fetch("/api/branches/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch(`/api/areas/${areaId}`, {
+          fetch(`/api/areas/${areaId}/`, {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
@@ -136,7 +136,7 @@ export default function EditarAreaPage() {
     setIsSaving(true);
 
     try {
-      const response = await fetch(`/api/areas/${areaId}`, {
+      const response = await fetch(`/api/areas/${areaId}/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

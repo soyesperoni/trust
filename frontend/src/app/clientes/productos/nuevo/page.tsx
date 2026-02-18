@@ -31,7 +31,7 @@ export default function NuevoProductoPage() {
 
     const loadDispensers = async () => {
       try {
-        const response = await fetch("/api/dispensers", {
+        const response = await fetch("/api/dispensers/", {
           cache: "no-store",
           headers: { "x-current-user-email": getSessionUserEmail() },
         });
@@ -67,7 +67,7 @@ export default function NuevoProductoPage() {
     setIsSaving(true);
 
     try {
-      const response = await fetch("/api/products", {
+      const response = await fetch("/api/products/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -38,7 +38,7 @@ export default function EditarClientePage() {
 
     const loadClient = async () => {
       try {
-        const response = await fetch(`/api/clients/${clientId}`, {
+        const response = await fetch(`/api/clients/${clientId}/`, {
           cache: "no-store",
         });
         const payload = await response.json();
@@ -88,7 +88,7 @@ export default function EditarClientePage() {
         throw new Error("No se encontró el cliente solicitado.");
       }
 
-      const response = await fetch(`/api/clients/${clientId}`, {
+      const response = await fetch(`/api/clients/${clientId}/`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formState),

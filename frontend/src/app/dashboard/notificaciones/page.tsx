@@ -101,8 +101,8 @@ export default function NotificationsPage() {
     const loadNotifications = async () => {
       try {
         const [incidentsResponse, visitsResponse] = await Promise.all([
-          fetch("/api/incidents", { cache: "no-store" }),
-          fetch("/api/visits", { cache: "no-store" }),
+          fetch("/api/incidents/", { cache: "no-store" }),
+          fetch("/api/visits/", { cache: "no-store" }),
         ]);
         if (!incidentsResponse.ok || !visitsResponse.ok) {
           throw new Error("No se pudieron cargar las notificaciones.");

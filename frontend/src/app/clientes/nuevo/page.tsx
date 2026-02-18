@@ -49,7 +49,7 @@ export default function NuevoClientePage() {
         throw new Error("No se pudo identificar tu sesión. Cierra sesión y vuelve a ingresar.");
       }
 
-      const response = await fetch("/api/clients", {
+      const response = await fetch("/api/clients/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

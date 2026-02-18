@@ -49,11 +49,11 @@ export default function VisitasPage() {
       try {
         const currentUserEmail = getSessionUserEmail();
         const [visitsResponse, usersResponse] = await Promise.all([
-          fetch("/api/visits", {
+          fetch("/api/visits/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
-          fetch("/api/users", {
+          fetch("/api/users/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
@@ -143,7 +143,7 @@ export default function VisitasPage() {
   const downloadVisitReport = async (visitId: number) => {
     try {
       const currentUserEmail = getSessionUserEmail();
-      const response = await fetch(`/api/visits/${visitId}/report`, {
+      const response = await fetch(`/api/visits/${visitId}/report/`, {
         method: "GET",
         headers: { "x-current-user-email": currentUserEmail },
       });

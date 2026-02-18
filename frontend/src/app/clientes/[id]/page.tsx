@@ -75,10 +75,10 @@ export default function EditarUsuarioPage() {
       try {
         const [userRes, clientsRes, branchesRes, areasRes] =
           await Promise.all([
-            fetch(`/api/users/${userId}`, { cache: "no-store" }),
-            fetch("/api/clients", { cache: "no-store" }),
-            fetch("/api/branches", { cache: "no-store" }),
-            fetch("/api/areas", { cache: "no-store" }),
+            fetch(`/api/users/${userId}/`, { cache: "no-store" }),
+            fetch("/api/clients/", { cache: "no-store" }),
+            fetch("/api/branches/", { cache: "no-store" }),
+            fetch("/api/areas/", { cache: "no-store" }),
           ]);
 
         if (!userRes.ok) {
@@ -187,7 +187,7 @@ export default function EditarUsuarioPage() {
       const sessionUserRaw = window.localStorage.getItem("trust.currentUser");
       const sessionEmail = sessionUserRaw ? (JSON.parse(sessionUserRaw) as { email?: string }).email ?? "" : "";
 
-      const response = await fetch(`/api/users/${userId}`, {
+      const response = await fetch(`/api/users/${userId}/`, {
         method: "PUT",
         headers: { "x-current-user-email": sessionEmail },
         body,

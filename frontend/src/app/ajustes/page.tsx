@@ -52,7 +52,7 @@ export default function AjustesPage() {
 
     const loadCurrentUser = async () => {
       try {
-        const response = await fetch("/api/users", { cache: "no-store" });
+        const response = await fetch("/api/users/", { cache: "no-store" });
         if (!response.ok) throw new Error();
         const data = await response.json();
         const users = (data.results ?? []) as CurrentUser[];
@@ -115,7 +115,7 @@ export default function AjustesPage() {
       if (formState.password) body.append("password", formState.password);
       if (photoFile) body.append("profile_photo", photoFile);
 
-      const response = await fetch(`/api/users/${user.id}`, {
+      const response = await fetch(`/api/users/${user.id}/`, {
         method: "PUT",
         headers: { "x-current-user-email": user.email ?? "" },
         body,

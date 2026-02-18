@@ -80,8 +80,8 @@ export default function AreasPage() {
       try {
         const currentUserEmail = getSessionUserEmail();
         const [areasResponse, dispensersResponse] = await Promise.all([
-          fetch("/api/areas", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
-          fetch("/api/dispensers", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/areas/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/dispensers/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
         ]);
         if (!areasResponse.ok || !dispensersResponse.ok) {
           throw new Error("No se pudieron cargar las áreas.");
@@ -139,7 +139,7 @@ export default function AreasPage() {
     if (!confirmed) return;
 
     try {
-      const response = await fetch(`/api/areas/${areaId}`, {
+      const response = await fetch(`/api/areas/${areaId}/`, {
         method: "DELETE",
         headers: { "x-current-user-email": getSessionUserEmail() },
       });

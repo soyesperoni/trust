@@ -37,9 +37,9 @@ export default function NuevoUsuarioPage() {
     const loadData = async () => {
       try {
         const [clientsRes, branchesRes, areasRes] = await Promise.all([
-          fetch("/api/clients", { cache: "no-store" }),
-          fetch("/api/branches", { cache: "no-store" }),
-          fetch("/api/areas", { cache: "no-store" }),
+          fetch("/api/clients/", { cache: "no-store" }),
+          fetch("/api/branches/", { cache: "no-store" }),
+          fetch("/api/areas/", { cache: "no-store" }),
         ]);
 
         if (!clientsRes.ok || !branchesRes.ok || !areasRes.ok) {
@@ -107,7 +107,7 @@ export default function NuevoUsuarioPage() {
     try {
       const currentUserEmail = getSessionUserEmail();
 
-      const response = await fetch("/api/users", {
+      const response = await fetch("/api/users/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -35,7 +35,7 @@ export default function ClientesPage() {
 
     const loadUsers = async () => {
       try {
-        const response = await fetch("/api/users", { cache: "no-store" });
+        const response = await fetch("/api/users/", { cache: "no-store" });
         if (!response.ok) {
           throw new Error("No se pudieron cargar los usuarios.");
         }

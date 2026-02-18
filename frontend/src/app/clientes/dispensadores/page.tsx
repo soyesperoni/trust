@@ -84,8 +84,8 @@ export default function DispensadoresPage() {
       try {
         const currentUserEmail = getSessionUserEmail();
         const [dispensersResponse, productsResponse] = await Promise.all([
-          fetch("/api/dispensers", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
-          fetch("/api/products", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/dispensers/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/products/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
         ]);
         if (!dispensersResponse.ok || !productsResponse.ok) {
           throw new Error("No se pudieron cargar los dosificadores.");
