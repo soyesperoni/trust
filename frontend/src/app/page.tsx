@@ -10,6 +10,39 @@ import { setSessionUser } from "./lib/session";
 
 export default function Home() {
   const router = useRouter();
+
+  const loginEndpoints = [
+    "/api/auth/login",
+    "/api/login/",
+    process.env.NEXT_PUBLIC_BACKEND_BASE_URL
+      ? `${process.env.NEXT_PUBLIC_BACKEND_BASE_URL.replace(/\/$/, "")}/api/login/`
+      : null,
+  ].filter((endpoint): endpoint is string => Boolean(endpoint));
+
+  const performLogin = async (email: string, password: string) => {
+    let lastError = "No se pudo iniciar sesión.";
+
+    for (const endpoint of loginEndpoints) {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const payload = await response.json();
+      if (response.ok) {
+        return payload;
+      }
+
+      if (response.status !== 404) {
+        lastError = payload.error || lastError;
+        break;
+      }
+    }
+
+    throw new Error(lastError);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -18,16 +51,7 @@ export default function Home() {
     const password = String(formData.get("password") ?? "");
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error || "No se pudo iniciar sesión.");
-      }
+      const payload = await performLogin(email, password);
 
       if (payload.user) {
         setSessionUser(payload.user);
