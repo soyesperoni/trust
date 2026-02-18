@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
@@ -63,6 +64,7 @@ const statusDot: Record<AreaStatus, string> = {
 };
 
 export default function AreasPage() {
+  const router = useRouter();
   const { user, isLoading: isLoadingUser } = useCurrentUser();
   const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
   const canManageAreas = !isLoadingUser && !isRestrictedRole;
@@ -131,6 +133,29 @@ export default function AreasPage() {
       isMounted = false;
     };
   }, []);
+
+  const handleDeleteArea = async (areaId: number) => {
+    const confirmed = window.confirm("¿Deseas eliminar esta área?");
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/areas/${areaId}`, {
+        method: "DELETE",
+        headers: { "x-current-user-email": getSessionUserEmail() },
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "No se pudo eliminar el área.");
+      }
+      setAreas((currentAreas) => currentAreas.filter((area) => area.id !== areaId));
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No se pudo eliminar el área.",
+      );
+    }
+  };
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando áreas...";
@@ -262,6 +287,7 @@ export default function AreasPage() {
                             <button
                               className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
                               title="Editar"
+                              onClick={() => router.push(`/clientes/areas/${area.id}`)}
                             >
                               <span className="material-symbols-outlined text-[20px]">
                                 edit
@@ -270,6 +296,7 @@ export default function AreasPage() {
                             <button
                               className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                               title="Eliminar"
+                              onClick={() => void handleDeleteArea(area.id)}
                             >
                               <span className="material-symbols-outlined text-[20px]">
                                 delete
