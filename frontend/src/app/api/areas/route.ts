@@ -42,5 +42,18 @@ export async function POST(request: Request) {
     payload = { error: "Respuesta inválida del servidor al crear el área." };
   }
 
+  if (response.ok) {
+    const maybePayload = payload as { id?: unknown };
+    if (response.status !== 201 || typeof maybePayload.id !== "number") {
+      return NextResponse.json(
+        {
+          error:
+            "No se confirmó la creación del área. Intenta nuevamente y verifica en el listado.",
+        },
+        { status: 502 },
+      );
+    }
+  }
+
   return NextResponse.json(payload, { status: response.status });
 }
