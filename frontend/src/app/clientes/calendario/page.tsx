@@ -501,14 +501,22 @@ export default function CalendarioPage() {
                     <span className="text-xs text-slate-600 dark:text-slate-400">{visit.inspector}</span>
                   </div>
                   {visit.notes && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{visit.notes}</p>}
-                  {user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <Link
-                      href={`/clientes/visitas/${visit.id}/realizar`}
-                      className="mt-3 inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-black"
+                      href={`/clientes/visitas/${visit.id}/informe`}
+                      className="inline-flex rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
-                      Iniciar visita
+                      Ver informe
                     </Link>
-                  )}
+                    {user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
+                      <Link
+                        href={`/clientes/visitas/${visit.id}/realizar`}
+                        className="inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-black"
+                      >
+                        Iniciar visita
+                      </Link>
+                    )}
+                  </div>
                 </div>
               );
             })}
