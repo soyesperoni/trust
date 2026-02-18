@@ -1010,16 +1010,116 @@ def branch_detail(request, branch_id: int):
     return JsonResponse(_serialize_branch(branch))
 
 
-@require_GET
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def areas(request):
-    queryset = Area.objects.select_related("branch__client")
     scope = _get_access_scope(request)
-    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="id")
-    payload = [
-        _serialize_area(area)
-        for area in queryset.all()
-    ]
-    return JsonResponse({"results": payload})
+    if request.method == "GET":
+        queryset = Area.objects.select_related("branch__client")
+        queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="id")
+        payload = [
+            _serialize_area(area)
+            for area in queryset.all()
+        ]
+        return JsonResponse({"results": payload})
+
+    current_user = _get_current_user(request)
+    if current_user and current_user.role == User.Role.INSPECTOR:
+        return JsonResponse({"error": "No tienes permisos para crear áreas."}, status=403)
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    name = str(data.get("name") or "").strip()
+    description = str(data.get("description") or "").strip()
+
+    try:
+        branch_id = int(data.get("branch_id") or 0)
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Sucursal inválida."}, status=400)
+
+    if not name or not branch_id:
+        return JsonResponse({"error": "Sucursal y nombre son obligatorios."}, status=400)
+
+    branch = _filter_queryset_by_scope(
+        Branch.objects.select_related("client"),
+        scope,
+        branch_lookup="id",
+    ).filter(pk=branch_id).first()
+    if branch is None:
+        return JsonResponse({"error": "Sucursal no encontrada."}, status=404)
+
+    if Area.objects.filter(branch=branch, name=name).exists():
+        return JsonResponse(
+            {"error": "Ya existe un área con ese nombre para la sucursal seleccionada."},
+            status=400,
+        )
+
+    area = Area.objects.create(branch=branch, name=name, description=description)
+    return JsonResponse(_serialize_area(area), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PUT", "DELETE"])
+def area_detail(request, area_id: int):
+    scope = _get_access_scope(request)
+    queryset = _filter_queryset_by_scope(
+        Area.objects.select_related("branch__client"),
+        scope,
+        area_lookup="id",
+    )
+    area = queryset.filter(pk=area_id).first()
+    if area is None:
+        return JsonResponse({"error": "Área no encontrada."}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_area(area))
+
+    current_user = _get_current_user(request)
+    if current_user and current_user.role == User.Role.INSPECTOR:
+        return JsonResponse({"error": "No tienes permisos para modificar áreas."}, status=403)
+
+    if request.method == "DELETE":
+        area.delete()
+        return JsonResponse({"ok": True})
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    if "branch_id" in data:
+        try:
+            branch_id = int(data.get("branch_id") or 0)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Sucursal inválida."}, status=400)
+
+        branch = _filter_queryset_by_scope(
+            Branch.objects.select_related("client"),
+            scope,
+            branch_lookup="id",
+        ).filter(pk=branch_id).first()
+        if branch is None:
+            return JsonResponse({"error": "Sucursal no encontrada."}, status=404)
+        area.branch = branch
+
+    if "name" in data:
+        area.name = str(data.get("name") or "").strip()
+    if "description" in data:
+        area.description = str(data.get("description") or "").strip()
+
+    if not area.name:
+        return JsonResponse({"error": "El nombre no puede estar vacío."}, status=400)
+
+    duplicate = Area.objects.exclude(pk=area.pk).filter(branch=area.branch, name=area.name).exists()
+    if duplicate:
+        return JsonResponse(
+            {"error": "Ya existe un área con ese nombre para la sucursal seleccionada."},
+            status=400,
+        )
+
+    area.save()
+    return JsonResponse(_serialize_area(area))
 
 
 @require_GET

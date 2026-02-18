@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    area_detail,
     areas,
     branches,
     branch_detail,
@@ -36,6 +37,7 @@ urlpatterns = [
     path("branches/", branches, name="branches"),
     path("branches/<int:branch_id>/", branch_detail, name="branch_detail"),
     path("areas/", areas, name="areas"),
+    path("areas/<int:area_id>/", area_detail, name="area_detail"),
     path("dispensers/", dispensers, name="dispensers"),
     path("dispenser-models/", dispenser_models, name="dispenser_models"),
     path("products/", products, name="products"),
