@@ -1,17 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 
-type CurrentUser = {
-  id: number;
-  full_name: string;
-  email?: string;
-  role_label: string;
-  is_active: boolean;
-};
-
-const SESSION_USER_KEY = "trust.currentUser";
+import { useCurrentUser } from "../hooks/useCurrentUser";
+import { clearSessionUser } from "../lib/session";
 
 const getInitials = (fullName: string) => {
   const initials = fullName
@@ -24,55 +17,7 @@ const getInitials = (fullName: string) => {
 
 export default function SidebarUserCard() {
   const router = useRouter();
-  const [user, setUser] = useState<CurrentUser | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("loading");
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const sessionUserRaw = window.localStorage.getItem(SESSION_USER_KEY);
-    let sessionUser: CurrentUser | null = null;
-
-    if (sessionUserRaw) {
-      try {
-        sessionUser = JSON.parse(sessionUserRaw) as CurrentUser;
-        setUser(sessionUser);
-        setStatus("idle");
-      } catch {
-        window.localStorage.removeItem(SESSION_USER_KEY);
-      }
-    }
-
-    const loadUser = async () => {
-      try {
-        const response = await fetch("/api/users", { cache: "no-store" });
-        if (!response.ok) {
-          throw new Error("No se pudo cargar el usuario.");
-        }
-        const data = await response.json();
-        if (!isMounted) return;
-        const results = (data.results ?? []) as CurrentUser[];
-        const sessionEmail = sessionUser?.email ?? null;
-        const currentUser =
-          (sessionEmail
-            ? results.find((candidate) => candidate.email === sessionEmail)
-            : null) ??
-          results.find((candidate) => candidate.is_active) ??
-          results[0] ??
-          null;
-        setUser(currentUser);
-        setStatus("idle");
-      } catch {
-        if (!isMounted) return;
-        setStatus("error");
-      }
-    };
-
-    loadUser();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const { user, isLoading } = useCurrentUser();
 
   const initials = useMemo(() => {
     if (!user?.full_name) return "?";
@@ -80,7 +25,7 @@ export default function SidebarUserCard() {
   }, [user]);
 
   const handleLogout = () => {
-    window.localStorage.removeItem(SESSION_USER_KEY);
+    clearSessionUser();
     router.push("/");
   };
 
@@ -100,13 +45,10 @@ export default function SidebarUserCard() {
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-bold text-slate-900 dark:text-white">
-            {user?.full_name ??
-              (status === "error"
-                ? "Usuario no disponible"
-                : "Cargando usuario...")}
+            {user?.full_name ?? (isLoading ? "Cargando usuario..." : "Usuario no disponible")}
           </span>
           <span className="truncate text-xs text-slate-500">
-            {user?.email ?? user?.role_label ?? (status === "error" ? "-" : " ")}
+            {user?.email ?? user?.role_label ?? (isLoading ? " " : "-")}
           </span>
         </div>
         <span className="material-symbols-outlined text-[18px] text-slate-400 transition-colors group-hover:text-slate-700 dark:group-hover:text-slate-200">

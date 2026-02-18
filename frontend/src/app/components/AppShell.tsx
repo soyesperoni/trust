@@ -14,7 +14,7 @@ import {
   isBranchAdminAllowedPath,
   isInspectorAllowedPath,
 } from "../lib/permissions";
-import { getSessionUserEmail } from "../lib/session";
+import { getSessionUserEmail, SESSION_USER_UPDATED_EVENT } from "../lib/session";
 import DashboardSidebar from "./DashboardSidebar";
 import MobileBottomNav from "./MobileBottomNav";
 
@@ -64,7 +64,16 @@ export default function AppShell({ children }: AppShellProps) {
   const isPublicVisitReport = pathname.startsWith("/visits/report/public/");
   const isPublicPage = isPublicPath(pathname) || isPublicVisitReport;
   const hasSession = useSyncExternalStore(
-    () => () => undefined,
+    (callback) => {
+      if (typeof window === "undefined") return () => undefined;
+      const handleChange = () => callback();
+      window.addEventListener("storage", handleChange);
+      window.addEventListener(SESSION_USER_UPDATED_EVENT, handleChange);
+      return () => {
+        window.removeEventListener("storage", handleChange);
+        window.removeEventListener(SESSION_USER_UPDATED_EVENT, handleChange);
+      };
+    },
     () => (isPublicPage ? true : Boolean(getSessionUserEmail())),
     () => (isPublicPage ? true : false),
   );

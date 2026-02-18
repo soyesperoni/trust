@@ -6,6 +6,14 @@ export const revalidate = 0;
 const backendBaseUrl =
   process.env.BACKEND_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
 
+const readJsonSafely = async (response: Response) => {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
 export async function GET() {
   const response = await fetch(`${backendBaseUrl}/api/users/`, {
     cache: "no-store",
@@ -36,6 +44,14 @@ export async function POST(request: NextRequest) {
     body,
   });
 
-  const payload = await response.json();
+  const payload = await readJsonSafely(response);
+
+  if (!response.ok) {
+    return NextResponse.json(
+      { error: payload?.error ?? "No se pudo crear el usuario." },
+      { status: response.status },
+    );
+  }
+
   return NextResponse.json(payload, { status: response.status });
 }
