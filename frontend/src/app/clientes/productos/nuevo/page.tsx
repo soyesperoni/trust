@@ -81,12 +81,22 @@ export default function NuevoProductoPage() {
 
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="dispenser">
                 Dosificador asignado
-                <input
+                <select
                   className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
                   id="dispenser"
-                  placeholder="Ej. DISP-001"
-                  type="text"
-                />
+                  name="dispenser"
+                  required
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Selecciona un dosificador
+                  </option>
+                  {dispensers.map((dispenser) => (
+                    <option key={dispenser.id} value={dispenser.id}>
+                      {dispenser.identifier} · {dispenser.model.name}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="description">
