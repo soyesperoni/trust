@@ -6,14 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 
-type DispenserApi = {
-  id: number;
-  model: {
-    id: number;
-    name: string;
-  };
-};
-
 export default function NuevoDosificadorPage() {
   const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
   const [selectedModelId, setSelectedModelId] = useState("");
@@ -23,21 +15,15 @@ export default function NuevoDosificadorPage() {
 
     const loadOptions = async () => {
       try {
-        const dispensersResponse = await fetch("/api/dispensers", { cache: "no-store" });
+        const modelsResponse = await fetch("/api/dispenser-models", { cache: "no-store" });
 
-        if (!dispensersResponse.ok) return;
+        if (!modelsResponse.ok) return;
 
-        const dispensersData = await dispensersResponse.json();
+        const modelsData = await modelsResponse.json();
 
         if (!isMounted) return;
 
-        const dispensers = (dispensersData.results ?? []) as DispenserApi[];
-
-        const uniqueModels = Array.from(
-          new Map(dispensers.map((item) => [item.model.id, item.model])).values(),
-        );
-
-        setModels(uniqueModels);
+        setModels((modelsData.results ?? []) as Array<{ id: number; name: string }>);
       } catch {
         // UI-only fallback sin bloquear render
       }

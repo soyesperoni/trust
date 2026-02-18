@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
@@ -35,9 +35,8 @@ export default function EditarDosificadorPage() {
   const params = useParams<{ id: string }>();
   const dispenserId = Number(params.id);
 
-  const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
   const [identifier, setIdentifier] = useState("");
-  const [selectedModelId, setSelectedModelId] = useState("");
+  const [selectedModelName, setSelectedModelName] = useState("");
   const [clientName, setClientName] = useState("");
   const [areaName, setAreaName] = useState("");
 
@@ -64,16 +63,10 @@ export default function EditarDosificadorPage() {
         const dispensers = (dispensersData.results ?? []) as DispenserApi[];
         const currentDispenser = dispensers.find((item) => item.id === dispenserId);
 
-        const uniqueModels = Array.from(
-          new Map(dispensers.map((item) => [item.model.id, item.model])).values(),
-        );
-
-        setModels(uniqueModels);
-
         if (!currentDispenser) return;
 
         setIdentifier(currentDispenser.identifier);
-        setSelectedModelId(String(currentDispenser.model.id));
+        setSelectedModelName(currentDispenser.model.name);
         setAreaName(currentDispenser.area?.name ?? "");
 
         if (currentDispenser.area?.id) {
@@ -95,7 +88,6 @@ export default function EditarDosificadorPage() {
     };
   }, [dispenserId]);
 
-  const hasModelOptions = useMemo(() => models.length > 0, [models.length]);
   const displayIdentifier = identifier || `DISP-${params.id}`;
 
   return (
@@ -131,26 +123,16 @@ export default function EditarDosificadorPage() {
 
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="model_id">
                 Modelo
-                <select
-                  className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+                <input
+                  className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 outline-none"
                   id="model_id"
                   name="model_id"
-                  onChange={(event) => setSelectedModelId(event.target.value)}
-                  required
-                  value={selectedModelId}
-                >
-                  <option value="">Seleccione un modelo</option>
-                  {models.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
-                    </option>
-                  ))}
-                </select>
-                {!hasModelOptions ? (
-                  <span className="text-xs text-amber-600 dark:text-amber-400">
-                    No hay modelos disponibles todavía.
-                  </span>
-                ) : null}
+                  readOnly
+                  value={selectedModelName || "Modelo no disponible"}
+                />
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  El modelo no se puede cambiar después de crear el dosificador.
+                </span>
               </label>
 
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="client">
