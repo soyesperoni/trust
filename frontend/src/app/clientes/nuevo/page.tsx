@@ -56,7 +56,7 @@ export default function NuevoClientePage() {
       });
 
       const payload = (await response.json()) as CreateClientResponse;
-      if (!response.ok || payload.error || typeof payload.id !== "number") {
+      if (!response.ok || payload.error) {
         throw new Error(payload.error || "No se pudo crear el cliente.");
       }
 
