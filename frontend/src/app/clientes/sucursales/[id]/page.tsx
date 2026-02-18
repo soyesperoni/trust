@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
@@ -13,59 +13,96 @@ type ClientApi = {
   name: string;
 };
 
-export default function NuevaSucursalPage() {
+type BranchApi = {
+  id: number;
+  name: string;
+  address: string;
+  city: string;
+  client: {
+    id: number;
+    name: string;
+  };
+};
+
+export default function EditarSucursalPage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
+  const branchId = params?.id;
+
   const [clients, setClients] = useState<ClientApi[]>([]);
   const [clientId, setClientId] = useState("");
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
-  const [isLoadingClients, setIsLoadingClients] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
-    const loadClients = async () => {
+    const loadData = async () => {
+      if (!branchId) return;
       try {
-        const response = await fetch("/api/clients", {
-          cache: "no-store",
-          headers: { "x-current-user-email": getSessionUserEmail() },
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(payload.error || "No se pudieron cargar los clientes.");
+        const currentUserEmail = getSessionUserEmail();
+        const [clientsResponse, branchResponse] = await Promise.all([
+          fetch("/api/clients", {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
+          fetch(`/api/branches/${branchId}`, {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
+        ]);
+
+        const [clientsPayload, branchPayload] = await Promise.all([
+          clientsResponse.json(),
+          branchResponse.json(),
+        ]);
+
+        if (!clientsResponse.ok) {
+          throw new Error(clientsPayload.error || "No se pudieron cargar los clientes.");
         }
+        if (!branchResponse.ok) {
+          throw new Error(branchPayload.error || "No se pudo cargar la sucursal.");
+        }
+
         if (!mounted) return;
-        setClients((payload.results ?? []) as ClientApi[]);
-      } catch (fetchError) {
+        const branch = branchPayload as BranchApi;
+        setClients((clientsPayload.results ?? []) as ClientApi[]);
+        setClientId(String(branch.client.id));
+        setName(branch.name);
+        setAddress(branch.address || "");
+        setCity(branch.city || "");
+      } catch (loadError) {
         if (!mounted) return;
         setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : "No se pudieron cargar los clientes.",
+          loadError instanceof Error
+            ? loadError.message
+            : "No se pudo cargar la sucursal.",
         );
       } finally {
         if (!mounted) return;
-        setIsLoadingClients(false);
+        setIsLoading(false);
       }
     };
 
-    loadClients();
+    loadData();
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [branchId]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!branchId) return;
     setError(null);
     setIsSaving(true);
 
     try {
-      const response = await fetch("/api/branches", {
-        method: "POST",
+      const response = await fetch(`/api/branches/${branchId}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "x-current-user-email": getSessionUserEmail(),
@@ -79,14 +116,14 @@ export default function NuevaSucursalPage() {
       });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload.error || "No se pudo crear la sucursal.");
+        throw new Error(payload.error || "No se pudo guardar la sucursal.");
       }
       router.push("/clientes/sucursales");
     } catch (submitError) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "No se pudo crear la sucursal.",
+          : "No se pudo guardar la sucursal.",
       );
     } finally {
       setIsSaving(false);
@@ -96,20 +133,11 @@ export default function NuevaSucursalPage() {
   return (
     <>
       <DashboardHeader
-        title="Nueva Sucursal"
-        description="Registra una sucursal real en el backend para administrarla desde Django."
+        title="Editar Sucursal"
+        description="Actualiza los datos de la sucursal en el backend de Django."
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-3xl mx-auto bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-              Datos de la sucursal
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Campos equivalentes al modelo de Sucursal en Django admin.
-            </p>
-          </div>
-
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
               {error}
@@ -123,7 +151,7 @@ export default function NuevaSucursalPage() {
                 required
                 value={clientId}
                 onChange={(event) => setClientId(event.target.value)}
-                disabled={isLoadingClients || isSaving}
+                disabled={isLoading || isSaving}
                 className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="">Seleccione un cliente</option>
@@ -142,7 +170,6 @@ export default function NuevaSucursalPage() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 type="text"
-                placeholder="Ej. Sucursal Centro"
                 className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
               />
             </label>
@@ -153,7 +180,6 @@ export default function NuevaSucursalPage() {
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
                 type="text"
-                placeholder="Calle, número y colonia"
                 className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
               />
             </label>
@@ -164,7 +190,6 @@ export default function NuevaSucursalPage() {
                 value={city}
                 onChange={(event) => setCity(event.target.value)}
                 type="text"
-                placeholder="Ej. Monterrey"
                 className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
               />
             </label>
@@ -178,10 +203,10 @@ export default function NuevaSucursalPage() {
               </Link>
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || isLoading}
                 className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700 disabled:opacity-70"
               >
-                {isSaving ? "Guardando..." : "Guardar sucursal"}
+                {isSaving ? "Guardando..." : "Guardar cambios"}
               </button>
             </div>
           </form>

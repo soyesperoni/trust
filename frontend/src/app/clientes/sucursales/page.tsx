@@ -279,22 +279,26 @@ export default function SucursalesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {canManageBranches && (<button
-                          className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-yellow-50 rounded-full transition-colors"
-                          title="Editar"
-                        >
-                          <span className="material-symbols-outlined text-[20px]">
-                            edit
-                          </span>
-                        </button>)}
-                        <button
+                        {canManageBranches && (
+                          <Link
+                            href={`/clientes/sucursales/${branch.id}`}
+                            className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-yellow-50 rounded-full transition-colors"
+                            title="Editar"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">
+                              edit
+                            </span>
+                          </Link>
+                        )}
+                        <Link
+                          href={`/clientes/sucursales/${branch.id}`}
                           className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                           title="Ver detalles"
                         >
                           <span className="material-symbols-outlined text-[20px]">
                             visibility
                           </span>
-                        </button>
+                        </Link>
                       </div>
                     </td>
                   </tr>

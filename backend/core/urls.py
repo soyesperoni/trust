@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     areas,
     branches,
+    branch_detail,
     client_detail,
     clients,
     dashboard,
@@ -33,6 +34,7 @@ urlpatterns = [
     path("clients/", clients, name="clients"),
     path("clients/<int:client_id>/", client_detail, name="client_detail"),
     path("branches/", branches, name="branches"),
+    path("branches/<int:branch_id>/", branch_detail, name="branch_detail"),
     path("areas/", areas, name="areas"),
     path("dispensers/", dispensers, name="dispensers"),
     path("dispenser-models/", dispenser_models, name="dispenser_models"),
