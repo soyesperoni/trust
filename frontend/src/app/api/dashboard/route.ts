@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendBaseUrl } from "../../lib/backend";
 
 export async function GET(request: NextRequest) {
-  const backendBaseUrl =
-    process.env.BACKEND_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+  const backendBaseUrl = getBackendBaseUrl();
   const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
   const response = await fetch(`${backendBaseUrl}/api/dashboard/`, {
     cache: "no-store",
