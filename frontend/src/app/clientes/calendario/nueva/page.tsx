@@ -138,9 +138,41 @@ export default function NuevaVisitaPage() {
         }),
       });
 
-      const payload = await response.json();
+      const rawBody = await response.text();
+      let payload: { id?: number; error?: string } | null = null;
+
+      if (rawBody) {
+        try {
+          payload = JSON.parse(rawBody) as { id?: number; error?: string };
+        } catch {
+          payload = null;
+        }
+      }
+
       if (!response.ok) {
-        throw new Error(payload.error ?? "No se pudo agendar la visita.");
+        const detailedMessage = payload?.error
+          ?? (rawBody
+            ? `No se pudo agendar la visita (HTTP ${response.status}): ${rawBody}`
+            : `No se pudo agendar la visita (HTTP ${response.status}).`);
+        console.error("Error al agendar visita", {
+          status: response.status,
+          statusText: response.statusText,
+          payload,
+          rawBody,
+        });
+        throw new Error(detailedMessage);
+      }
+
+      if (typeof payload?.id !== "number") {
+        console.error("Respuesta inválida al crear visita", {
+          status: response.status,
+          statusText: response.statusText,
+          payload,
+          rawBody,
+        });
+        throw new Error(
+          `No se confirmó la creación de la visita (HTTP ${response.status}). Revisa la consola para más detalle.`,
+        );
       }
 
       setStatusMessage("Visita registrada correctamente.");
