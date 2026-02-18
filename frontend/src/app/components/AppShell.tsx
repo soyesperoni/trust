@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 import { usePathname, useRouter } from "next/navigation";
 
@@ -62,8 +62,11 @@ export default function AppShell({ children }: AppShellProps) {
   const isMobileVisitFlow = pathname.includes("/clientes/visitas/") && pathname.endsWith("/realizar");
   const isPublicVisitReport = pathname.startsWith("/visits/report/public/");
   const isPublicPage = isPublicPath(pathname) || isPublicVisitReport;
-
-  const hasSession = isPublicPage ? true : Boolean(getSessionUserEmail());
+  const hasSession = useSyncExternalStore(
+    () => () => undefined,
+    () => (isPublicPage ? true : Boolean(getSessionUserEmail())),
+    () => (isPublicPage ? true : false),
+  );
 
   useEffect(() => {
     if (!pathname || isLoading || isPublicPage) return;
