@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 import { useCurrentUser } from "../../../hooks/useCurrentUser";
-import { GENERAL_ADMIN_ROLE } from "../../../lib/permissions";
+import { GENERAL_ADMIN_ROLE, INSPECTOR_ROLE } from "../../../lib/permissions";
 import { getSessionUserEmail } from "../../../lib/session";
 
 type Inspector = { id: number; full_name: string; role: string };
@@ -100,7 +100,8 @@ function AgendarVisitaPageContent() {
     };
   }, [incidentId]);
 
-  const canSubmit = useMemo(() => !!incident && !!inspectorId && !!date && !!time && !isSubmitting, [incident, inspectorId, date, time, isSubmitting]);
+  const isInspector = user?.role === INSPECTOR_ROLE;
+  const canSubmit = useMemo(() => !!incident && !!date && !!time && !isSubmitting && (isInspector || !!inspectorId), [incident, date, time, isSubmitting, isInspector, inspectorId]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -119,7 +120,7 @@ function AgendarVisitaPageContent() {
           "x-current-user-email": currentUserEmail,
         },
         body: JSON.stringify({
-          inspector_id: Number(inspectorId),
+          ...(isInspector ? {} : { inspector_id: Number(inspectorId) }),
           visited_at: visitedAt,
           notes,
         }),
@@ -139,11 +140,11 @@ function AgendarVisitaPageContent() {
     }
   };
 
-  if (!isLoadingUser && user?.role !== GENERAL_ADMIN_ROLE) {
+  if (!isLoadingUser && user?.role !== GENERAL_ADMIN_ROLE && user?.role !== INSPECTOR_ROLE) {
     return (
       <PageTransition className="flex-1 p-6 md:p-8">
         <div className="max-w-3xl mx-auto rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-          Solo el administrador general puede programar visitas desde incidencias.
+          Solo el administrador general y el inspector asignado al cliente pueden programar visitas desde incidencias.
         </div>
       </PageTransition>
     );
@@ -174,14 +175,16 @@ function AgendarVisitaPageContent() {
                 </label>
               </div>
 
-              <label className="block text-sm text-slate-600 dark:text-slate-300">Inspector
-                <select className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800" onChange={(e) => setInspectorId(e.target.value)} required value={inspectorId}>
-                  <option value="">Seleccione inspector</option>
-                  {inspectors.map((inspector) => (
-                    <option key={inspector.id} value={inspector.id}>{inspector.full_name}</option>
-                  ))}
-                </select>
-              </label>
+              {!isInspector ? (
+                <label className="block text-sm text-slate-600 dark:text-slate-300">Inspector
+                  <select className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800" onChange={(e) => setInspectorId(e.target.value)} required value={inspectorId}>
+                    <option value="">Seleccione inspector</option>
+                    {inspectors.map((inspector) => (
+                      <option key={inspector.id} value={inspector.id}>{inspector.full_name}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <label className="text-sm text-slate-600 dark:text-slate-300">Fecha

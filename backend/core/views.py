@@ -80,6 +80,16 @@ def _can_create_incidents(user: User | None) -> bool:
     return bool(user and user.role in {User.Role.GENERAL_ADMIN, User.Role.BRANCH_ADMIN})
 
 
+def _can_schedule_visit_from_incident(user: User | None, incident: Incident) -> bool:
+    if not user:
+        return False
+    if user.role == User.Role.GENERAL_ADMIN:
+        return True
+    if user.role != User.Role.INSPECTOR:
+        return False
+    return user.clients.filter(pk=incident.client_id).exists()
+
+
 def _build_access_scope(current_user: User | None) -> dict[str, list[int]] | None:
     if not current_user or current_user.role == User.Role.GENERAL_ADMIN:
         return None
@@ -1652,16 +1662,20 @@ def incident_schedule_visit(request, incident_id: int):
     current_user = _get_current_user(request)
     if not current_user:
         return JsonResponse({"error": "No se pudo identificar tu sesión de usuario."}, status=401)
-    if current_user.role == User.Role.INSPECTOR:
-        return JsonResponse({"error": "No tienes permisos para programar visitas desde incidencias."}, status=403)
 
     data, _ = _extract_user_data(request)
     if data is None:
         return JsonResponse({"error": "Formato JSON inválido."}, status=400)
 
-    incident = Incident.objects.select_related("area", "dispenser").filter(pk=incident_id).first()
+    incident = Incident.objects.select_related("client", "area", "dispenser").filter(pk=incident_id).first()
     if incident is None:
         return JsonResponse({"error": "No se encontró la incidencia."}, status=404)
+
+    if not _can_schedule_visit_from_incident(current_user, incident):
+        return JsonResponse(
+            {"error": "Solo el administrador general o el inspector asignado al cliente pueden programar visitas desde incidencias."},
+            status=403,
+        )
 
     scope = _build_access_scope(current_user)
     if scope is not None and incident.area_id not in scope["area_ids"]:
@@ -1669,7 +1683,9 @@ def incident_schedule_visit(request, incident_id: int):
 
     inspector = None
     inspector_id = data.get("inspector_id")
-    if inspector_id:
+    if current_user.role == User.Role.INSPECTOR:
+        inspector = current_user
+    elif inspector_id:
         try:
             inspector = User.objects.get(pk=int(inspector_id), role=User.Role.INSPECTOR)
         except (User.DoesNotExist, TypeError, ValueError):

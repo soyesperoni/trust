@@ -68,7 +68,7 @@ export default function IncidenciasPage() {
   const canCreateIncident = !isInspector;
   const canCreateIncidentsFromHeader =
     !isLoadingUser && canCreateIncident && !isAccountAdmin;
-  const canScheduleFromIncident = user?.role === GENERAL_ADMIN_ROLE;
+  const canScheduleFromIncident = user?.role === GENERAL_ADMIN_ROLE || user?.role === INSPECTOR_ROLE;
 
   const [incidents, setIncidents] = useState<IncidentRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
