@@ -36,6 +36,19 @@ export async function POST(request: NextRequest) {
     body,
   });
 
-  const payload = await response.json();
+  const payload = await response.json().catch(() => null);
+
+  if (response.ok) {
+    if (response.status !== 201 || typeof payload?.id !== "number") {
+      return NextResponse.json(
+        {
+          error:
+            "No se confirmó la creación de la visita. Intenta nuevamente y verifica en el calendario.",
+        },
+        { status: 502 },
+      );
+    }
+  }
+
   return NextResponse.json(payload, { status: response.status });
 }

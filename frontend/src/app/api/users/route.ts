@@ -53,5 +53,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (response.status !== 201 || typeof payload?.id !== "number") {
+    return NextResponse.json(
+      {
+        error:
+          "No se confirmó la creación del usuario. Intenta nuevamente y verifica en el listado.",
+      },
+      { status: 502 },
+    );
+  }
+
   return NextResponse.json(payload, { status: response.status });
 }

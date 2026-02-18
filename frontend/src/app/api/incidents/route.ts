@@ -53,5 +53,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (response.status !== 201 || typeof data?.id !== "number") {
+    return NextResponse.json(
+      {
+        error:
+          "No se confirmó el registro de la incidencia. Intenta nuevamente y verifica en el listado.",
+      },
+      { status: 502 },
+    );
+  }
+
   return NextResponse.json(data, { status: response.status });
 }
