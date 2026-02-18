@@ -19,6 +19,7 @@ type DispenserApi = {
   model: {
     id: number;
     name: string;
+    photo: string | null;
   };
   area: {
     id: number;
@@ -43,6 +44,7 @@ type DispenserRow = {
   code: string;
   serial: string;
   model: string;
+  modelPhoto: string | null;
   area: string;
   branch: string;
   branchInitials: string;
@@ -119,6 +121,7 @@ export default function DispensadoresPage() {
               code: dispenser.identifier,
               serial: `#${dispenser.id}`,
               model: dispenser.model.name,
+              modelPhoto: dispenser.model.photo,
               area: dispenser.area?.name ?? "Sin área",
               branch: branchName,
               branchInitials: branchInitials || "NA",
@@ -200,9 +203,17 @@ export default function DispensadoresPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
-                            <span className="material-symbols-outlined">
-                              water_drop
-                            </span>
+                            {dispenser.modelPhoto ? (
+                              <img
+                                alt={`Modelo ${dispenser.model}`}
+                                className="h-full w-full rounded-lg object-cover"
+                                src={dispenser.modelPhoto}
+                              />
+                            ) : (
+                              <span className="material-symbols-outlined">
+                                water_drop
+                              </span>
+                            )}
                           </div>
                           <div>
                             <div className="font-semibold text-slate-900 dark:text-white">
