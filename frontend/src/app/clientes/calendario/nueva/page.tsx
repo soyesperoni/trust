@@ -138,9 +138,15 @@ export default function NuevaVisitaPage() {
         }),
       });
 
-      const payload = await response.json();
+      const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(payload.error ?? "No se pudo agendar la visita.");
+        throw new Error(payload?.error ?? "No se pudo agendar la visita.");
+      }
+
+      if (typeof payload?.id !== "number") {
+        throw new Error(
+          "No se confirmó la creación de la visita. Intenta nuevamente y verifica en el calendario.",
+        );
       }
 
       setStatusMessage("Visita registrada correctamente.");
