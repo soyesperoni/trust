@@ -20,3 +20,27 @@ export async function GET(request: NextRequest) {
   const data = await response.json();
   return NextResponse.json(data);
 }
+
+
+export async function POST(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "application/json";
+  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
+  const body = await request.text();
+  const response = await fetch(`${backendBaseUrl}/api/branches/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": contentType,
+      "X-Current-User-Email": currentUserEmail,
+    },
+    body,
+  });
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = { error: "Respuesta inválida del servidor al crear la sucursal." };
+  }
+
+  return NextResponse.json(payload, { status: response.status });
+}

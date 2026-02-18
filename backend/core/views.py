@@ -910,16 +910,104 @@ def client_detail(request, client_id: int):
     return JsonResponse(_serialize_client(client))
 
 
-@require_GET
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def branches(request):
-    queryset = Branch.objects.select_related("client")
     scope = _get_access_scope(request)
-    queryset = _filter_queryset_by_scope(queryset, scope, branch_lookup="id")
-    payload = [
-        _serialize_branch(branch)
-        for branch in queryset.all()
-    ]
-    return JsonResponse({"results": payload})
+    if request.method == "GET":
+        queryset = Branch.objects.select_related("client")
+        queryset = _filter_queryset_by_scope(queryset, scope, branch_lookup="id")
+        payload = [
+            _serialize_branch(branch)
+            for branch in queryset.all()
+        ]
+        return JsonResponse({"results": payload})
+
+    current_user = _get_current_user(request)
+    if current_user and current_user.role == User.Role.INSPECTOR:
+        return JsonResponse({"error": "No tienes permisos para crear sucursales."}, status=403)
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    name = str(data.get("name") or "").strip()
+    address = str(data.get("address") or "").strip()
+    city = str(data.get("city") or "").strip()
+
+    try:
+        client_id = int(data.get("client_id") or 0)
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Cliente inválido."}, status=400)
+
+    if not name or not client_id:
+        return JsonResponse({"error": "Cliente y nombre son obligatorios."}, status=400)
+
+    client = _filter_queryset_by_scope(Client.objects.all(), scope, client_lookup="id").filter(pk=client_id).first()
+    if client is None:
+        return JsonResponse({"error": "Cliente no encontrado."}, status=404)
+
+    if Branch.objects.filter(client=client, name=name).exists():
+        return JsonResponse(
+            {"error": "Ya existe una sucursal con ese nombre para el cliente seleccionado."},
+            status=400,
+        )
+
+    branch = Branch.objects.create(client=client, name=name, address=address, city=city)
+    return JsonResponse(_serialize_branch(branch), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PUT"])
+def branch_detail(request, branch_id: int):
+    scope = _get_access_scope(request)
+    queryset = _filter_queryset_by_scope(
+        Branch.objects.select_related("client"),
+        scope,
+        branch_lookup="id",
+    )
+    branch = queryset.filter(pk=branch_id).first()
+    if branch is None:
+        return JsonResponse({"error": "Sucursal no encontrada."}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_branch(branch))
+
+    current_user = _get_current_user(request)
+    if current_user and current_user.role == User.Role.INSPECTOR:
+        return JsonResponse({"error": "No tienes permisos para editar sucursales."}, status=403)
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    if "client_id" in data:
+        try:
+            client_id = int(data.get("client_id") or 0)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Cliente inválido."}, status=400)
+
+        new_client = _filter_queryset_by_scope(Client.objects.all(), scope, client_lookup="id").filter(pk=client_id).first()
+        if new_client is None:
+            return JsonResponse({"error": "Cliente no encontrado."}, status=404)
+        branch.client = new_client
+
+    if "name" in data:
+        branch.name = str(data.get("name") or "").strip()
+    if "address" in data:
+        branch.address = str(data.get("address") or "").strip()
+    if "city" in data:
+        branch.city = str(data.get("city") or "").strip()
+
+    if not branch.name:
+        return JsonResponse({"error": "El nombre no puede estar vacío."}, status=400)
+
+    duplicate = Branch.objects.exclude(pk=branch.pk).filter(client=branch.client, name=branch.name).exists()
+    if duplicate:
+        return JsonResponse({"error": "Ya existe una sucursal con ese nombre para el cliente seleccionado."}, status=400)
+
+    branch.save()
+    return JsonResponse(_serialize_branch(branch))
 
 
 @require_GET

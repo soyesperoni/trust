@@ -359,3 +359,56 @@ class HierarchicalAccessScopeTests(TestCase):
             HTTP_X_CURRENT_USER_EMAIL=user.email,
         )
         self.assertEqual(blocked_response.status_code, 404)
+
+
+class BranchApiTests(TestCase):
+    def setUp(self):
+        self.client_entity = Client.objects.create(name="Cliente Uno", code="CLI-01")
+
+    def test_create_branch(self):
+        response = self.client.post(
+            "/api/branches/",
+            data=json.dumps(
+                {
+                    "client_id": self.client_entity.id,
+                    "name": "Sucursal Centro",
+                    "address": "Av. Siempre Viva 123",
+                    "city": "Monterrey",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Branch.objects.count(), 1)
+        branch = Branch.objects.first()
+        self.assertIsNotNone(branch)
+        branch = Branch.objects.get()
+        self.assertEqual(branch.client_id, self.client_entity.id)
+        self.assertEqual(branch.name, "Sucursal Centro")
+
+    def test_update_branch(self):
+        branch = Branch.objects.create(
+            client=self.client_entity,
+            name="Sucursal Norte",
+            address="",
+            city="",
+        )
+
+        response = self.client.put(
+            f"/api/branches/{branch.id}/",
+            data=json.dumps(
+                {
+                    "name": "Sucursal Norte 2",
+                    "address": "Calle 1",
+                    "city": "CDMX",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        branch.refresh_from_db()
+        self.assertEqual(branch.name, "Sucursal Norte 2")
+        self.assertEqual(branch.address, "Calle 1")
+        self.assertEqual(branch.city, "CDMX")
