@@ -42,15 +42,15 @@ export function useCurrentUser() {
         const data = await response.json();
         if (!isMounted) return;
         const results = (data.results ?? []) as CurrentUser[];
-        const resolvedUser =
-          (sessionEmail
-            ? results.find(
-                (candidate) => candidate.email?.trim().toLowerCase() === sessionEmail,
-              )
-            : null) ??
-          results.find((candidate) => candidate.is_active) ??
-          results[0] ??
-          null;
+        const matchedSessionUser = sessionEmail
+          ? results.find(
+              (candidate) => candidate.email?.trim().toLowerCase() === sessionEmail,
+            ) ?? null
+          : null;
+
+        const resolvedUser = sessionEmail
+          ? matchedSessionUser
+          : results.find((candidate) => candidate.is_active) ?? results[0] ?? null;
         setUser(resolvedUser);
       } finally {
         if (!isMounted) return;
