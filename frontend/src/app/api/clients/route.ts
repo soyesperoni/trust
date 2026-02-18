@@ -31,7 +31,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "application/json";
-  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
+  const currentUserEmail = request.headers.get("x-current-user-email")?.trim().toLowerCase() ?? "";
+
+  if (!currentUserEmail) {
+    return NextResponse.json(
+      { error: "No se pudo identificar tu sesión. Cierra sesión y vuelve a ingresar." },
+      { status: 401 },
+    );
+  }
+
   const body = await request.text();
   const response = await fetch(`${backendBaseUrl}/api/clients/`, {
     method: "POST",
