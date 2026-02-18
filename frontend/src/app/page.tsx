@@ -12,11 +12,11 @@ export default function Home() {
   const router = useRouter();
 
   const loginEndpoints = [
-    "/api/auth/login",
     "/api/login/",
     process.env.NEXT_PUBLIC_BACKEND_BASE_URL
       ? `${process.env.NEXT_PUBLIC_BACKEND_BASE_URL.replace(/\/$/, "")}/api/login/`
       : null,
+    process.env.NEXT_PUBLIC_USE_NEXT_AUTH_PROXY === "true" ? "/api/auth/login" : null,
   ].filter((endpoint): endpoint is string => Boolean(endpoint));
 
   const performLogin = async (email: string, password: string) => {
