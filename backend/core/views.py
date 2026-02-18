@@ -68,6 +68,18 @@ def _get_current_user(request):
     return User.objects.filter(email__iexact=current_email, is_active=True).first()
 
 
+def _is_general_admin_user(user: User | None) -> bool:
+    return bool(user and user.role == User.Role.GENERAL_ADMIN)
+
+
+def _can_create_dashboard_items(user: User | None) -> bool:
+    return _is_general_admin_user(user)
+
+
+def _can_create_incidents(user: User | None) -> bool:
+    return bool(user and user.role in {User.Role.GENERAL_ADMIN, User.Role.BRANCH_ADMIN})
+
+
 def _build_access_scope(current_user: User | None) -> dict[str, list[int]] | None:
     if not current_user or current_user.role == User.Role.GENERAL_ADMIN:
         return None
@@ -840,8 +852,8 @@ def clients(request):
         return JsonResponse({"results": payload})
 
     current_user = _get_current_user(request)
-    if current_user and current_user.role == User.Role.INSPECTOR:
-        return JsonResponse({"error": "No tienes permisos para editar clientes."}, status=403)
+    if current_user and not _can_create_dashboard_items(current_user):
+        return JsonResponse({"error": "Solo el administrador general puede crear clientes."}, status=403)
 
     data, files = _extract_user_data(request)
     if data is None:
@@ -924,8 +936,8 @@ def branches(request):
         return JsonResponse({"results": payload})
 
     current_user = _get_current_user(request)
-    if current_user and current_user.role == User.Role.INSPECTOR:
-        return JsonResponse({"error": "No tienes permisos para crear sucursales."}, status=403)
+    if not _can_create_dashboard_items(current_user):
+        return JsonResponse({"error": "Solo el administrador general puede crear sucursales."}, status=403)
 
     data, files = _extract_user_data(request)
     if data is None:
@@ -1024,8 +1036,8 @@ def areas(request):
         return JsonResponse({"results": payload})
 
     current_user = _get_current_user(request)
-    if current_user and current_user.role == User.Role.INSPECTOR:
-        return JsonResponse({"error": "No tienes permisos para crear áreas."}, status=403)
+    if not _can_create_dashboard_items(current_user):
+        return JsonResponse({"error": "Solo el administrador general puede crear áreas."}, status=403)
 
     data, files = _extract_user_data(request)
     if data is None:
@@ -1128,8 +1140,8 @@ def dispensers(request):
     scope = _get_access_scope(request)
     if request.method == "POST":
         current_user = _get_current_user(request)
-        if current_user and current_user.role == User.Role.INSPECTOR:
-            return JsonResponse({"error": "No tienes permisos para crear dosificadores."}, status=403)
+        if not _can_create_dashboard_items(current_user):
+            return JsonResponse({"error": "Solo el administrador general puede crear dosificadores."}, status=403)
 
         data, files = _extract_user_data(request)
         if data is None:
@@ -1213,8 +1225,8 @@ def products(request):
         return JsonResponse({"results": payload})
 
     current_user = _get_current_user(request)
-    if current_user and current_user.role == User.Role.INSPECTOR:
-        return JsonResponse({"error": "No tienes permisos para crear productos."}, status=403)
+    if not _can_create_dashboard_items(current_user):
+        return JsonResponse({"error": "Solo el administrador general puede crear productos."}, status=403)
 
     data, files = _extract_user_data(request)
     if data is None:
@@ -1262,8 +1274,8 @@ def visits(request):
     if request.method == "POST":
         if not current_user:
             return JsonResponse({"error": "No se pudo identificar tu sesión de usuario."}, status=401)
-        if current_user.role == User.Role.INSPECTOR:
-            return JsonResponse({"error": "No tienes permisos para agendar visitas."}, status=403)
+        if not _can_create_dashboard_items(current_user):
+            return JsonResponse({"error": "Solo el administrador general puede agendar visitas."}, status=403)
 
     if request.method == "GET":
         queryset = Visit.objects.select_related(
@@ -1562,8 +1574,8 @@ def incidents(request):
         ]
         return JsonResponse({"results": payload})
 
-    if not current_user or current_user.role not in {User.Role.GENERAL_ADMIN, User.Role.BRANCH_ADMIN}:
-        return JsonResponse({"error": "Solo administradores pueden registrar incidencias."}, status=403)
+    if not _can_create_incidents(current_user):
+        return JsonResponse({"error": "Solo el administrador general y el administrador de sucursal pueden registrar incidencias."}, status=403)
 
     data, files = _extract_user_data(request)
     if data is None:
