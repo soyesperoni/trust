@@ -27,7 +27,7 @@ from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
 from reportlab.pdfgen import canvas
 
-from .models import Area, Branch, Client, Dispenser, Incident, IncidentMedia, Product, User, Visit, VisitMedia
+from .models import Area, Branch, Client, Dispenser, DispenserModel, Incident, IncidentMedia, Product, User, Visit, VisitMedia
 
 
 REPORT_FONT = "Helvetica"
@@ -247,6 +247,16 @@ def _serialize_dispenser(dispenser: Dispenser) -> dict:
             }
             for product in dispenser.products.all()
         ],
+    }
+
+
+def _serialize_dispenser_model(model: DispenserModel) -> dict:
+    return {
+        "id": model.id,
+        "name": model.name,
+        "manufacturer": model.manufacturer,
+        "description": model.description,
+        "photo": model.photo.url if model.photo else None,
     }
 
 
@@ -933,6 +943,13 @@ def dispensers(request):
         _serialize_dispenser(dispenser)
         for dispenser in queryset.all()
     ]
+    return JsonResponse({"results": payload})
+
+
+@require_GET
+def dispenser_models(request):
+    queryset = DispenserModel.objects.all()
+    payload = [_serialize_dispenser_model(model) for model in queryset]
     return JsonResponse({"results": payload})
 
 
