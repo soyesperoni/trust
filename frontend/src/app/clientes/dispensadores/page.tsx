@@ -6,7 +6,12 @@ import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { getSessionUserEmail } from "../../lib/session";
-import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE } from "../../lib/permissions";
+import {
+  ACCOUNT_ADMIN_ROLE,
+  BRANCH_ADMIN_ROLE,
+  GENERAL_ADMIN_ROLE,
+  INSPECTOR_ROLE,
+} from "../../lib/permissions";
 
 import PageTransition from "../../components/PageTransition";
 
@@ -73,10 +78,12 @@ export default function DispensadoresPage() {
   const { user, isLoading: isLoadingUser } = useCurrentUser();
   const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
   const canManageDispensers = !isLoadingUser && !isRestrictedRole;
+  const canDeleteDispensers = !isLoadingUser && user?.role === GENERAL_ADMIN_ROLE;
   const [dispensers, setDispensers] = useState<DispenserRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingDispenserId, setDeletingDispenserId] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -152,6 +159,36 @@ export default function DispensadoresPage() {
     };
   }, []);
 
+
+  const handleDeleteDispenser = async (dispenserId: number) => {
+    const confirmed = window.confirm("¿Deseas eliminar este dosificador?");
+    if (!confirmed) return;
+
+    setDeletingDispenserId(dispenserId);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/dispensers/${dispenserId}/`, {
+        method: "DELETE",
+        headers: { "x-current-user-email": getSessionUserEmail() },
+      });
+
+      if (response.status !== 204) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || "No se pudo eliminar el dosificador.");
+      }
+
+      setDispensers((current) => current.filter((dispenser) => dispenser.id !== dispenserId));
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No se pudo eliminar el dosificador.",
+      );
+    } finally {
+      setDeletingDispenserId(null);
+    }
+  };
   const filteredDispensers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     if (!query) return dispensers;
@@ -299,6 +336,17 @@ export default function DispensadoresPage() {
                             edit
                           </span>
                         </Link>}
+                        {canDeleteDispensers && (
+                          <button
+                            type="button"
+                            className="text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                            onClick={() => void handleDeleteDispenser(dispenser.id)}
+                            disabled={deletingDispenserId === dispenser.id}
+                            title="Eliminar"
+                          >
+                            <span className="material-symbols-outlined">delete</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

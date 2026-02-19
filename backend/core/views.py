@@ -981,7 +981,7 @@ def branches(request):
 
 
 @csrf_exempt
-@require_http_methods(["GET", "PUT"])
+@require_http_methods(["GET", "PUT", "DELETE"])
 def branch_detail(request, branch_id: int):
     scope = _get_access_scope(request)
     queryset = _filter_queryset_by_scope(
@@ -997,6 +997,12 @@ def branch_detail(request, branch_id: int):
         return JsonResponse(_serialize_branch(branch))
 
     current_user = _get_current_user(request)
+    if request.method == "DELETE":
+        if not _is_general_admin_user(current_user):
+            return JsonResponse({"error": "Solo el administrador general puede eliminar sucursales."}, status=403)
+        branch.delete()
+        return JsonResponse({}, status=204)
+
     if current_user and current_user.role == User.Role.INSPECTOR:
         return JsonResponse({"error": "No tienes permisos para editar sucursales."}, status=403)
 
@@ -1223,6 +1229,72 @@ def dispenser_models(request):
 
 
 @csrf_exempt
+@require_http_methods(["GET", "PUT", "DELETE"])
+def dispenser_detail(request, dispenser_id: int):
+    scope = _get_access_scope(request)
+    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
+    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
+    dispenser = queryset.filter(pk=dispenser_id).first()
+    if dispenser is None:
+        return JsonResponse({"error": "Dosificador no encontrado."}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_dispenser(dispenser))
+
+    current_user = _get_current_user(request)
+    if not _is_general_admin_user(current_user):
+        return JsonResponse({"error": "Solo el administrador general puede modificar dosificadores."}, status=403)
+
+    if request.method == "DELETE":
+        dispenser.delete()
+        return JsonResponse({}, status=204)
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    if "identifier" in data:
+        dispenser.identifier = str(data.get("identifier") or "").strip()
+
+    if "model_id" in data:
+        try:
+            model_id = int(data.get("model_id") or 0)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Modelo inválido."}, status=400)
+        model = DispenserModel.objects.filter(pk=model_id).first()
+        if model is None:
+            return JsonResponse({"error": "Modelo no encontrado."}, status=404)
+        dispenser.model = model
+
+    if "area_id" in data:
+        area_id = data.get("area_id")
+        if area_id in (None, ""):
+            dispenser.area = None
+        else:
+            try:
+                resolved_area_id = int(area_id)
+            except (TypeError, ValueError):
+                return JsonResponse({"error": "Área inválida."}, status=400)
+            area = _filter_queryset_by_scope(
+                Area.objects.select_related("branch__client"),
+                scope,
+                area_lookup="id",
+            ).filter(pk=resolved_area_id).first()
+            if area is None:
+                return JsonResponse({"error": "Área no encontrada."}, status=404)
+            dispenser.area = area
+
+    if not dispenser.identifier:
+        return JsonResponse({"error": "El identificador no puede estar vacío."}, status=400)
+
+    if Dispenser.objects.exclude(pk=dispenser.pk).filter(model=dispenser.model, identifier=dispenser.identifier).exists():
+        return JsonResponse({"error": "Ya existe un dosificador con ese identificador para el modelo seleccionado."}, status=400)
+
+    dispenser.save()
+    return JsonResponse(_serialize_dispenser(dispenser))
+
+
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def products(request):
     scope = _get_access_scope(request)
@@ -1276,6 +1348,62 @@ def products(request):
 
     product = Product.objects.create(dispenser=dispenser, name=name, description=description)
     return JsonResponse(_serialize_product(product), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PUT", "DELETE"])
+def product_detail(request, product_id: int):
+    scope = _get_access_scope(request)
+    queryset = Product.objects.select_related("dispenser__model", "dispenser__area__branch__client")
+    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="dispenser__area_id")
+    product = queryset.filter(pk=product_id).first()
+    if product is None:
+        return JsonResponse({"error": "Producto no encontrado."}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_product(product))
+
+    current_user = _get_current_user(request)
+    if not _is_general_admin_user(current_user):
+        return JsonResponse({"error": "Solo el administrador general puede modificar productos."}, status=403)
+
+    if request.method == "DELETE":
+        product.delete()
+        return JsonResponse({}, status=204)
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    if "name" in data:
+        product.name = str(data.get("name") or "").strip()
+    if "description" in data:
+        product.description = str(data.get("description") or "").strip()
+
+    if "dispenser_id" in data:
+        try:
+            dispenser_id = int(data.get("dispenser_id") or 0)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Dosificador inválido."}, status=400)
+        dispenser = _filter_queryset_by_scope(
+            Dispenser.objects.select_related("model", "area__branch__client"),
+            scope,
+            area_lookup="area_id",
+        ).filter(pk=dispenser_id).first()
+        if dispenser is None:
+            return JsonResponse({"error": "Dosificador no encontrado."}, status=404)
+        if Product.objects.exclude(pk=product.pk).filter(dispenser=dispenser).count() >= 4:
+            return JsonResponse({"error": "Cada dosificador puede tener máximo 4 productos."}, status=400)
+        product.dispenser = dispenser
+
+    if not product.name:
+        return JsonResponse({"error": "El nombre no puede estar vacío."}, status=400)
+
+    if Product.objects.exclude(pk=product.pk).filter(dispenser=product.dispenser, name=product.name).exists():
+        return JsonResponse({"error": "Ya existe un producto con ese nombre para el dosificador seleccionado."}, status=400)
+
+    product.save()
+    return JsonResponse(_serialize_product(product))
 
 
 @csrf_exempt
