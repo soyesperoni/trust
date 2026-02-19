@@ -94,6 +94,7 @@ export default function ClientesListadoPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingClientId, setDeletingClientId] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -265,6 +266,49 @@ export default function ClientesListadoPage() {
     return "No hay clientes registrados.";
   }, [clients.length, error, isLoading]);
 
+  const handleDeleteClient = async (clientId: number) => {
+    const confirmDelete = window.confirm(
+      "¿Estás seguro de que deseas eliminar este cliente? Esta acción no se puede deshacer.",
+    );
+    if (!confirmDelete) {
+      return;
+    }
+
+    setDeletingClientId(clientId);
+
+    try {
+      const response = await fetch(`/api/clients/${clientId}/`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        let errorMessage = "No se pudo eliminar el cliente.";
+        try {
+          const payload = await response.json();
+          if (typeof payload?.error === "string" && payload.error.trim()) {
+            errorMessage = payload.error;
+          }
+        } catch {
+          // no-op
+        }
+        throw new Error(errorMessage);
+      }
+
+      setClients((current) =>
+        current.filter((client) => client.id !== clientId),
+      );
+      setError(null);
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No se pudo eliminar el cliente.",
+      );
+    } finally {
+      setDeletingClientId(null);
+    }
+  };
+
   return (
     <>
       <DashboardHeader
@@ -403,6 +447,17 @@ export default function ClientesListadoPage() {
                                 edit
                               </span>
                             </Link>
+                            <button
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                              disabled={deletingClientId === client.id}
+                              onClick={() => void handleDeleteClient(client.id)}
+                              title="Eliminar"
+                              type="button"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                delete
+                              </span>
+                            </button>
                           </div>
                         </td>
                       </tr>
