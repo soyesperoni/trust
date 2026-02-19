@@ -107,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 6),
             Image.network(
               'https://trust.supplymax.net/supply.png',
-              height: 20,
+              height: 34,
               errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
           ],

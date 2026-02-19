@@ -161,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const SizedBox(width: 8),
                                 Image.network(
                                   'https://trust.supplymax.net/supply.png',
-                                  height: 24,
+                                  height: 58,
                                   errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                                 ),
                               ],
@@ -363,7 +363,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const SizedBox(width: 8),
                                 Image.network(
                                   'https://trust.supplymax.net/supply.png',
-                                  height: 22,
+                                  height: 58,
                                   errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                                 ),
                               ],
