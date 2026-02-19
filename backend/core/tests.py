@@ -74,6 +74,41 @@ class ClientApiTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Client.objects.filter(code="CLI-ASSIGNED").count(), 0)
 
+    def test_delete_client_as_general_admin(self):
+        target_client = Client.objects.create(name="Delete Me", code="DEL-001")
+        general_admin = User.objects.create_user(
+            username="ga-client",
+            email="ga-client@test.com",
+            password="secret123",
+            role=User.Role.GENERAL_ADMIN,
+        )
+
+        response = self.client.delete(
+            f"/api/clients/{target_client.id}/",
+            HTTP_X_CURRENT_USER_EMAIL=general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Client.objects.filter(pk=target_client.id).exists())
+
+    def test_delete_client_forbidden_for_account_admin(self):
+        target_client = Client.objects.create(name="Keep Me", code="KEEP-001")
+        account_admin = User.objects.create_user(
+            username="aa-client",
+            email="aa-client@test.com",
+            password="secret123",
+            role=User.Role.ACCOUNT_ADMIN,
+        )
+        account_admin.clients.add(target_client)
+
+        response = self.client.delete(
+            f"/api/clients/{target_client.id}/",
+            HTTP_X_CURRENT_USER_EMAIL=account_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Client.objects.filter(pk=target_client.id).exists())
+
 
 class ProductionSettingsTests(TestCase):
     def test_default_storage_is_configured_for_media_uploads(self):

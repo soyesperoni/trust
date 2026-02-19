@@ -893,7 +893,7 @@ def clients(request):
 
 
 @csrf_exempt
-@require_http_methods(["GET", "PUT"])
+@require_http_methods(["GET", "PUT", "DELETE"])
 def client_detail(request, client_id: int):
     scope = _get_access_scope(request)
     queryset = _filter_queryset_by_scope(Client.objects.all(), scope, client_lookup="id")
@@ -905,6 +905,12 @@ def client_detail(request, client_id: int):
         return JsonResponse(_serialize_client(client))
 
     current_user = _get_current_user(request)
+    if request.method == "DELETE":
+        if not _is_general_admin_user(current_user):
+            return JsonResponse({"error": "Solo el administrador general puede eliminar clientes."}, status=403)
+        client.delete()
+        return JsonResponse({}, status=204)
+
     if current_user and current_user.role == User.Role.INSPECTOR:
         return JsonResponse({"error": "No tienes permisos para editar clientes."}, status=403)
 
