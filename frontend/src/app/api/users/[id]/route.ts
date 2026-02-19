@@ -44,3 +44,21 @@ export async function PUT(
   const payload = await response.json();
   return NextResponse.json(payload, { status: response.status });
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const resolvedParams = await params;
+
+  const response = await fetch(`${backendBaseUrl}/api/users/${resolvedParams.id}/`, {
+    method: "DELETE",
+  });
+
+  if (response.status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  const payload = await response.json();
+  return NextResponse.json(payload, { status: response.status });
+}
