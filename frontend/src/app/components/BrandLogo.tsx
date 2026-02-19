@@ -10,20 +10,25 @@ type BrandLogoProps = {
   size?: BrandLogoSize;
   showSupplyLogo?: boolean;
   showBySupply?: boolean;
+  className?: string;
 };
 
-const sizeStyles: Record<BrandLogoSize, { text: string }> = {
+const sizeStyles: Record<BrandLogoSize, { text: string; supply: string }> = {
   md: {
     text: "text-xl",
+    supply: "h-5",
   },
   lg: {
     text: "text-2xl",
+    supply: "h-6",
   },
   xl: {
     text: "text-[2.44rem]",
+    supply: "h-9",
   },
   xxl: {
     text: "text-[54px]",
+    supply: "h-12",
   },
 };
 
@@ -31,12 +36,13 @@ export default function BrandLogo({
   size = "md",
   showSupplyLogo = false,
   showBySupply = false,
+  className = "",
 }: BrandLogoProps) {
   const styles = sizeStyles[size];
   const shouldShowSupplyLogo = showSupplyLogo || showBySupply;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center gap-2 ${className}`.trim()}>
       <span className={`font-logo ${styles.text} font-bold text-primary lowercase`}>
         trust
       </span>
@@ -45,7 +51,7 @@ export default function BrandLogo({
         <Image
           src={supplyLogo}
           alt="SupplyMax"
-          className="h-7 w-auto"
+          className={`${styles.supply} w-auto`}
           priority
         />
       ) : null}

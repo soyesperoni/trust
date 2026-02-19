@@ -90,7 +90,7 @@ export default function DashboardHeader({
   return (
     <>
       <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
-        <BrandLogo size="xl" showBySupply />
+        <BrandLogo size="xl" showSupplyLogo />
         <div className="flex items-center gap-1">
           <ThemeToggleButton />
           <Link
