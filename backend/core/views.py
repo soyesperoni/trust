@@ -1803,7 +1803,7 @@ def users(request):
 
 
 @csrf_exempt
-@require_http_methods(["GET", "PUT"])
+@require_http_methods(["GET", "PUT", "DELETE"])
 def user_detail(request, user_id: int):
     try:
         user = User.objects.get(pk=user_id)
@@ -1812,6 +1812,16 @@ def user_detail(request, user_id: int):
 
     if request.method == "GET":
         return JsonResponse(_serialize_user(user))
+
+    if request.method == "DELETE":
+        current_user = _get_current_user(request)
+        if current_user and current_user.id == user.id:
+            return JsonResponse({"error": "No puedes eliminar tu propio usuario."}, status=400)
+
+        if user.profile_photo:
+            user.profile_photo.delete(save=False)
+        user.delete()
+        return HttpResponse(status=204)
 
     data, files = _extract_user_data(request)
     if data is None:
