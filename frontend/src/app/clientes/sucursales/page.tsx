@@ -70,6 +70,7 @@ export default function SucursalesPage() {
   const canManageBranches = !isLoadingUser && !isRestrictedRole;
 
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,11 +155,27 @@ export default function SucursalesPage() {
     };
   }, []);
 
+  const filteredBranches = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return branches;
+
+    return branches.filter((branch) =>
+      [
+        branch.name,
+        branch.client,
+        branch.city,
+        branch.status,
+        String(branch.id),
+      ].some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [branches, searchTerm]);
+
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando sucursales...";
     if (error) return error;
+    if (branches.length > 0) return "No hay sucursales que coincidan con la búsqueda.";
     return "No hay sucursales registradas.";
-  }, [error, isLoading]);
+  }, [branches.length, error, isLoading]);
 
   return (
     <>
@@ -188,6 +205,8 @@ export default function SucursalesPage() {
                   className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   placeholder="Buscar sucursal..."
                   type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </div>
             </div>
@@ -225,7 +244,7 @@ export default function SucursalesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {branches.map((branch) => (
+                {filteredBranches.map((branch) => (
                   <tr
                     key={branch.id}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
@@ -305,7 +324,7 @@ export default function SucursalesPage() {
                     </td>
                   </tr>
                 ))}
-                {branches.length === 0 && (
+                {filteredBranches.length === 0 && (
                   <tr>
                     <td
                       colSpan={7}
@@ -320,7 +339,7 @@ export default function SucursalesPage() {
           </div>
           <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
             <span className="text-sm text-slate-500 dark:text-slate-400">
-              Mostrando {branches.length} de {branches.length} sucursales
+              Mostrando {filteredBranches.length} de {branches.length} sucursales
             </span>
             <div className="flex items-center gap-2">
               <button

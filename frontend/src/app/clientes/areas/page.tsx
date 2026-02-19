@@ -70,6 +70,7 @@ export default function AreasPage() {
   const canManageAreas = !isLoadingUser && !isRestrictedRole;
 
   const [areas, setAreas] = useState<AreaRow[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -157,11 +158,23 @@ export default function AreasPage() {
     }
   };
 
+  const filteredAreas = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return areas;
+
+    return areas.filter((area) =>
+      [area.name, area.branch, area.client, area.status, String(area.id)].some((value) =>
+        value.toLowerCase().includes(query),
+      ),
+    );
+  }, [areas, searchTerm]);
+
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando áreas...";
     if (error) return error;
+    if (areas.length > 0) return "No hay áreas que coincidan con la búsqueda.";
     return "No hay áreas registradas.";
-  }, [error, isLoading]);
+  }, [areas.length, error, isLoading]);
 
   return (
     <>
@@ -191,6 +204,8 @@ export default function AreasPage() {
                   className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   placeholder="Buscar área..."
                   type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </div>
             </div>
@@ -228,7 +243,7 @@ export default function AreasPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {areas.map((area) => (
+                {filteredAreas.map((area) => (
                   <tr
                     key={area.id}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
@@ -311,7 +326,7 @@ export default function AreasPage() {
                     </td>
                   </tr>
                 ))}
-                {areas.length === 0 && (
+                {filteredAreas.length === 0 && (
                   <tr>
                     <td
                       colSpan={6}
@@ -326,7 +341,7 @@ export default function AreasPage() {
           </div>
           <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
             <span className="text-sm text-slate-500 dark:text-slate-400">
-              Mostrando {areas.length} de {areas.length} áreas
+              Mostrando {filteredAreas.length} de {areas.length} áreas
             </span>
             <div className="flex items-center gap-2">
               <button

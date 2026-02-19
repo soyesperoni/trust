@@ -53,6 +53,7 @@ export default function ProductosPage() {
   const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
   const canManageProducts = !isLoadingUser && !isRestrictedRole;
   const [products, setProducts] = useState<ProductRow[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,14 +107,31 @@ export default function ProductosPage() {
     };
   }, []);
 
+  const filteredProducts = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return products;
+
+    return products.filter((product) =>
+      [
+        product.name,
+        product.sku,
+        product.description,
+        product.dispenserCode,
+        product.dispenserModel,
+        product.status,
+      ].some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [products, searchTerm]);
+
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando productos...";
     if (error) return error;
+    if (products.length > 0) return "No hay productos que coincidan con la búsqueda.";
     return "No hay productos registrados.";
-  }, [error, isLoading]);
+  }, [error, isLoading, products.length]);
 
   const totalResults = products.length;
-  const displayedResults = products.length;
+  const displayedResults = filteredProducts.length;
 
   return (
     <>
@@ -144,6 +162,8 @@ export default function ProductosPage() {
                   className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   placeholder="Buscar producto, SKU..."
                   type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </div>
             </div>
@@ -161,7 +181,7 @@ export default function ProductosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {products.map((product) => {
+                {filteredProducts.map((product) => {
                   const statusStyle = statusStyles[product.status];
 
                   return (
@@ -226,7 +246,7 @@ export default function ProductosPage() {
                     </tr>
                   );
                 })}
-                {products.length === 0 && (
+                {filteredProducts.length === 0 && (
                   <tr>
                     <td
                       colSpan={6}

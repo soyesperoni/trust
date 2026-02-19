@@ -91,6 +91,7 @@ export default function ClientesListadoPage() {
     );
 
   const [clients, setClients] = useState<ClientRow[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -242,11 +243,27 @@ export default function ClientesListadoPage() {
     };
   }, []);
 
+  const filteredClients = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return clients;
+
+    return clients.filter((client) =>
+      [
+        client.name,
+        client.contactName,
+        client.contactEmail,
+        client.status,
+        String(client.id),
+      ].some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [clients, searchTerm]);
+
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando clientes...";
     if (error) return error;
+    if (clients.length > 0) return "No hay clientes que coincidan con la búsqueda.";
     return "No hay clientes registrados.";
-  }, [error, isLoading]);
+  }, [clients.length, error, isLoading]);
 
   return (
     <>
@@ -276,6 +293,8 @@ export default function ClientesListadoPage() {
                       className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                       placeholder="Buscar cliente..."
                       type="text"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
                     />
                   </div>
                 </div>
@@ -312,7 +331,7 @@ export default function ClientesListadoPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                    {clients.map((client) => (
+                    {filteredClients.map((client) => (
                       <tr
                         key={client.id}
                         className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
@@ -388,7 +407,7 @@ export default function ClientesListadoPage() {
                         </td>
                       </tr>
                     ))}
-                    {clients.length === 0 && (
+                    {filteredClients.length === 0 && (
                       <tr>
                         <td
                           colSpan={6}
@@ -403,7 +422,7 @@ export default function ClientesListadoPage() {
               </div>
               <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
                 <span className="text-sm text-slate-500 dark:text-slate-400">
-                  Mostrando {clients.length} de {clients.length} clientes
+                  Mostrando {filteredClients.length} de {clients.length} clientes
                 </span>
                 <div className="flex items-center gap-2">
                   <button
