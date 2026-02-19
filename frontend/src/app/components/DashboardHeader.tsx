@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import {
   fetchNotificationIds,
   getUnreadNotificationCount,
-  NOTIFICATIONS_UPDATED_EVENT,
+  subscribeToRealtimeNotifications,
 } from "../lib/notifications";
 import { clearSessionUser } from "../lib/session";
 
@@ -64,19 +64,11 @@ export default function DashboardHeader({
     };
 
     loadUnreadCount();
-
-    const handleNotificationsUpdate = () => {
-      loadUnreadCount();
-    };
-
-    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, handleNotificationsUpdate);
+    const unsubscribe = subscribeToRealtimeNotifications(loadUnreadCount);
 
     return () => {
       isMounted = false;
-      window.removeEventListener(
-        NOTIFICATIONS_UPDATED_EVENT,
-        handleNotificationsUpdate,
-      );
+      unsubscribe();
     };
   }, []);
 

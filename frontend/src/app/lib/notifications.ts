@@ -1,5 +1,6 @@
 const READ_NOTIFICATIONS_KEY = "read-notification-ids";
 export const NOTIFICATIONS_UPDATED_EVENT = "notifications-updated";
+const NOTIFICATIONS_POLL_INTERVAL_MS = 10000;
 
 type Incident = {
   id: number;
@@ -43,7 +44,7 @@ export const getUnreadNotificationCount = (ids: string[]) => {
   return ids.reduce((total, id) => total + (readIds.has(id) ? 0 : 1), 0);
 };
 
-export const fetchNotificationIds = async () => {
+export const fetchNotificationsPayload = async () => {
   const [incidentsResponse, visitsResponse] = await Promise.all([
     fetch("/api/incidents", { cache: "no-store" }),
     fetch("/api/visits", { cache: "no-store" }),
@@ -58,11 +59,43 @@ export const fetchNotificationIds = async () => {
     visitsResponse.json(),
   ]);
 
-  const incidentIds = (incidentsData.results ?? []).map(
-    (incident: Incident) => `incident-${incident.id}`,
-  );
-  const visitIds = (visitsData.results ?? []).map((visit: Visit) => `visit-${visit.id}`);
+  return {
+    incidents: incidentsData.results ?? [],
+    visits: visitsData.results ?? [],
+  };
+};
+
+export const fetchNotificationIds = async () => {
+  const { incidents, visits } = await fetchNotificationsPayload();
+
+  const incidentIds = incidents.map((incident: Incident) => `incident-${incident.id}`);
+  const visitIds = visits.map((visit: Visit) => `visit-${visit.id}`);
 
   return [...incidentIds, ...visitIds];
 };
 
+export const subscribeToRealtimeNotifications = (
+  onUpdate: () => void,
+  pollIntervalMs = NOTIFICATIONS_POLL_INTERVAL_MS,
+) => {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  const handleSync = () => {
+    onUpdate();
+  };
+
+  const timerId = window.setInterval(handleSync, pollIntervalMs);
+
+  window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, handleSync);
+  window.addEventListener("focus", handleSync);
+  document.addEventListener("visibilitychange", handleSync);
+
+  return () => {
+    window.clearInterval(timerId);
+    window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, handleSync);
+    window.removeEventListener("focus", handleSync);
+    document.removeEventListener("visibilitychange", handleSync);
+  };
+};
