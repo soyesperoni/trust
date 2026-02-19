@@ -6,7 +6,12 @@ import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { getSessionUserEmail } from "../../lib/session";
-import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE } from "../../lib/permissions";
+import {
+  ACCOUNT_ADMIN_ROLE,
+  BRANCH_ADMIN_ROLE,
+  GENERAL_ADMIN_ROLE,
+  INSPECTOR_ROLE,
+} from "../../lib/permissions";
 
 import PageTransition from "../../components/PageTransition";
 
@@ -52,10 +57,12 @@ export default function ProductosPage() {
   const { user, isLoading: isLoadingUser } = useCurrentUser();
   const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
   const canManageProducts = !isLoadingUser && !isRestrictedRole;
+  const canDeleteProducts = !isLoadingUser && user?.role === GENERAL_ADMIN_ROLE;
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -107,6 +114,36 @@ export default function ProductosPage() {
     };
   }, []);
 
+
+  const handleDeleteProduct = async (productId: number) => {
+    const confirmed = window.confirm("¿Deseas eliminar este producto?");
+    if (!confirmed) return;
+
+    setDeletingProductId(productId);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/products/${productId}/`, {
+        method: "DELETE",
+        headers: { "x-current-user-email": getSessionUserEmail() },
+      });
+
+      if (response.status !== 204) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || "No se pudo eliminar el producto.");
+      }
+
+      setProducts((current) => current.filter((product) => product.id !== productId));
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No se pudo eliminar el producto.",
+      );
+    } finally {
+      setDeletingProductId(null);
+    }
+  };
   const filteredProducts = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     if (!query) return products;
@@ -234,14 +271,27 @@ export default function ProductosPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {canManageProducts && <Link
-                          className="text-slate-400 hover:text-professional-green transition-colors"
-                          href={`/clientes/productos/${product.id}`}
-                        >
-                          <span className="material-symbols-outlined">
-                            edit
-                          </span>
-                        </Link>}
+                        <div className="flex items-center justify-end gap-2">
+                          {canManageProducts && <Link
+                            className="text-slate-400 hover:text-professional-green transition-colors"
+                            href={`/clientes/productos/${product.id}`}
+                          >
+                            <span className="material-symbols-outlined">
+                              edit
+                            </span>
+                          </Link>}
+                          {canDeleteProducts && (
+                            <button
+                              type="button"
+                              className="text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                              onClick={() => void handleDeleteProduct(product.id)}
+                              disabled={deletingProductId === product.id}
+                              title="Eliminar"
+                            >
+                              <span className="material-symbols-outlined">delete</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

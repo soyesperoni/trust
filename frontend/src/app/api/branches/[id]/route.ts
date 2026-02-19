@@ -51,3 +51,28 @@ export async function PUT(
   const payload = await response.json();
   return NextResponse.json(payload, { status: response.status });
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const resolvedParams = await params;
+  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
+
+  const response = await fetch(
+    `${backendBaseUrl}/api/branches/${resolvedParams.id}/`,
+    {
+      method: "DELETE",
+      headers: { "X-Current-User-Email": currentUserEmail },
+    },
+  );
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = { ok: response.ok };
+  }
+
+  return NextResponse.json(payload, { status: response.status });
+}

@@ -5,7 +5,12 @@ import Link from "next/link";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE } from "../../lib/permissions";
+import {
+  ACCOUNT_ADMIN_ROLE,
+  BRANCH_ADMIN_ROLE,
+  GENERAL_ADMIN_ROLE,
+  INSPECTOR_ROLE,
+} from "../../lib/permissions";
 import { getSessionUserEmail } from "../../lib/session";
 
 import PageTransition from "../../components/PageTransition";
@@ -68,11 +73,13 @@ export default function SucursalesPage() {
   const { user, isLoading: isLoadingUser } = useCurrentUser();
   const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
   const canManageBranches = !isLoadingUser && !isRestrictedRole;
+  const canDeleteBranches = !isLoadingUser && user?.role === GENERAL_ADMIN_ROLE;
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingBranchId, setDeletingBranchId] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -155,6 +162,35 @@ export default function SucursalesPage() {
     };
   }, []);
 
+
+  const handleDeleteBranch = async (branchId: number) => {
+    const confirmed = window.confirm("¿Deseas eliminar esta sucursal?");
+    if (!confirmed) return;
+
+    setDeletingBranchId(branchId);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/branches/${branchId}/`, {
+        method: "DELETE",
+        headers: { "x-current-user-email": getSessionUserEmail() },
+      });
+      if (response.status !== 204) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || "No se pudo eliminar la sucursal.");
+      }
+
+      setBranches((current) => current.filter((branch) => branch.id !== branchId));
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No se pudo eliminar la sucursal.",
+      );
+    } finally {
+      setDeletingBranchId(null);
+    }
+  };
   const filteredBranches = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     if (!query) return branches;
@@ -320,6 +356,17 @@ export default function SucursalesPage() {
                             visibility
                           </span>
                         </Link>
+                        {canDeleteBranches && (
+                          <button
+                            type="button"
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                            onClick={() => void handleDeleteBranch(branch.id)}
+                            disabled={deletingBranchId === branch.id}
+                            title="Eliminar"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
