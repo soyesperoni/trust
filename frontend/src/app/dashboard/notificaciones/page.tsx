@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
 import {
+  fetchNotificationsPayload,
   getUnreadNotificationCount,
   markNotificationsAsRead,
+  subscribeToRealtimeNotifications,
 } from "../../lib/notifications";
 
 type Incident = {
@@ -100,19 +102,9 @@ export default function NotificationsPage() {
 
     const loadNotifications = async () => {
       try {
-        const [incidentsResponse, visitsResponse] = await Promise.all([
-          fetch("/api/incidents/", { cache: "no-store" }),
-          fetch("/api/visits/", { cache: "no-store" }),
-        ]);
-        if (!incidentsResponse.ok || !visitsResponse.ok) {
-          throw new Error("No se pudieron cargar las notificaciones.");
-        }
-        const [incidentsData, visitsData] = await Promise.all([
-          incidentsResponse.json(),
-          visitsResponse.json(),
-        ]);
+        const { incidents, visits } = await fetchNotificationsPayload();
         if (!isMounted) return;
-        const incidentItems = (incidentsData.results ?? []).map(
+        const incidentItems = incidents.map(
           (incident: Incident) => ({
             id: `incident-${incident.id}`,
             title: "Incidencia reportada",
@@ -125,7 +117,7 @@ export default function NotificationsPage() {
             ...tagStyles.incidencia,
           }),
         );
-        const visitItems = (visitsData.results ?? []).map((visit: Visit) => ({
+        const visitItems = visits.map((visit: Visit) => ({
           id: `visit-${visit.id}`,
           title: `Visita registrada por ${visit.inspector}`,
           timestamp: formatRelativeTime(visit.visited_at),
@@ -162,8 +154,11 @@ export default function NotificationsPage() {
     };
 
     loadNotifications();
+    const unsubscribe = subscribeToRealtimeNotifications(loadNotifications);
+
     return () => {
       isMounted = false;
+      unsubscribe();
     };
   }, []);
 
