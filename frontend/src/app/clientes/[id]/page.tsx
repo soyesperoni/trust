@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
@@ -40,6 +40,7 @@ type Area = {
 
 export default function EditarUsuarioPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const userId = params?.id;
   const [formState, setFormState] = useState({
     full_name: "",
@@ -54,6 +55,7 @@ export default function EditarUsuarioPage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
@@ -163,6 +165,43 @@ export default function EditarUsuarioPage() {
     const selectedId = Number(formState.selectedBranchId);
     return areas.filter((area) => area.branch.id === selectedId);
   }, [areas, formState.selectedBranchId]);
+
+
+
+  const handleDelete = async () => {
+    if (!userId || isDeleting) return;
+
+    const confirmed = window.confirm(
+      "¿Seguro que deseas eliminar este usuario? Esta acción no se puede deshacer.",
+    );
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const response = await fetch(`/api/users/${userId}/`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.error || "No se pudo eliminar el usuario.");
+      }
+
+      router.replace("/usuarios");
+      router.refresh();
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No se pudo eliminar el usuario.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -373,20 +412,30 @@ export default function EditarUsuarioPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3">
-                <Link
-                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-                  href="/usuarios"
-                >
-                  Cancelar
-                </Link>
+              <div className="flex items-center justify-between gap-3">
                 <button
-                  className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700 disabled:opacity-60"
-                  disabled={isSaving || isLoading}
-                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+                  disabled={isDeleting || isSaving || isLoading}
+                  onClick={handleDelete}
+                  type="button"
                 >
-                  {isSaving ? "Guardando..." : "Guardar cambios"}
+                  {isDeleting ? "Eliminando..." : "Eliminar usuario"}
                 </button>
+                <div className="flex items-center gap-3">
+                  <Link
+                    className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    href="/usuarios"
+                  >
+                    Cancelar
+                  </Link>
+                  <button
+                    className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700 disabled:opacity-60"
+                    disabled={isSaving || isDeleting || isLoading}
+                    type="submit"
+                  >
+                    {isSaving ? "Guardando..." : "Guardar cambios"}
+                  </button>
+                </div>
               </div>
             </form>
           )}
