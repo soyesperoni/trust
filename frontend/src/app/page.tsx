@@ -79,7 +79,7 @@ export default function Home() {
   return (
     <div className="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col items-center justify-center p-4 antialiased transition-colors duration-300">
       <div className="w-full max-w-[420px] flex flex-col items-center gap-8">
-        <BrandLogo size="xxl" />
+        <BrandLogo size="xxl" showSupplyLogo />
         <div className="w-full bg-white dark:bg-[#161e27] rounded-2xl shadow-card dark:shadow-black/60 border border-slate-100 dark:border-slate-800 p-8 sm:p-10">
           <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
             <div className="space-y-2">

@@ -143,6 +143,31 @@ class _LoginScreenState extends State<LoginScreen> {
                             letterSpacing: -1,
                           ),
                         ),
+                        const SizedBox(height: 6),
+                        Center(
+                          child: GestureDetector(
+                            onTap: _openSupplyMaxUrl,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'by',
+                                  style: TextStyle(
+                                    color: mutedTextColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Image.network(
+                                  'https://trust.supplymax.net/supply.png',
+                                  height: 24,
+                                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         Text(
                           'Accede a tu cuenta',
@@ -324,12 +349,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         Center(
                           child: GestureDetector(
                             onTap: _openSupplyMaxUrl,
-                            child: const Text(
-                              'by SupplyMax de Panamá',
-                              style: TextStyle(
-                                color: AppColors.yellow,
-                                fontWeight: FontWeight.w700,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'by',
+                                  style: TextStyle(
+                                    color: mutedTextColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Image.network(
+                                  'https://trust.supplymax.net/supply.png',
+                                  height: 22,
+                                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                ),
+                              ],
                             ),
                           ),
                         ),

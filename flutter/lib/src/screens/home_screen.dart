@@ -83,14 +83,34 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 20,
-        title: Text(
-          'trust',
-          style: GoogleFonts.poppins(
-            color: AppColors.yellow,
-            fontWeight: FontWeight.bold,
-            fontSize: 34,
-            letterSpacing: -1,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'trust',
+              style: GoogleFonts.poppins(
+                color: AppColors.yellow,
+                fontWeight: FontWeight.bold,
+                fontSize: 34,
+                letterSpacing: -1,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'by',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Image.network(
+              'https://trust.supplymax.net/supply.png',
+              height: 20,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ],
         ),
         actions: [
           IconButton(
