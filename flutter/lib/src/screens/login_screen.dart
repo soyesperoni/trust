@@ -345,20 +345,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         Center(
                           child: GestureDetector(
                             onTap: _openSupplyMaxUrl,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'by',
-                                  style: TextStyle(
-                                    color: mutedTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Image.asset('assets/icon/supply.png', height: 58),
-                              ],
+                            child: Text(
+                              'SupplyMax de Panama · supplymax.net',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: mutedTextColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
