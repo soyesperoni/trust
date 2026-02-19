@@ -40,6 +40,7 @@ export default function VisitasPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedInspector, setSelectedInspector] = useState("");
   const [activeFilter, setActiveFilter] = useState<(typeof mobileFilters)[number]["value"]>("all");
 
   useEffect(() => {
@@ -183,6 +184,11 @@ export default function VisitasPage() {
   const filteredVisits = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     return visits.filter((visit) => {
+      const matchesInspector =
+        selectedInspector.length === 0 ||
+        visit.inspector.trim().toLowerCase() === selectedInspector.trim().toLowerCase();
+      if (!matchesInspector) return false;
+
       const typeLabel = visitType(visit.status);
       const mappedFilter = mapVisitTypeToFilter(typeLabel);
       const matchesFilter = activeFilter === "all" || mappedFilter === activeFilter;
@@ -197,7 +203,7 @@ export default function VisitasPage() {
         `#${visit.id}`,
       ].some((value) => value.toLowerCase().includes(query));
     });
-  }, [activeFilter, searchTerm, visits]);
+  }, [activeFilter, searchTerm, selectedInspector, visits]);
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando historial...";
@@ -342,18 +348,24 @@ export default function VisitasPage() {
                 </span>
                 <input
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+                  onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Cliente o Sucursal..."
                   type="text"
+                  value={searchTerm}
                 />
               </div>
               <div className="relative w-full lg:w-48">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">
                   person_search
                 </span>
-                <select className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-8 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800">
+                <select
+                  className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-8 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+                  onChange={(event) => setSelectedInspector(event.target.value)}
+                  value={selectedInspector}
+                >
                   <option value="">Todos los Inspectores</option>
                   {inspectors.map((inspector) => (
-                    <option key={inspector.id} value={inspector.id}>
+                    <option key={inspector.id} value={inspector.full_name}>
                       {inspector.full_name}
                     </option>
                   ))}
@@ -394,7 +406,7 @@ export default function VisitasPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
-                  {visits.map((visit) => {
+                  {filteredVisits.map((visit) => {
                     const formatted = formatDate(visit.visited_at);
                     const typeLabel = visitType(visit.status);
                     return (
@@ -489,10 +501,10 @@ export default function VisitasPage() {
                       </td>
                     </tr>
                   )}
-                  {!error && !isLoading && visits.length === 0 && (
+                  {!error && !isLoading && filteredVisits.length === 0 && (
                     <tr>
                       <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
-                        No hay visitas registradas.
+                        No hay visitas que coincidan con los filtros aplicados.
                       </td>
                     </tr>
                   )}
