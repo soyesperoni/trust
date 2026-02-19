@@ -74,6 +74,7 @@ export default function DispensadoresPage() {
   const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
   const canManageDispensers = !isLoadingUser && !isRestrictedRole;
   const [dispensers, setDispensers] = useState<DispenserRow[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -151,14 +152,31 @@ export default function DispensadoresPage() {
     };
   }, []);
 
+  const filteredDispensers = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return dispensers;
+
+    return dispensers.filter((dispenser) =>
+      [
+        dispenser.code,
+        dispenser.serial,
+        dispenser.model,
+        dispenser.area,
+        dispenser.branch,
+        dispenser.status,
+      ].some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [dispensers, searchTerm]);
+
   const totalResults = dispensers.length;
-  const displayedResults = dispensers.length;
+  const displayedResults = filteredDispensers.length;
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando dosificadores...";
     if (error) return error;
+    if (dispensers.length > 0) return "No hay dosificadores que coincidan con la búsqueda.";
     return "No hay dosificadores registrados.";
-  }, [error, isLoading]);
+  }, [dispensers.length, error, isLoading]);
 
   return (
     <>
@@ -188,6 +206,8 @@ export default function DispensadoresPage() {
                   className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   placeholder="Buscar dosificador..."
                   type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </div>
             </div>
@@ -206,7 +226,7 @@ export default function DispensadoresPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {dispensers.map((dispenser) => {
+                {filteredDispensers.map((dispenser) => {
                   const statusStyle = statusStyles[dispenser.status];
 
                   return (
@@ -283,7 +303,7 @@ export default function DispensadoresPage() {
                     </tr>
                   );
                 })}
-                {dispensers.length === 0 && (
+                {filteredDispensers.length === 0 && (
                   <tr>
                     <td
                       colSpan={7}
