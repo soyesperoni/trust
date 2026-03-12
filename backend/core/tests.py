@@ -8,7 +8,7 @@ from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.utils import timezone
 
 from config import settings_prod
-from .models import Area, Branch, Client, Dispenser, DispenserModel, User, Visit
+from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, User, Visit
 
 
 class ClientApiTests(TestCase):
@@ -532,3 +532,92 @@ class IncidentPermissionsTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+
+class AuditApiTests(TestCase):
+    def setUp(self):
+        self.client_entity = Client.objects.create(name="Cliente Audit", code="CL-AUD")
+        self.branch = Branch.objects.create(client=self.client_entity, name="Sucursal Audit")
+        self.area = Area.objects.create(branch=self.branch, name="Área Audit")
+        self.general_admin = User.objects.create_user(
+            username="ga-audit",
+            email="ga-audit@test.com",
+            password="secret123",
+            role=User.Role.GENERAL_ADMIN,
+        )
+        self.inspector = User.objects.create_user(
+            username="insp-audit",
+            email="insp-audit@test.com",
+            password="secret123",
+            role=User.Role.INSPECTOR,
+        )
+        self.inspector.areas.add(self.area)
+
+    def test_create_audit_form_and_audit_for_area(self):
+        form_response = self.client.post(
+            "/api/audits/forms/",
+            data=json.dumps(
+                {
+                    "name": "Checklist Cocina",
+                    "area_id": self.area.id,
+                    "schema": {"questions": [{"id": 1, "label": "Orden"}]},
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(form_response.status_code, 201)
+        form_id = form_response.json()["id"]
+
+        audit_response = self.client.post(
+            "/api/audits/",
+            data=json.dumps(
+                {
+                    "area_id": self.area.id,
+                    "form_id": form_id,
+                    "inspector_id": self.inspector.id,
+                    "notes": "Auditoría inicial",
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(audit_response.status_code, 201)
+        payload = audit_response.json()
+        self.assertEqual(payload["form_id"], form_id)
+        self.assertEqual(payload["area_id"], self.area.id)
+        self.assertEqual(payload["inspector_id"], self.inspector.id)
+
+    def test_complete_audit_mobile_flow(self):
+        form = AuditForm.objects.create(name="Checklist", area=self.area, schema={"questions": []})
+        audit = Audit.objects.create(
+            area=self.area,
+            form=form,
+            inspector=self.inspector,
+            status=Audit.Status.SCHEDULED,
+            started_at=timezone.now(),
+            start_latitude=-12.05,
+            start_longitude=-77.04,
+        )
+
+        response = self.client.patch(
+            f"/api/audits/{audit.id}/mobile-flow/",
+            data=json.dumps(
+                {
+                    "action": "complete",
+                    "end_latitude": -12.06,
+                    "end_longitude": -77.05,
+                    "audit_report": {"location_verified": True, "answers": []},
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.inspector.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        audit.refresh_from_db()
+        self.assertEqual(audit.status, Audit.Status.COMPLETED)
+        self.assertIsNotNone(audit.audit_report)
+        self.assertEqual(audit.audit_report["form"]["id"], form.id)

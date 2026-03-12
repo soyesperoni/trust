@@ -3,6 +3,9 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from .models import (
     Area,
+    Audit,
+    AuditForm,
+    AuditMedia,
     Branch,
     Client,
     Dispenser,
@@ -38,6 +41,11 @@ class VisitMediaInline(admin.TabularInline):
 
 class IncidentMediaInline(admin.TabularInline):
     model = IncidentMedia
+    extra = 0
+
+
+class AuditMediaInline(admin.TabularInline):
+    model = AuditMedia
     extra = 0
 
 
@@ -121,6 +129,28 @@ class VisitMediaAdmin(admin.ModelAdmin):
     list_display = ("visit", "media_type", "file")
     list_filter = ("media_type",)
 
+
+
+
+@admin.register(AuditForm)
+class AuditFormAdmin(admin.ModelAdmin):
+    list_display = ("name", "area", "is_active")
+    list_filter = ("is_active", "area__branch__client", "area__branch")
+    search_fields = ("name", "area__name")
+
+
+@admin.register(Audit)
+class AuditAdmin(admin.ModelAdmin):
+    list_display = ("area", "form", "inspector", "audited_at")
+    list_filter = ("area__branch__client", "area__branch", "inspector", "form")
+    search_fields = ("area__name", "form__name", "inspector__username")
+    inlines = [AuditMediaInline]
+
+
+@admin.register(AuditMedia)
+class AuditMediaAdmin(admin.ModelAdmin):
+    list_display = ("audit", "media_type", "file")
+    list_filter = ("media_type",)
 
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):

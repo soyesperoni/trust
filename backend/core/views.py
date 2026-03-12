@@ -27,7 +27,7 @@ from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
 from reportlab.pdfgen import canvas
 
-from .models import Area, Branch, Client, Dispenser, DispenserModel, Incident, IncidentMedia, Product, User, Visit, VisitMedia
+from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, Dispenser, DispenserModel, Incident, IncidentMedia, Product, User, Visit, VisitMedia
 
 
 REPORT_FONT = "Helvetica"
@@ -337,6 +337,62 @@ def _serialize_visit(visit: Visit) -> dict:
         ],
     }
 
+
+
+
+def _serialize_audit_form(form: AuditForm) -> dict:
+    return {
+        "id": form.id,
+        "name": form.name,
+        "area_id": form.area_id,
+        "area": form.area.name,
+        "branch_id": form.area.branch_id,
+        "branch": form.area.branch.name,
+        "client_id": form.area.branch.client_id,
+        "client": form.area.branch.client.name,
+        "schema": form.schema or {},
+        "is_active": form.is_active,
+    }
+
+
+def _serialize_audit(audit: Audit) -> dict:
+    inspector = "Sin asignar"
+    inspector_id = None
+    if audit.inspector:
+        inspector = audit.inspector.get_full_name() or audit.inspector.username
+        inspector_id = audit.inspector_id
+    return {
+        "id": audit.id,
+        "client": audit.area.branch.client.name,
+        "client_id": audit.area.branch.client_id,
+        "branch": audit.area.branch.name,
+        "branch_id": audit.area.branch_id,
+        "area": audit.area.name,
+        "area_id": audit.area_id,
+        "form_id": audit.form_id,
+        "form": audit.form.name,
+        "inspector": inspector,
+        "inspector_id": inspector_id,
+        "audited_at": audit.audited_at.isoformat(),
+        "notes": audit.notes,
+        "status": audit.status,
+        "status_label": audit.get_status_display(),
+        "started_at": audit.started_at.isoformat() if audit.started_at else None,
+        "completed_at": audit.completed_at.isoformat() if audit.completed_at else None,
+        "start_latitude": audit.start_latitude,
+        "start_longitude": audit.start_longitude,
+        "end_latitude": audit.end_latitude,
+        "end_longitude": audit.end_longitude,
+        "audit_report": audit.audit_report,
+        "media": [
+            {
+                "id": medium.id,
+                "type": medium.media_type,
+                "file": medium.file.url if medium.file else None,
+            }
+            for medium in audit.media.all()
+        ],
+    }
 
 def _serialize_notification(item: dict[str, Any]) -> dict[str, Any]:
     return {
@@ -1611,6 +1667,231 @@ def visit_mobile_flow(request, visit_id: int):
 
     return JsonResponse({"error": "Acción no válida."}, status=400)
 
+
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def audit_forms(request):
+    current_user = _get_current_user(request)
+    scope = _get_access_scope(request)
+
+    if request.method == "GET":
+        queryset = AuditForm.objects.select_related("area__branch__client")
+        queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
+        return JsonResponse({"results": [_serialize_audit_form(form) for form in queryset.all()]})
+
+    if not current_user or not _is_general_admin_user(current_user):
+        return JsonResponse({"error": "Solo el administrador general puede crear formularios de auditoría."}, status=403)
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    name = str(data.get("name") or "").strip()
+    if not name:
+        return JsonResponse({"error": "El nombre del formulario es obligatorio."}, status=400)
+
+    try:
+        area_id = int(data.get("area_id") or 0)
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Área inválida."}, status=400)
+
+    area = Area.objects.select_related("branch__client").filter(pk=area_id).first()
+    if area is None:
+        return JsonResponse({"error": "Área no encontrada."}, status=404)
+
+    schema = data.get("schema")
+    if isinstance(schema, str):
+        try:
+            schema = json.loads(schema)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "El esquema del formulario no tiene formato JSON válido."}, status=400)
+    if schema is None:
+        schema = {}
+    if not isinstance(schema, dict):
+        return JsonResponse({"error": "El esquema del formulario debe ser un objeto JSON."}, status=400)
+
+    is_active = _is_truthy(data.get("is_active", True))
+
+    form = AuditForm.objects.create(name=name, area=area, schema=schema, is_active=is_active)
+    return JsonResponse(_serialize_audit_form(form), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def audits(request):
+    current_user = _get_current_user(request)
+    if request.method == "POST":
+        if not current_user:
+            return JsonResponse({"error": "No se pudo identificar tu sesión de usuario."}, status=401)
+        if not _is_general_admin_user(current_user):
+            return JsonResponse({"error": "Solo el administrador general puede agendar auditorías."}, status=403)
+
+    if request.method == "GET":
+        queryset = Audit.objects.select_related("area__branch__client", "inspector", "form")
+        scope = _get_access_scope(request)
+        queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
+
+        month = (request.GET.get("month") or "").strip()
+        if month:
+            try:
+                month_date = datetime.strptime(month, "%Y-%m")
+                queryset = queryset.filter(
+                    audited_at__year=month_date.year,
+                    audited_at__month=month_date.month,
+                )
+            except ValueError:
+                return JsonResponse({"error": "El parámetro month debe tener formato YYYY-MM."}, status=400)
+
+        return JsonResponse({"results": [_serialize_audit(audit) for audit in queryset.all()]})
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    try:
+        area_id = int(data.get("area_id") or 0)
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Área inválida."}, status=400)
+
+    area = Area.objects.select_related("branch__client").filter(pk=area_id).first()
+    if area is None:
+        return JsonResponse({"error": "Área no válida."}, status=400)
+
+    scope = _build_access_scope(current_user)
+    if scope is not None and area.id not in scope["area_ids"]:
+        return JsonResponse({"error": "No tienes permiso para agendar auditorías en esta área."}, status=403)
+
+    form = None
+    try:
+        form_id = int(data.get("form_id") or 0)
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Formulario de auditoría inválido."}, status=400)
+
+    form = AuditForm.objects.select_related("area").filter(pk=form_id, is_active=True).first()
+    if form is None:
+        return JsonResponse({"error": "Formulario de auditoría no válido."}, status=400)
+    if form.area_id != area.id:
+        return JsonResponse({"error": "El formulario de auditoría debe pertenecer al área seleccionada."}, status=400)
+
+    inspector = None
+    inspector_id = data.get("inspector_id")
+    if inspector_id:
+        try:
+            inspector = User.objects.filter(role=User.Role.INSPECTOR).get(pk=int(inspector_id))
+        except (User.DoesNotExist, ValueError, TypeError):
+            return JsonResponse({"error": "Inspector no válido."}, status=400)
+
+    notes = str(data.get("notes") or "").strip()
+    audited_at = None
+    audited_at_input = str(data.get("audited_at") or "").strip()
+    if audited_at_input:
+        try:
+            audited_at = datetime.fromisoformat(audited_at_input.replace("Z", "+00:00"))
+        except ValueError:
+            return JsonResponse({"error": "La fecha/hora de la auditoría no tiene un formato válido."}, status=400)
+
+    create_kwargs = {"area": area, "form": form, "inspector": inspector, "notes": notes, "status": Audit.Status.SCHEDULED}
+    if audited_at:
+        create_kwargs["audited_at"] = audited_at
+
+    audit = Audit.objects.create(**create_kwargs)
+    return JsonResponse(_serialize_audit(audit), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["PATCH"])
+def audit_mobile_flow(request, audit_id: int):
+    current_user = _get_current_user(request)
+    if not current_user or current_user.role != User.Role.INSPECTOR:
+        return JsonResponse({"error": "Solo un inspector puede realizar auditorías programadas."}, status=403)
+
+    scope = _build_access_scope(current_user)
+
+    try:
+        audit = Audit.objects.select_related("inspector", "form").get(pk=audit_id)
+    except Audit.DoesNotExist:
+        return JsonResponse({"error": "Auditoría no encontrada."}, status=404)
+
+    if scope is not None and audit.area_id not in scope["area_ids"]:
+        return JsonResponse({"error": "No tienes permiso para realizar esta auditoría."}, status=403)
+
+    if audit.inspector_id and audit.inspector_id != current_user.id:
+        return JsonResponse({"error": "Esta auditoría está asignada a otro inspector."}, status=403)
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    action = str(data.get("action") or "").strip().lower()
+    if action in {"iniciar", "inicio"}:
+        action = "start"
+    elif action in {"finalizar", "finish", "finalize", "complete_audit"}:
+        action = "complete"
+
+    if action == "start":
+        if audit.status != Audit.Status.SCHEDULED:
+            return JsonResponse({"error": "Solo puedes iniciar auditorías programadas."}, status=400)
+
+        start_latitude = _parse_optional_float(data.get("start_latitude"))
+        start_longitude = _parse_optional_float(data.get("start_longitude"))
+        if start_latitude is None or start_longitude is None:
+            return JsonResponse({"error": "Debes validar tu ubicación para iniciar la auditoría."}, status=400)
+
+        audit.started_at = timezone.now()
+        audit.start_latitude = start_latitude
+        audit.start_longitude = start_longitude
+        audit.inspector = current_user
+        audit.save(update_fields=["started_at", "start_latitude", "start_longitude", "inspector"])
+        return JsonResponse(_serialize_audit(audit))
+
+    if action == "complete":
+        if audit.status != Audit.Status.SCHEDULED:
+            return JsonResponse({"error": "La auditoría no se puede finalizar en su estado actual."}, status=400)
+        if not audit.started_at:
+            return JsonResponse({"error": "Debes iniciar la auditoría antes de finalizarla."}, status=400)
+
+        end_latitude = _parse_optional_float(data.get("end_latitude"))
+        end_longitude = _parse_optional_float(data.get("end_longitude"))
+        if end_latitude is None or end_longitude is None:
+            return JsonResponse({"error": "Debes validar tu ubicación para finalizar la auditoría."}, status=400)
+
+        report = _normalize_visit_report(data.get("audit_report"))
+        if report is None:
+            return JsonResponse({"error": "El informe de la auditoría es inválido."}, status=400)
+
+        if not _is_truthy(report.get("location_verified")):
+            return JsonResponse({"error": "Debes confirmar que te encuentras físicamente en el sitio."}, status=400)
+
+        audit.status = Audit.Status.COMPLETED
+        audit.completed_at = timezone.now()
+        audit.end_latitude = end_latitude
+        audit.end_longitude = end_longitude
+        report["form"] = _serialize_audit_form(audit.form)
+        report["start_location"] = {"latitude": audit.start_latitude, "longitude": audit.start_longitude}
+        report["end_location"] = {"latitude": end_latitude, "longitude": end_longitude}
+        audit.audit_report = report
+        audit.save(update_fields=["status", "completed_at", "end_latitude", "end_longitude", "audit_report"])
+
+        evidence_files = []
+        if files:
+            evidence_files = files.getlist("evidence_files") or files.getlist("evidence")
+
+        for evidence in evidence_files:
+            content_type = str(getattr(evidence, "content_type", "") or "").lower()
+            filename = str(getattr(evidence, "name", "") or "").lower()
+            if content_type.startswith("image/") or filename.endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")):
+                media_type = AuditMedia.MediaType.PHOTO
+            elif content_type.startswith("video/") or filename.endswith((".mp4", ".mov", ".avi", ".mkv", ".webm")):
+                media_type = AuditMedia.MediaType.VIDEO
+            else:
+                media_type = AuditMedia.MediaType.OTHER
+            AuditMedia.objects.create(audit=audit, media_type=media_type, file=evidence)
+
+        return JsonResponse(_serialize_audit(audit))
+
+    return JsonResponse({"error": "Acción no válida."}, status=400)
 
 @require_GET
 def visit_report_pdf(request, visit_id: int):
