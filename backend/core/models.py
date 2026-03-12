@@ -172,6 +172,8 @@ class Audit(models.Model):
 
     area = models.ForeignKey(Area, on_delete=models.CASCADE, related_name="audits")
     form = models.ForeignKey(AuditForm, on_delete=models.PROTECT, related_name="audits")
+    form_name = models.CharField(max_length=255, blank=True)
+    form_schema = models.JSONField(default=dict, blank=True)
     inspector = models.ForeignKey(
         "User",
         on_delete=models.SET_NULL,
