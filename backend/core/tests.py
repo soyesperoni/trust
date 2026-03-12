@@ -587,8 +587,52 @@ class AuditApiTests(TestCase):
         self.assertEqual(audit_response.status_code, 201)
         payload = audit_response.json()
         self.assertEqual(payload["form_id"], form_id)
+        self.assertEqual(payload["form_name"], "Checklist Cocina")
+        self.assertEqual(payload["form_schema"], {"questions": [{"id": 1, "label": "Orden"}]})
         self.assertEqual(payload["area_id"], self.area.id)
         self.assertEqual(payload["inspector_id"], self.inspector.id)
+
+    def test_audit_keeps_form_snapshot_after_template_changes(self):
+        form = AuditForm.objects.create(
+            name="Checklist Inicial",
+            area=self.area,
+            schema={"questions": [{"id": 1, "label": "Limpieza"}]},
+        )
+
+        create_response = self.client.post(
+            "/api/audits/",
+            data=json.dumps(
+                {
+                    "area_id": self.area.id,
+                    "form_id": form.id,
+                    "inspector_id": self.inspector.id,
+                    "notes": "Programada",
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(create_response.status_code, 201)
+        audit_id = create_response.json()["id"]
+
+        form.name = "Checklist Actualizado"
+        form.schema = {"questions": [{"id": 1, "label": "Nuevo"}, {"id": 2, "label": "Piso"}]}
+        form.save(update_fields=["name", "schema"])
+
+        list_response = self.client.get(
+            "/api/audits/",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(list_response.status_code, 200)
+        audit_payload = next(item for item in list_response.json()["results"] if item["id"] == audit_id)
+        self.assertEqual(audit_payload["form_name"], "Checklist Inicial")
+        self.assertEqual(audit_payload["form"], "Checklist Inicial")
+        self.assertEqual(
+            audit_payload["form_schema"],
+            {"questions": [{"id": 1, "label": "Limpieza"}]},
+        )
 
     def test_complete_audit_mobile_flow(self):
         form = AuditForm.objects.create(name="Checklist", area=self.area, schema={"questions": []})

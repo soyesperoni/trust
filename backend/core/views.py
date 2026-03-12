@@ -361,6 +361,10 @@ def _serialize_audit(audit: Audit) -> dict:
     if audit.inspector:
         inspector = audit.inspector.get_full_name() or audit.inspector.username
         inspector_id = audit.inspector_id
+
+    form_name = audit.form_name or audit.form.name
+    form_schema = audit.form_schema or audit.form.schema or {}
+
     return {
         "id": audit.id,
         "client": audit.area.branch.client.name,
@@ -370,7 +374,9 @@ def _serialize_audit(audit: Audit) -> dict:
         "area": audit.area.name,
         "area_id": audit.area_id,
         "form_id": audit.form_id,
-        "form": audit.form.name,
+        "form": form_name,
+        "form_name": form_name,
+        "form_schema": form_schema,
         "inspector": inspector,
         "inspector_id": inspector_id,
         "audited_at": audit.audited_at.isoformat(),
@@ -1792,7 +1798,15 @@ def audits(request):
         except ValueError:
             return JsonResponse({"error": "La fecha/hora de la auditoría no tiene un formato válido."}, status=400)
 
-    create_kwargs = {"area": area, "form": form, "inspector": inspector, "notes": notes, "status": Audit.Status.SCHEDULED}
+    create_kwargs = {
+        "area": area,
+        "form": form,
+        "form_name": form.name,
+        "form_schema": form.schema or {},
+        "inspector": inspector,
+        "notes": notes,
+        "status": Audit.Status.SCHEDULED,
+    }
     if audited_at:
         create_kwargs["audited_at"] = audited_at
 
@@ -1868,7 +1882,18 @@ def audit_mobile_flow(request, audit_id: int):
         audit.completed_at = timezone.now()
         audit.end_latitude = end_latitude
         audit.end_longitude = end_longitude
-        report["form"] = _serialize_audit_form(audit.form)
+        report["form"] = {
+            "id": audit.form_id,
+            "name": audit.form_name or audit.form.name,
+            "schema": audit.form_schema or audit.form.schema or {},
+            "area_id": audit.area_id,
+            "area": audit.area.name,
+            "branch_id": audit.area.branch_id,
+            "branch": audit.area.branch.name,
+            "client_id": audit.area.branch.client_id,
+            "client": audit.area.branch.client.name,
+            "is_active": audit.form.is_active,
+        }
         report["start_location"] = {"latitude": audit.start_latitude, "longitude": audit.start_longitude}
         report["end_location"] = {"latitude": end_latitude, "longitude": end_longitude}
         audit.audit_report = report
