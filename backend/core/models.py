@@ -151,6 +151,71 @@ class VisitMedia(models.Model):
         return f"{self.get_media_type_display()} - {self.visit}"
 
 
+class AuditForm(models.Model):
+    name = models.CharField(max_length=255)
+    area = models.ForeignKey(Area, on_delete=models.CASCADE, related_name="audit_forms")
+    schema = models.JSONField(default=dict, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+        unique_together = ("area", "name")
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.area.name})"
+
+
+class Audit(models.Model):
+    class Status(models.TextChoices):
+        SCHEDULED = "scheduled", _("Programada")
+        COMPLETED = "completed", _("Finalizada")
+
+    area = models.ForeignKey(Area, on_delete=models.CASCADE, related_name="audits")
+    form = models.ForeignKey(AuditForm, on_delete=models.PROTECT, related_name="audits")
+    inspector = models.ForeignKey(
+        "User",
+        on_delete=models.SET_NULL,
+        related_name="audits",
+        blank=True,
+        null=True,
+    )
+    audited_at = models.DateTimeField(default=timezone.now)
+    notes = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.SCHEDULED,
+    )
+    started_at = models.DateTimeField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+    start_latitude = models.FloatField(blank=True, null=True)
+    start_longitude = models.FloatField(blank=True, null=True)
+    end_latitude = models.FloatField(blank=True, null=True)
+    end_longitude = models.FloatField(blank=True, null=True)
+    audit_report = models.JSONField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-audited_at"]
+
+    def __str__(self) -> str:
+        return f"Auditoría {self.area.name} - {self.audited_at:%Y-%m-%d}"
+
+
+class AuditMedia(models.Model):
+    class MediaType(models.TextChoices):
+        PHOTO = "photo", _("Foto")
+        VIDEO = "video", _("Video")
+        OTHER = "other", _("Otro")
+
+    audit = models.ForeignKey(Audit, on_delete=models.CASCADE, related_name="media")
+    media_type = models.CharField(max_length=20, choices=MediaType.choices, default=MediaType.PHOTO)
+    file = models.FileField(upload_to="audits/media/")
+    description = models.CharField(max_length=255, blank=True)
+
+    def __str__(self) -> str:
+        return f"{self.get_media_type_display()} - {self.audit}"
+
+
 class Incident(models.Model):
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="incidents")
     branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="incidents")
