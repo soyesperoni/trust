@@ -35,6 +35,13 @@ class Area(models.Model):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="areas")
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    audit_form_template = models.ForeignKey(
+        "AuditForm",
+        on_delete=models.SET_NULL,
+        related_name="areas_using_template",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         ordering = ["name"]
@@ -153,16 +160,14 @@ class VisitMedia(models.Model):
 
 class AuditForm(models.Model):
     name = models.CharField(max_length=255)
-    area = models.ForeignKey(Area, on_delete=models.CASCADE, related_name="audit_forms")
     schema = models.JSONField(default=dict, blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["name"]
-        unique_together = ("area", "name")
 
     def __str__(self) -> str:
-        return f"{self.name} ({self.area.name})"
+        return self.name
 
 
 class Audit(models.Model):

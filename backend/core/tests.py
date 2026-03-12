@@ -553,13 +553,34 @@ class AuditApiTests(TestCase):
         )
         self.inspector.areas.add(self.area)
 
+
+    def test_create_area_with_audit_form_template(self):
+        form = AuditForm.objects.create(name="Plantilla Base", schema={"questions": []})
+
+        response = self.client.post(
+            "/api/areas/",
+            data=json.dumps(
+                {
+                    "branch_id": self.branch.id,
+                    "name": "Área con plantilla",
+                    "description": "Desc",
+                    "audit_form_template_id": form.id,
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["audit_form_template_id"], form.id)
+
     def test_create_audit_form_and_audit_for_area(self):
         form_response = self.client.post(
             "/api/audits/forms/",
             data=json.dumps(
                 {
                     "name": "Checklist Cocina",
-                    "area_id": self.area.id,
                     "schema": {"questions": [{"id": 1, "label": "Orden"}]},
                 }
             ),
@@ -569,13 +590,14 @@ class AuditApiTests(TestCase):
 
         self.assertEqual(form_response.status_code, 201)
         form_id = form_response.json()["id"]
+        self.area.audit_form_template_id = form_id
+        self.area.save(update_fields=["audit_form_template"])
 
         audit_response = self.client.post(
             "/api/audits/",
             data=json.dumps(
                 {
                     "area_id": self.area.id,
-                    "form_id": form_id,
                     "inspector_id": self.inspector.id,
                     "notes": "Auditoría inicial",
                 }
@@ -595,16 +617,16 @@ class AuditApiTests(TestCase):
     def test_audit_keeps_form_snapshot_after_template_changes(self):
         form = AuditForm.objects.create(
             name="Checklist Inicial",
-            area=self.area,
             schema={"questions": [{"id": 1, "label": "Limpieza"}]},
         )
+        self.area.audit_form_template = form
+        self.area.save(update_fields=["audit_form_template"])
 
         create_response = self.client.post(
             "/api/audits/",
             data=json.dumps(
                 {
                     "area_id": self.area.id,
-                    "form_id": form.id,
                     "inspector_id": self.inspector.id,
                     "notes": "Programada",
                 }
@@ -635,7 +657,10 @@ class AuditApiTests(TestCase):
         )
 
     def test_complete_audit_mobile_flow(self):
-        form = AuditForm.objects.create(name="Checklist", area=self.area, schema={"questions": []})
+        form = AuditForm.objects.create(name="Checklist", schema={"questions": []})
+        self.area.audit_form_template = form
+        self.area.save(update_fields=["audit_form_template"])
+
         audit = Audit.objects.create(
             area=self.area,
             form=form,

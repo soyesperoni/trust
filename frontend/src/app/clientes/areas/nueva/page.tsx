@@ -22,14 +22,22 @@ type BranchApi = {
   };
 };
 
+type AuditFormApi = {
+  id: number;
+  name: string;
+  is_active: boolean;
+};
+
 export default function NuevaAreaPage() {
   const router = useRouter();
   const [clients, setClients] = useState<ClientApi[]>([]);
   const [branches, setBranches] = useState<BranchApi[]>([]);
+  const [auditFormTemplates, setAuditFormTemplates] = useState<AuditFormApi[]>([]);
   const [clientId, setClientId] = useState("");
   const [branchId, setBranchId] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [auditFormTemplateId, setAuditFormTemplateId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +48,7 @@ export default function NuevaAreaPage() {
     const loadData = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const [clientsResponse, branchesResponse] = await Promise.all([
+        const [clientsResponse, branchesResponse, templatesResponse] = await Promise.all([
           fetch("/api/clients/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
@@ -49,11 +57,16 @@ export default function NuevaAreaPage() {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
+          fetch("/api/audits/forms/", {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
         ]);
 
-        const [clientsPayload, branchesPayload] = await Promise.all([
+        const [clientsPayload, branchesPayload, templatesPayload] = await Promise.all([
           clientsResponse.json(),
           branchesResponse.json(),
+          templatesResponse.json(),
         ]);
 
         if (!clientsResponse.ok) {
@@ -62,10 +75,14 @@ export default function NuevaAreaPage() {
         if (!branchesResponse.ok) {
           throw new Error(branchesPayload.error || "No se pudieron cargar las sucursales.");
         }
+        if (!templatesResponse.ok) {
+          throw new Error(templatesPayload.error || "No se pudieron cargar las plantillas de auditoría.");
+        }
 
         if (!mounted) return;
         setClients((clientsPayload.results ?? []) as ClientApi[]);
         setBranches((branchesPayload.results ?? []) as BranchApi[]);
+        setAuditFormTemplates((templatesPayload.results ?? []) as AuditFormApi[]);
       } catch (loadError) {
         if (!mounted) return;
         setError(
@@ -111,6 +128,7 @@ export default function NuevaAreaPage() {
           branch_id: Number(branchId),
           name,
           description,
+          audit_form_template_id: auditFormTemplateId ? Number(auditFormTemplateId) : null,
         }),
       });
 
@@ -212,6 +230,25 @@ export default function NuevaAreaPage() {
                 placeholder="Descripción del área"
                 className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
               />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2">
+              Plantilla de auditoría
+              <select
+                value={auditFormTemplateId}
+                onChange={(event) => setAuditFormTemplateId(event.target.value)}
+                disabled={isLoading || isSaving}
+                className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+              >
+                <option value="">Sin plantilla</option>
+                {auditFormTemplates
+                  .filter((template) => template.is_active)
+                  .map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+              </select>
             </label>
 
             <div className="md:col-span-2 flex items-center justify-end gap-3 pt-2">

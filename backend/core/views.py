@@ -231,6 +231,7 @@ def _serialize_branch(branch: Branch) -> dict:
 
 
 def _serialize_area(area: Area) -> dict:
+    template = area.audit_form_template
     return {
         "id": area.id,
         "name": area.name,
@@ -240,6 +241,8 @@ def _serialize_area(area: Area) -> dict:
             "name": area.branch.name,
             "client": area.branch.client.name,
         },
+        "audit_form_template_id": area.audit_form_template_id,
+        "audit_form_template_name": template.name if template else None,
     }
 
 
@@ -344,14 +347,9 @@ def _serialize_audit_form(form: AuditForm) -> dict:
     return {
         "id": form.id,
         "name": form.name,
-        "area_id": form.area_id,
-        "area": form.area.name,
-        "branch_id": form.area.branch_id,
-        "branch": form.area.branch.name,
-        "client_id": form.area.branch.client_id,
-        "client": form.area.branch.client.name,
         "schema": form.schema or {},
         "is_active": form.is_active,
+        "areas_count": form.areas_using_template.count(),
     }
 
 
@@ -1112,7 +1110,7 @@ def branch_detail(request, branch_id: int):
 def areas(request):
     scope = _get_access_scope(request)
     if request.method == "GET":
-        queryset = Area.objects.select_related("branch__client")
+        queryset = Area.objects.select_related("branch__client", "audit_form_template")
         queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="id")
         payload = [
             _serialize_area(area)
@@ -1153,7 +1151,23 @@ def areas(request):
             status=400,
         )
 
-    area = Area.objects.create(branch=branch, name=name, description=description)
+    audit_form_template = None
+    template_id = data.get("audit_form_template_id")
+    if template_id not in (None, ""):
+        try:
+            resolved_template_id = int(template_id)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Plantilla de formulario de auditoría inválida."}, status=400)
+        audit_form_template = AuditForm.objects.filter(pk=resolved_template_id, is_active=True).first()
+        if audit_form_template is None:
+            return JsonResponse({"error": "Plantilla de formulario de auditoría no encontrada."}, status=404)
+
+    area = Area.objects.create(
+        branch=branch,
+        name=name,
+        description=description,
+        audit_form_template=audit_form_template,
+    )
     return JsonResponse(_serialize_area(area), status=201)
 
 
@@ -1162,7 +1176,7 @@ def areas(request):
 def area_detail(request, area_id: int):
     scope = _get_access_scope(request)
     queryset = _filter_queryset_by_scope(
-        Area.objects.select_related("branch__client"),
+        Area.objects.select_related("branch__client", "audit_form_template"),
         scope,
         area_lookup="id",
     )
@@ -1204,6 +1218,20 @@ def area_detail(request, area_id: int):
         area.name = str(data.get("name") or "").strip()
     if "description" in data:
         area.description = str(data.get("description") or "").strip()
+
+    if "audit_form_template_id" in data:
+        template_id = data.get("audit_form_template_id")
+        if template_id in (None, ""):
+            area.audit_form_template = None
+        else:
+            try:
+                resolved_template_id = int(template_id)
+            except (TypeError, ValueError):
+                return JsonResponse({"error": "Plantilla de formulario de auditoría inválida."}, status=400)
+            audit_form_template = AuditForm.objects.filter(pk=resolved_template_id, is_active=True).first()
+            if audit_form_template is None:
+                return JsonResponse({"error": "Plantilla de formulario de auditoría no encontrada."}, status=404)
+            area.audit_form_template = audit_form_template
 
     if not area.name:
         return JsonResponse({"error": "El nombre no puede estar vacío."}, status=400)
@@ -1680,11 +1708,9 @@ def visit_mobile_flow(request, visit_id: int):
 @require_http_methods(["GET", "POST"])
 def audit_forms(request):
     current_user = _get_current_user(request)
-    scope = _get_access_scope(request)
 
     if request.method == "GET":
-        queryset = AuditForm.objects.select_related("area__branch__client")
-        queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
+        queryset = AuditForm.objects.all()
         return JsonResponse({"results": [_serialize_audit_form(form) for form in queryset.all()]})
 
     if not current_user or not _is_general_admin_user(current_user):
@@ -1697,15 +1723,6 @@ def audit_forms(request):
     name = str(data.get("name") or "").strip()
     if not name:
         return JsonResponse({"error": "El nombre del formulario es obligatorio."}, status=400)
-
-    try:
-        area_id = int(data.get("area_id") or 0)
-    except (TypeError, ValueError):
-        return JsonResponse({"error": "Área inválida."}, status=400)
-
-    area = Area.objects.select_related("branch__client").filter(pk=area_id).first()
-    if area is None:
-        return JsonResponse({"error": "Área no encontrada."}, status=404)
 
     schema = data.get("schema")
     if isinstance(schema, str):
@@ -1720,7 +1737,7 @@ def audit_forms(request):
 
     is_active = _is_truthy(data.get("is_active", True))
 
-    form = AuditForm.objects.create(name=name, area=area, schema=schema, is_active=is_active)
+    form = AuditForm.objects.create(name=name, schema=schema, is_active=is_active)
     return JsonResponse(_serialize_audit_form(form), status=201)
 
 
@@ -1769,17 +1786,12 @@ def audits(request):
     if scope is not None and area.id not in scope["area_ids"]:
         return JsonResponse({"error": "No tienes permiso para agendar auditorías en esta área."}, status=403)
 
-    form = None
-    try:
-        form_id = int(data.get("form_id") or 0)
-    except (TypeError, ValueError):
-        return JsonResponse({"error": "Formulario de auditoría inválido."}, status=400)
-
-    form = AuditForm.objects.select_related("area").filter(pk=form_id, is_active=True).first()
-    if form is None:
-        return JsonResponse({"error": "Formulario de auditoría no válido."}, status=400)
-    if form.area_id != area.id:
-        return JsonResponse({"error": "El formulario de auditoría debe pertenecer al área seleccionada."}, status=400)
+    form = area.audit_form_template
+    if form is None or not form.is_active:
+        return JsonResponse(
+            {"error": "El área seleccionada no tiene una plantilla de formulario de auditoría activa."},
+            status=400,
+        )
 
     inspector = None
     inspector_id = data.get("inspector_id")
