@@ -26,11 +26,18 @@ type AreaApi = {
   id: number;
   name: string;
   description: string;
+  audit_form_template_id: number | null;
   branch: {
     id: number;
     name: string;
     client: string;
   };
+};
+
+type AuditFormApi = {
+  id: number;
+  name: string;
+  is_active: boolean;
 };
 
 export default function EditarAreaPage() {
@@ -40,10 +47,12 @@ export default function EditarAreaPage() {
 
   const [clients, setClients] = useState<ClientApi[]>([]);
   const [branches, setBranches] = useState<BranchApi[]>([]);
+  const [auditFormTemplates, setAuditFormTemplates] = useState<AuditFormApi[]>([]);
   const [clientId, setClientId] = useState("");
   const [branchId, setBranchId] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [auditFormTemplateId, setAuditFormTemplateId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,12 +64,16 @@ export default function EditarAreaPage() {
     const loadData = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const [clientsResponse, branchesResponse, areaResponse] = await Promise.all([
+        const [clientsResponse, branchesResponse, templatesResponse, areaResponse] = await Promise.all([
           fetch("/api/clients/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
           fetch("/api/branches/", {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
+          fetch("/api/audits/forms/", {
             cache: "no-store",
             headers: { "x-current-user-email": currentUserEmail },
           }),
@@ -70,9 +83,10 @@ export default function EditarAreaPage() {
           }),
         ]);
 
-        const [clientsPayload, branchesPayload, areaPayload] = await Promise.all([
+        const [clientsPayload, branchesPayload, templatesPayload, areaPayload] = await Promise.all([
           clientsResponse.json(),
           branchesResponse.json(),
+          templatesResponse.json(),
           areaResponse.json(),
         ]);
 
@@ -81,6 +95,9 @@ export default function EditarAreaPage() {
         }
         if (!branchesResponse.ok) {
           throw new Error(branchesPayload.error || "No se pudieron cargar las sucursales.");
+        }
+        if (!templatesResponse.ok) {
+          throw new Error(templatesPayload.error || "No se pudieron cargar las plantillas de auditoría.");
         }
         if (!areaResponse.ok) {
           throw new Error(areaPayload.error || "No se pudo cargar el área.");
@@ -92,9 +109,11 @@ export default function EditarAreaPage() {
 
         setClients((clientsPayload.results ?? []) as ClientApi[]);
         setBranches(availableBranches);
+        setAuditFormTemplates((templatesPayload.results ?? []) as AuditFormApi[]);
         setName(area.name);
         setDescription(area.description || "");
         setBranchId(String(area.branch.id));
+        setAuditFormTemplateId(area.audit_form_template_id ? String(area.audit_form_template_id) : "");
 
         const selectedBranch = availableBranches.find((branch) => branch.id === area.branch.id);
         if (selectedBranch) {
@@ -146,6 +165,7 @@ export default function EditarAreaPage() {
           branch_id: Number(branchId),
           name,
           description,
+          audit_form_template_id: auditFormTemplateId ? Number(auditFormTemplateId) : null,
         }),
       });
 
@@ -236,6 +256,25 @@ export default function EditarAreaPage() {
                 onChange={(event) => setDescription(event.target.value)}
                 className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
               />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2">
+              Plantilla de auditoría
+              <select
+                value={auditFormTemplateId}
+                onChange={(event) => setAuditFormTemplateId(event.target.value)}
+                disabled={isLoading || isSaving}
+                className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none"
+              >
+                <option value="">Sin plantilla</option>
+                {auditFormTemplates
+                  .filter((template) => template.is_active)
+                  .map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+              </select>
             </label>
 
             <div className="md:col-span-2 flex items-center justify-end gap-3 pt-2">

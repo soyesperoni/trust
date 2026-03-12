@@ -134,9 +134,9 @@ class VisitMediaAdmin(admin.ModelAdmin):
 
 @admin.register(AuditForm)
 class AuditFormAdmin(admin.ModelAdmin):
-    list_display = ("name", "area", "is_active")
-    list_filter = ("is_active", "area__branch__client", "area__branch")
-    search_fields = ("name", "area__name")
+    list_display = ("name", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("name",)
 
 
 @admin.register(Audit)
