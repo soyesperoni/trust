@@ -83,39 +83,44 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 20,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'trust',
-              style: GoogleFonts.poppins(
-                color: AppColors.yellow,
-                fontWeight: FontWeight.bold,
-                fontSize: 34,
-                letterSpacing: -1,
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'trust',
+                style: GoogleFonts.poppins(
+                  color: AppColors.yellow,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 34,
+                  letterSpacing: -1,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'by',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+              const SizedBox(width: 8),
+              Text(
+                'by',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Image.asset('assets/icon/supply.png', height: 34),
-          ],
+              const SizedBox(width: 6),
+              Image.asset('assets/icon/supply.png', height: 34),
+            ],
+          ),
         ),
         actions: [
-          IconButton(
+          _TopBarIconButton(
             tooltip: widget.isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro',
             onPressed: widget.onToggleThemeMode,
             icon: Icon(widget.isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round),
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-          IconButton(
+          const SizedBox(width: 2),
+          _TopBarIconButton(
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => NotificationsScreen(email: widget.email)),
@@ -238,6 +243,35 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       // Silencioso: el contador no debe romper la navegación por fallas de red.
     }
+  }
+}
+
+
+class _TopBarIconButton extends StatelessWidget {
+  const _TopBarIconButton({
+    required this.onPressed,
+    required this.icon,
+    this.color,
+    this.tooltip,
+  });
+
+  final VoidCallback onPressed;
+  final Widget icon;
+  final Color? color;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: icon,
+      color: color,
+      splashRadius: 20,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      padding: EdgeInsets.zero,
+    );
   }
 }
 
