@@ -184,15 +184,6 @@ export default function PlantillasAuditoriaPage() {
           <StatCard label="Áreas asignadas" value={String(templates.reduce((acc, item) => acc + item.areas_count, 0))} />
         </div>
 
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 md:p-5 mb-6">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">Flujo recomendado de auditoría con plantillas</p>
-          <ol className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300 list-decimal list-inside">
-            <li>Crea o actualiza una plantilla de formulario y asígnala a una o más áreas.</li>
-            <li>Cuando se programe la auditoría, se cargará la plantilla configurada para el área seleccionada.</li>
-            <li>El inspector completa respuestas, guarda la auditoría y luego se genera el informe PDF con resultados.</li>
-          </ol>
-        </div>
-
         <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27] lg:flex-row">
           <div className="flex w-full flex-col gap-4 lg:flex-row">
             <div className="relative w-full lg:w-80">
