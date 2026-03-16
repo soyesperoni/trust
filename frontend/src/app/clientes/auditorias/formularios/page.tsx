@@ -62,7 +62,7 @@ export default function FormulariosAuditoriaPage() {
       headers: { "x-current-user-email": getSessionUserEmail() },
     });
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "No se pudieron cargar los formularios de auditoría.");
+    if (!response.ok) throw new Error(payload.error || "No se pudieron cargar las plantillas de auditoría.");
     setTemplates((payload.results ?? []) as AuditFormApi[]);
   };
 
@@ -75,7 +75,7 @@ export default function FormulariosAuditoriaPage() {
         if (isMounted) setError(null);
       } catch (loadError) {
         if (!isMounted) return;
-        setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los formularios.");
+        setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar las plantillas.");
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -138,12 +138,12 @@ export default function FormulariosAuditoriaPage() {
       });
 
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "No se pudo guardar el formulario.");
+      if (!response.ok) throw new Error(payload.error || "No se pudo guardar la plantilla.");
 
       closeModal();
       await loadTemplates();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "No se pudo guardar el formulario.");
+      setError(submitError instanceof Error ? submitError.message : "No se pudo guardar la plantilla.");
     } finally {
       setIsSaving(false);
     }
@@ -169,8 +169,8 @@ export default function FormulariosAuditoriaPage() {
   return (
     <>
       <DashboardHeader
-        title="Formularios de Auditoría"
-        description="Gestiona formularios y edita plantillas para auditorías de forma centralizada."
+        title="Plantillas de Auditoría"
+        description="Administra plantillas reutilizables por una o más áreas para ejecutar auditorías con el mismo estándar."
         action={
           canManage ? (
             <button
@@ -179,7 +179,7 @@ export default function FormulariosAuditoriaPage() {
               type="button"
             >
               <span className="material-symbols-outlined text-[20px]">add</span>
-              Crear formulario
+              Crear plantilla
             </button>
           ) : undefined
         }
@@ -191,6 +191,15 @@ export default function FormulariosAuditoriaPage() {
           <StatCard label="Activas" value={String(templates.filter((item) => item.is_active).length)} valueClassName="text-green-600" />
           <StatCard label="Inactivas" value={String(templates.filter((item) => !item.is_active).length)} valueClassName="text-amber-500" />
           <StatCard label="Áreas asignadas" value={String(templates.reduce((acc, item) => acc + item.areas_count, 0))} />
+        </div>
+
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 md:p-5 mb-6">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Flujo recomendado de auditoría con plantillas</p>
+          <ol className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300 list-decimal list-inside">
+            <li>Crea o actualiza una plantilla de formulario y asígnala a una o más áreas.</li>
+            <li>Cuando se programe la auditoría, se cargará la plantilla configurada para el área seleccionada.</li>
+            <li>El inspector completa respuestas, guarda la auditoría y luego se genera el informe PDF con resultados.</li>
+          </ol>
         </div>
 
         <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27] lg:flex-row">
@@ -231,7 +240,7 @@ export default function FormulariosAuditoriaPage() {
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
                   <th className="px-6 py-4">Nombre</th>
                   <th className="px-6 py-4">Categoría</th>
-                  <th className="px-6 py-4">Áreas asignadas</th>
+                  <th className="px-6 py-4">Uso por áreas</th>
                   <th className="px-6 py-4">Estado</th>
                   {canManage ? <th className="px-6 py-4 text-right">Acciones</th> : null}
                 </tr>
@@ -245,7 +254,15 @@ export default function FormulariosAuditoriaPage() {
                         <div className="text-xs text-slate-500">#FORM-{template.id}</div>
                       </td>
                       <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{String(template.schema?.category || "General")}</td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{template.areas_count}</td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                        {template.areas_count > 0 ? (
+                          <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:border-blue-900/60 dark:bg-blue-900/30 dark:text-blue-200">
+                            {template.areas_count} área{template.areas_count === 1 ? "" : "s"}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-500">Sin áreas asignadas</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
@@ -274,14 +291,14 @@ export default function FormulariosAuditoriaPage() {
                 {!isLoading && filteredTemplates.length === 0 ? (
                   <tr>
                     <td className="px-6 py-8 text-center text-slate-500" colSpan={canManage ? 5 : 4}>
-                      No hay formularios que coincidan con los filtros aplicados.
+                      No hay plantillas que coincidan con los filtros aplicados.
                     </td>
                   </tr>
                 ) : null}
                 {isLoading ? (
                   <tr>
                     <td className="px-6 py-8 text-center text-slate-500" colSpan={canManage ? 5 : 4}>
-                      Cargando formularios...
+                      Cargando plantillas...
                     </td>
                   </tr>
                 ) : null}
@@ -297,9 +314,9 @@ export default function FormulariosAuditoriaPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                  {editingTemplateId ? "Editar formulario" : "Crear formulario"}
+                  {editingTemplateId ? "Editar plantilla" : "Crear plantilla"}
                 </h3>
-                <p className="mt-1 text-sm text-slate-500">Configura nombre, categoría y estado del formulario.</p>
+                <p className="mt-1 text-sm text-slate-500">Configura nombre, categoría y estado de la plantilla.</p>
               </div>
               <button className="text-slate-500 hover:text-slate-700" onClick={closeModal} type="button">
                 <span className="material-symbols-outlined">close</span>
@@ -356,7 +373,7 @@ export default function FormulariosAuditoriaPage() {
                   className="flex items-center justify-center rounded-lg h-10 px-6 bg-primary text-slate-900 text-sm font-bold shadow-sm hover:brightness-105 transition-all disabled:opacity-60"
                   type="submit"
                 >
-                  {isSaving ? "Guardando..." : editingTemplateId ? "Guardar cambios" : "Guardar formulario"}
+                  {isSaving ? "Guardando..." : editingTemplateId ? "Guardar cambios" : "Guardar plantilla"}
                 </button>
               </div>
             </form>
