@@ -35,6 +35,8 @@ const navItems: NavItem[] = [
   { icon: "calendar_month", label: "Calendario", href: "/clientes/calendario", accountAdminOnly: true , branchAdminOnly: true },
   { icon: "history", label: "Historial de Visitas", href: "/clientes/visitas", accountAdminOnly: true , branchAdminOnly: true },
   { icon: "report_problem", label: "Incidencias", href: "/clientes/incidencias", accountAdminOnly: true , branchAdminOnly: true },
+  { icon: "assignment_turned_in", label: "Auditorías", href: "/clientes/auditorias", accountAdminOnly: true , branchAdminOnly: true },
+  { icon: "fact_check", label: "Formularios", href: "/clientes/auditorias/formularios", accountAdminOnly: true , branchAdminOnly: true },
 ];
 
 const secondaryItems: NavItem[] = [
