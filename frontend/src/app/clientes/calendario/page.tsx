@@ -24,9 +24,35 @@ type Visit = {
   status: string;
 };
 
+type Audit = {
+  id: number;
+  client: string;
+  branch: string;
+  branch_id: number;
+  area: string;
+  area_id: number;
+  inspector: string;
+  inspector_id: number | null;
+  audited_at: string;
+  notes: string;
+  status: string;
+};
+
+type CalendarActivity = {
+  id: number;
+  type: "visit" | "audit";
+  client: string;
+  branch: string;
+  area: string;
+  inspector: string;
+  notes: string;
+  status: string;
+  scheduledAt: string;
+};
+
 type CalendarCell = {
   date: Date | null;
-  visits: Visit[];
+  activities: CalendarActivity[];
   muted?: boolean;
 };
 
@@ -65,7 +91,7 @@ export default function CalendarioPage() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [visits, setVisits] = useState<Visit[]>([]);
+  const [activities, setActivities] = useState<CalendarActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -77,25 +103,59 @@ export default function CalendarioPage() {
       setIsLoading(true);
       try {
         const currentUserEmail = getSessionUserEmail();
-        const response = await fetch(`/api/visits?month=${monthKey(currentMonth)}`, {
-          cache: "no-store",
-          headers: { "x-current-user-email": currentUserEmail },
-        });
-        if (!response.ok) {
-          throw new Error("No se pudieron cargar las visitas del calendario.");
+        const [visitsResponse, auditsResponse] = await Promise.all([
+          fetch(`/api/visits?month=${monthKey(currentMonth)}`, {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
+          fetch(`/api/audits?month=${monthKey(currentMonth)}`, {
+            cache: "no-store",
+            headers: { "x-current-user-email": currentUserEmail },
+          }),
+        ]);
+
+        if (!visitsResponse.ok || !auditsResponse.ok) {
+          throw new Error("No se pudieron cargar las actividades del calendario.");
         }
 
-        const payload = await response.json();
+        const [visitsPayload, auditsPayload] = await Promise.all([
+          visitsResponse.json(),
+          auditsResponse.json(),
+        ]);
         if (!isMounted) return;
 
-        setVisits(payload.results ?? []);
+        const mappedVisits = (visitsPayload.results ?? []).map((visit: Visit): CalendarActivity => ({
+          id: visit.id,
+          type: "visit",
+          client: visit.client,
+          branch: visit.branch,
+          area: visit.area,
+          inspector: visit.inspector,
+          notes: visit.notes,
+          status: visit.status,
+          scheduledAt: visit.visited_at,
+        }));
+
+        const mappedAudits = (auditsPayload.results ?? []).map((audit: Audit): CalendarActivity => ({
+          id: audit.id,
+          type: "audit",
+          client: audit.client,
+          branch: audit.branch,
+          area: audit.area,
+          inspector: audit.inspector,
+          notes: audit.notes,
+          status: audit.status,
+          scheduledAt: audit.audited_at,
+        }));
+
+        setActivities([...mappedVisits, ...mappedAudits]);
         setError(null);
       } catch (fetchError) {
         if (!isMounted) return;
         setError(
           fetchError instanceof Error
             ? fetchError.message
-            : "No se pudieron cargar las visitas del calendario.",
+            : "No se pudieron cargar las actividades del calendario.",
         );
       } finally {
         if (!isMounted) return;
@@ -118,26 +178,26 @@ export default function CalendarioPage() {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
 
-    const mapByDay = new Map<number, Visit[]>();
-    visits.forEach((visit) => {
-      const date = new Date(visit.visited_at);
+    const mapByDay = new Map<number, CalendarActivity[]>();
+    activities.forEach((activity) => {
+      const date = new Date(activity.scheduledAt);
       const day = date.getDate();
       const current = mapByDay.get(day) ?? [];
-      current.push(visit);
+      current.push(activity);
       mapByDay.set(day, current);
     });
 
     return Array.from({ length: totalCells }, (_, index): CalendarCell => {
       const day = index - startOffset + 1;
       if (day < 1 || day > daysInMonth) {
-        return { date: null, visits: [], muted: true };
+        return { date: null, activities: [], muted: true };
       }
       return {
         date: new Date(year, month, day),
-        visits: mapByDay.get(day) ?? [],
+        activities: mapByDay.get(day) ?? [],
       };
     });
-  }, [currentMonth, visits]);
+  }, [activities, currentMonth]);
 
   const mobileCells = useMemo(() => {
     const weeks = Array.from({ length: Math.ceil(cells.length / 7) }, (_, weekIndex) =>
@@ -151,33 +211,33 @@ export default function CalendarioPage() {
   }, [cells]);
 
   const selectedDayVisits = useMemo(() => {
-    return visits
-      .filter((visit) => {
-        const date = new Date(visit.visited_at);
+    return activities
+      .filter((activity) => {
+        const date = new Date(activity.scheduledAt);
         return (
           date.getFullYear() === selectedDate.getFullYear() &&
           date.getMonth() === selectedDate.getMonth() &&
           date.getDate() === selectedDate.getDate()
         );
       })
-      .sort((a, b) => a.visited_at.localeCompare(b.visited_at));
-  }, [selectedDate, visits]);
+      .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+  }, [activities, selectedDate]);
 
   const stats = useMemo(() => {
     const now = new Date();
-    const completed = visits.filter((visit) => new Date(visit.visited_at) <= now).length;
+    const completed = activities.filter((activity) => new Date(activity.scheduledAt) <= now).length;
     return {
       completed,
-      pending: visits.length - completed,
+      pending: activities.length - completed,
     };
-  }, [visits]);
+  }, [activities]);
 
   const today = new Date();
 
   return (
     <>
       <DashboardHeader
-        title="Calendario de Visitas"
+        title="Calendario de Actividades"
         action={
           <div className="flex items-center gap-3 flex-wrap justify-end">
             <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1">
@@ -315,7 +375,7 @@ export default function CalendarioPage() {
           <div className="space-y-3">
             {selectedDayVisits.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
-                No hay visitas para la fecha seleccionada.
+                No hay actividades para la fecha seleccionada.
               </div>
             ) : (
               selectedDayVisits.map((visit) => {
@@ -327,7 +387,7 @@ export default function CalendarioPage() {
                 return (
                   <article
                     className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 shadow-card dark:border-slate-800 dark:bg-slate-900/50"
-                    key={`mobile-visit-${visit.id}`}
+                    key={`mobile-${visit.type}-${visit.id}`}
                   >
                     <div className="mb-2 flex items-start justify-between gap-3">
                       <div className="flex flex-col gap-1">
@@ -341,11 +401,11 @@ export default function CalendarioPage() {
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <span className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                          {formatTime(visit.visited_at)}
+                          {formatTime(visit.scheduledAt)}
                         </span>
-                        {user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
+                        {visit.type === "visit" && user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
                           <Link
-                            aria-label={`Iniciar visita ${visit.id}`}
+                            aria-label={`Iniciar actividad ${visit.id}`}
                             href={`/clientes/visitas/${visit.id}/realizar`}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-yellow-400 text-black shadow-sm transition-transform hover:scale-105"
                           >
@@ -368,12 +428,12 @@ export default function CalendarioPage() {
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-professional-green px-4 py-3 text-sm font-semibold text-white shadow-sm"
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
-              Agendar visita
+              Agendar actividad
             </Link>
           )}
 
           {error && <p className="text-sm text-red-500">{error}</p>}
-          {isLoading && <p className="text-sm text-slate-500">Cargando visitas...</p>}
+          {isLoading && <p className="text-sm text-slate-500">Cargando actividades...</p>}
         </div>
 
         <div className="hidden md:flex flex-1 flex-col p-4 md:p-6 overflow-y-auto">
@@ -424,21 +484,21 @@ export default function CalendarioPage() {
                         </span>
                       ))}
 
-                    {cell.visits.slice(0, 2).map((visit) => {
+                    {cell.activities.slice(0, 2).map((visit) => {
                       const type = visit.notes.toLowerCase().includes("emergencia")
                         ? "emergencia"
                         : "mantenimiento";
                       return (
                         <div
-                          key={visit.id}
+                          key={`${visit.type}-${visit.id}`}
                           className={`mt-1 p-1 rounded text-[10px] font-medium truncate cursor-pointer ${eventStyles[type]}`}
                         >
-                          {formatTime(visit.visited_at)} - {visit.branch}
+                          {formatTime(visit.scheduledAt)} - {visit.branch}
                         </div>
                       );
                     })}
-                    {cell.visits.length > 2 && (
-                      <div className="text-[10px] text-slate-400 mt-1">+{cell.visits.length - 2} más</div>
+                    {cell.activities.length > 2 && (
+                      <div className="text-[10px] text-slate-400 mt-1">+{cell.activities.length - 2} más</div>
                     )}
                   </button>
                 );
@@ -446,7 +506,7 @@ export default function CalendarioPage() {
             </div>
           </div>
           {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
-          {isLoading && <p className="text-sm text-slate-500 mt-3">Cargando visitas...</p>}
+          {isLoading && <p className="text-sm text-slate-500 mt-3">Cargando actividades...</p>}
         </div>
 
         <aside className="w-80 bg-white dark:bg-[#161e27] border-l border-slate-200 dark:border-slate-800 flex-col shrink-0 hidden xl:flex">
@@ -462,7 +522,7 @@ export default function CalendarioPage() {
           </div>
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {selectedDayVisits.length === 0 && (
-              <div className="text-sm text-slate-500">No hay visitas para la fecha seleccionada.</div>
+              <div className="text-sm text-slate-500">No hay actividades para la fecha seleccionada.</div>
             )}
             {selectedDayVisits.map((visit) => {
               const emergency = visit.notes.toLowerCase().includes("emergencia");
@@ -473,7 +533,7 @@ export default function CalendarioPage() {
                       ? "border-l-4 border-l-primary bg-yellow-50/30 dark:bg-yellow-900/10"
                       : "border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50"
                   }`}
-                  key={visit.id}
+                  key={`${visit.type}-${visit.id}`}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <span
@@ -485,7 +545,7 @@ export default function CalendarioPage() {
                     >
                       {visit.client || "Sin cliente"}
                     </span>
-                    <span className="text-xs font-semibold text-slate-400">{formatTime(visit.visited_at)}</span>
+                    <span className="text-xs font-semibold text-slate-400">{formatTime(visit.scheduledAt)}</span>
                   </div>
                   <h4 className="font-bold text-slate-800 dark:text-white text-sm">{visit.branch}</h4>
                   <p className="text-xs text-slate-500 mt-1 mb-3">{visit.area}</p>
@@ -502,13 +562,15 @@ export default function CalendarioPage() {
                   </div>
                   {visit.notes && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{visit.notes}</p>}
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Link
-                      href={`/clientes/visitas/${visit.id}/informe`}
-                      className="inline-flex rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                    >
-                      Ver informe
-                    </Link>
-                    {user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
+                    {visit.type === "visit" && (
+                      <Link
+                        href={`/clientes/visitas/${visit.id}/informe`}
+                        className="inline-flex rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                      >
+                        Ver informe
+                      </Link>
+                    )}
+                    {visit.type === "visit" && user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
                       <Link
                         href={`/clientes/visitas/${visit.id}/realizar`}
                         className="inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-black"
