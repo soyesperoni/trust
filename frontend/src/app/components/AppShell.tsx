@@ -24,6 +24,8 @@ type AppShellProps = {
 
 const navigationPriority = [
   "/ajustes",
+  "/clientes/auditorias/formularios",
+  "/clientes/auditorias",
   "/clientes/incidencias",
   "/clientes/calendario",
   "/clientes/visitas",

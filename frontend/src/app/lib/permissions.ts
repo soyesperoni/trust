@@ -30,6 +30,7 @@ const INSPECTOR_BLOCKED_PATH_PREFIXES = [
 export const ACCOUNT_ADMIN_ALLOWED_PATH_PREFIXES = [
   "/ajustes",
   "/dashboard",
+  "/clientes/auditorias",
   "/clientes/sucursales",
   "/clientes/areas",
   "/clientes/dispensadores",
@@ -42,6 +43,7 @@ export const ACCOUNT_ADMIN_ALLOWED_PATH_PREFIXES = [
 export const BRANCH_ADMIN_ALLOWED_PATH_PREFIXES = [
   "/ajustes",
   "/dashboard",
+  "/clientes/auditorias",
   "/clientes/areas",
   "/clientes/dispensadores",
   "/clientes/productos",
@@ -53,6 +55,7 @@ export const BRANCH_ADMIN_ALLOWED_PATH_PREFIXES = [
 export const INSPECTOR_ALLOWED_PATH_PREFIXES = [
   "/ajustes",
   "/dashboard",
+  "/clientes/auditorias",
   "/clientes/data",
   "/clientes/sucursales",
   "/clientes/areas",
