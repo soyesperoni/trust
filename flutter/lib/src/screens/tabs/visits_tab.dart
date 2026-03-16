@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../../models/user_role.dart';
 import '../../models/visit.dart';
+import '../../models/audit.dart';
 import '../../services/trust_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/visit_summary_card.dart';
+import '../../widgets/audit_summary_card.dart';
 
 class VisitsTab extends StatefulWidget {
   const VisitsTab({required this.email, required this.role, super.key});
@@ -26,6 +28,7 @@ class _VisitsTabState extends State<VisitsTab> {
   Timer? _refreshTimer;
   _VisitFilter _selectedFilter = _VisitFilter.all;
   List<Visit> _visits = const [];
+  List<Audit> _audits = const [];
   Object? _error;
   bool _isLoading = true;
 
@@ -53,11 +56,12 @@ class _VisitsTabState extends State<VisitsTab> {
       return Center(child: Text('Error cargando visitas: $_error'));
     }
 
-    if (_visits.isEmpty) {
-      return const Center(child: Text('Sin visitas registradas.'));
+    if (_visits.isEmpty && _audits.isEmpty) {
+      return const Center(child: Text('Sin visitas ni auditorías registradas.'));
     }
 
     final filteredVisits = _applyFilters(_visits);
+    final filteredAudits = _applyAuditFilters(_audits);
 
     return Column(
       children: [
@@ -72,25 +76,44 @@ class _VisitsTabState extends State<VisitsTab> {
           },
         ),
         Expanded(
-          child: filteredVisits.isEmpty
+          child: filteredVisits.isEmpty && filteredAudits.isEmpty
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
-                      'No hay visitas que coincidan con los filtros aplicados.',
+                      'No hay visitas ni auditorías que coincidan con los filtros aplicados.',
                       textAlign: TextAlign.center,
                     ),
                   ),
                 )
-              : ListView.separated(
+              : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                  itemCount: filteredVisits.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) => VisitSummaryCard(
-                    visit: filteredVisits[index],
-                    role: widget.role,
-                    email: widget.email,
-                  ),
+                  children: [
+                    if (filteredVisits.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text('Visitas', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                      ...filteredVisits.map((visit) => Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: VisitSummaryCard(
+                              visit: visit,
+                              role: widget.role,
+                              email: widget.email,
+                            ),
+                          )),
+                    ],
+                    if (filteredAudits.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text('Auditorías', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                      ...filteredAudits.map((audit) => Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: AuditSummaryCard(audit: audit, role: widget.role, email: widget.email),
+                          )),
+                    ],
+                  ],
                 ),
         ),
       ],
@@ -103,12 +126,18 @@ class _VisitsTabState extends State<VisitsTab> {
     }
 
     try {
-      final visits = await _repository.loadVisits(widget.email);
+      final responses = await Future.wait([
+        _repository.loadVisits(widget.email),
+        _repository.loadAudits(widget.email),
+      ]);
+      final visits = responses[0] as List<Visit>;
+      final audits = responses[1] as List<Audit>;
       if (!mounted) {
         return;
       }
       setState(() {
         _visits = visits;
+        _audits = audits;
         _error = null;
         _isLoading = false;
       });
@@ -147,6 +176,30 @@ class _VisitsTabState extends State<VisitsTab> {
         visit.area,
       ].map((value) => value.toLowerCase());
 
+      return searchableFields.any((field) => field.contains(normalizedQuery));
+    }).toList();
+  }
+
+
+  List<Audit> _applyAuditFilters(List<Audit> audits) {
+    final normalizedQuery = _searchController.text.trim().toLowerCase();
+
+    return audits.where((audit) {
+      final matchesStatus = switch (_selectedFilter) {
+        _VisitFilter.all => true,
+        _VisitFilter.scheduled => _isScheduled(audit.status),
+        _VisitFilter.completed => _isCompleted(audit.status),
+      };
+
+      if (!matchesStatus) {
+        return false;
+      }
+
+      if (normalizedQuery.isEmpty) {
+        return true;
+      }
+
+      final searchableFields = [audit.client, audit.branch, audit.area, audit.formName].map((value) => value.toLowerCase());
       return searchableFields.any((field) => field.contains(normalizedQuery));
     }).toList();
   }
