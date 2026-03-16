@@ -58,7 +58,7 @@ export default function NuevaVisitaPage() {
           !dispensersResponse.ok ||
           !usersResponse.ok
         ) {
-          throw new Error("No se pudo cargar la información del formulario.");
+          throw new Error("No se pudo cargar la información de plantillas para la auditoría.");
         }
 
         const [clientsPayload, branchesPayload, areasPayload, dispensersPayload, usersPayload] =
@@ -86,7 +86,7 @@ export default function NuevaVisitaPage() {
         setStatusMessage(
           error instanceof Error
             ? error.message
-            : "No se pudo cargar la información del formulario.",
+            : "No se pudo cargar la información de plantillas para la auditoría.",
         );
       }
     };
@@ -163,7 +163,7 @@ export default function NuevaVisitaPage() {
     <>
       <DashboardHeader
         title="Agendar Nueva Visita"
-        description="Registra los datos base para programar una nueva visita técnica."
+        description="Programa auditorías por área: al ejecutarlas se abrirá automáticamente la plantilla asignada al área."
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -171,8 +171,12 @@ export default function NuevaVisitaPage() {
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Datos de la visita</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Completa la información base para agendar una nueva visita técnica.
+              Completa la información base para programar una auditoría. La ejecución utilizará la plantilla de auditoría del área elegida y luego permitirá generar el informe PDF.
             </p>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            La plantilla de auditoría se define en la configuración del área y puede reutilizarse en una o más áreas.
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
