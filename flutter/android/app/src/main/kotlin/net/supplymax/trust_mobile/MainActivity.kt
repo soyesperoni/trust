@@ -1,4 +1,4 @@
-package com.example.trust_mobile
+package net.supplymax.trust_mobile
 
 import io.flutter.embedding.android.FlutterActivity
 
