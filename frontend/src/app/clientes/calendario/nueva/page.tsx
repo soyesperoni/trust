@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
+import { useCurrentUser } from "../../../hooks/useCurrentUser";
+import { GENERAL_ADMIN_ROLE, INSPECTOR_ROLE } from "../../../lib/permissions";
 import { getSessionUserEmail } from "../../../lib/session";
 
 type Client = { id: number; name: string };
@@ -19,6 +21,8 @@ const initialTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.get
 
 export default function NuevaVisitaPage() {
   const router = useRouter();
+  const { user, isLoading: isLoadingUser } = useCurrentUser();
+  const canSchedule = user?.role === GENERAL_ADMIN_ROLE || user?.role === INSPECTOR_ROLE;
 
   const [clients, setClients] = useState<Client[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -33,6 +37,7 @@ export default function NuevaVisitaPage() {
   const [inspectorId, setInspectorId] = useState("");
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
+  const [activityType, setActivityType] = useState<"visit" | "audit">("visit");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -126,21 +131,31 @@ export default function NuevaVisitaPage() {
     try {
       const visitDateTime = new Date(`${date}T${time}:00`);
       const currentUserEmail = getSessionUserEmail();
-      const response = await fetch("/api/visits/", {
+      const endpoint = activityType === "audit" ? "/api/audits/" : "/api/visits/";
+      const payloadBody = activityType === "audit"
+        ? {
+            area_id: Number(areaId),
+            inspector_id: inspectorId ? Number(inspectorId) : null,
+            audited_at: visitDateTime.toISOString(),
+            notes: notes.trim(),
+          }
+        : {
+            area_id: Number(areaId),
+            dispenser_id: dispenserId ? Number(dispenserId) : null,
+            inspector_id: inspectorId ? Number(inspectorId) : null,
+            visited_at: visitDateTime.toISOString(),
+            notes: notes.trim(),
+          };
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-current-user-email": currentUserEmail },
-        body: JSON.stringify({
-          area_id: Number(areaId),
-          dispenser_id: dispenserId ? Number(dispenserId) : null,
-          inspector_id: inspectorId ? Number(inspectorId) : null,
-          visited_at: visitDateTime.toISOString(),
-          notes: notes.trim(),
-        }),
+        body: JSON.stringify(payloadBody),
       });
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(payload?.error ?? "No se pudo agendar la visita.");
+        throw new Error(payload?.error ?? "No se pudo agendar la actividad.");
       }
 
       if (typeof payload?.id !== "number") {
@@ -149,11 +164,11 @@ export default function NuevaVisitaPage() {
         );
       }
 
-      setStatusMessage("Visita registrada correctamente.");
+      setStatusMessage(activityType === "audit" ? "Auditoría registrada correctamente." : "Visita registrada correctamente.");
       router.push("/clientes/calendario");
       router.refresh();
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "No se pudo agendar la visita.");
+      setStatusMessage(error instanceof Error ? error.message : "No se pudo agendar la actividad.");
     } finally {
       setIsSubmitting(false);
     }
@@ -162,25 +177,42 @@ export default function NuevaVisitaPage() {
   return (
     <>
       <DashboardHeader
-        title="Agendar Nueva Visita"
-        description="Programa auditorías por área: al ejecutarlas se abrirá automáticamente la plantilla asignada al área."
+        title="Agendar actividad"
+        description="Programa una visita o una auditoría por área. Para auditorías, la ejecución seguirá el flujo móvil con formulario, evidencia y firma."
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-3xl mx-auto bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Datos de la visita</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Datos de la actividad</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Completa la información base para programar una auditoría. La ejecución utilizará la plantilla de auditoría del área elegida y luego permitirá generar el informe PDF.
+              Completa la información base para programar una visita o auditoría. En auditorías se usará la plantilla del área seleccionada.
             </p>
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-            La plantilla de auditoría se define en la configuración del área y puede reutilizarse en una o más áreas.
+            Solo el administrador general y los inspectores pueden programar actividades desde el calendario.
           </div>
+
+
+          {!isLoadingUser && !canSchedule && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200">
+              No tienes permisos para agendar actividades.
+            </div>
+          )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="activityType">
+                  Tipo de actividad
+                  <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="activityType" onChange={(e) => setActivityType(e.target.value as "visit" | "audit") } value={activityType}>
+                    <option value="visit">Visita</option>
+                    <option value="audit">Auditoría</option>
+                  </select>
+                </label>
+              </div>
+
               <div className="md:col-span-2">
                 <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="client">
                   Cliente
@@ -229,6 +261,7 @@ export default function NuevaVisitaPage() {
                 </label>
               </div>
 
+              {activityType === "visit" && (
               <div className="md:col-span-2">
                 <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="doser">
                   Dosificador
@@ -240,6 +273,7 @@ export default function NuevaVisitaPage() {
                   </select>
                 </label>
               </div>
+              )}
 
               <div className="md:col-span-2">
                 <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="inspector">
@@ -281,9 +315,9 @@ export default function NuevaVisitaPage() {
               <button className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800" onClick={() => router.push("/clientes/calendario")} type="button">
                 Cancelar
               </button>
-              <button className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700 flex items-center gap-2 disabled:opacity-60" disabled={isSubmitting} type="submit">
+              <button className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700 flex items-center gap-2 disabled:opacity-60" disabled={isSubmitting || !canSchedule} type="submit">
                 <span className="material-symbols-outlined text-[20px]">save</span>
-                {isSubmitting ? "Guardando..." : "Guardar Visita"}
+                {isSubmitting ? "Guardando..." : "Guardar actividad"}
               </button>
             </div>
           </form>

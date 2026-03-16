@@ -1827,8 +1827,8 @@ def audits(request):
     if request.method == "POST":
         if not current_user:
             return JsonResponse({"error": "No se pudo identificar tu sesión de usuario."}, status=401)
-        if not _is_general_admin_user(current_user):
-            return JsonResponse({"error": "Solo el administrador general puede agendar auditorías."}, status=403)
+        if not (_is_general_admin_user(current_user) or current_user.role == User.Role.INSPECTOR):
+            return JsonResponse({"error": "Solo el administrador general o un inspector pueden agendar auditorías."}, status=403)
 
     if request.method == "GET":
         queryset = Audit.objects.select_related("area__branch__client", "inspector", "form")
