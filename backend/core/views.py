@@ -823,6 +823,49 @@ def _is_truthy(value: Any) -> bool:
     return bool(value)
 
 
+def _validate_template_schema(schema: Any) -> tuple[dict[str, Any] | None, str | None]:
+    if isinstance(schema, str):
+        try:
+            schema = json.loads(schema)
+        except json.JSONDecodeError:
+            return None, "El esquema de la plantilla no tiene formato JSON válido."
+
+    if schema is None:
+        schema = {}
+    if not isinstance(schema, dict):
+        return None, "El esquema de la plantilla debe ser un objeto JSON."
+
+    questions = schema.get("questions", [])
+    if not isinstance(questions, list):
+        return None, "Las preguntas de la plantilla deben enviarse como una lista."
+
+    allowed_types = {"yes_no", "number", "text"}
+    for index, question in enumerate(questions, start=1):
+        if not isinstance(question, dict):
+            return None, f"La pregunta #{index} no tiene formato válido."
+
+        label = str(question.get("label") or "").strip()
+        if not label:
+            return None, f"La pregunta #{index} debe incluir un enunciado."
+
+        response_type = str(question.get("response_type") or "").strip().lower()
+        if response_type not in allowed_types:
+            return None, f"La pregunta #{index} tiene un tipo de respuesta inválido."
+
+        if response_type == "yes_no":
+            options = question.get("options")
+            if options is None:
+                question["options"] = ["Sí", "No"]
+            elif not isinstance(options, list) or len(options) < 2:
+                return None, f"La pregunta #{index} debe incluir al menos 2 respuestas posibles."
+
+        question["requires_image_evidence"] = _is_truthy(question.get("requires_image_evidence"))
+        question["required"] = _is_truthy(question.get("required", True))
+
+    schema["questions"] = questions
+    return schema, None
+
+
 def _serialize_incident(incident: Incident) -> dict:
     return {
         "id": incident.id,
@@ -1157,10 +1200,10 @@ def areas(request):
         try:
             resolved_template_id = int(template_id)
         except (TypeError, ValueError):
-            return JsonResponse({"error": "Plantilla de formulario de auditoría inválida."}, status=400)
+            return JsonResponse({"error": "Plantilla de auditoría inválida."}, status=400)
         audit_form_template = AuditForm.objects.filter(pk=resolved_template_id, is_active=True).first()
         if audit_form_template is None:
-            return JsonResponse({"error": "Plantilla de formulario de auditoría no encontrada."}, status=404)
+            return JsonResponse({"error": "Plantilla de auditoría no encontrada."}, status=404)
 
     area = Area.objects.create(
         branch=branch,
@@ -1227,10 +1270,10 @@ def area_detail(request, area_id: int):
             try:
                 resolved_template_id = int(template_id)
             except (TypeError, ValueError):
-                return JsonResponse({"error": "Plantilla de formulario de auditoría inválida."}, status=400)
+                return JsonResponse({"error": "Plantilla de auditoría inválida."}, status=400)
             audit_form_template = AuditForm.objects.filter(pk=resolved_template_id, is_active=True).first()
             if audit_form_template is None:
-                return JsonResponse({"error": "Plantilla de formulario de auditoría no encontrada."}, status=404)
+                return JsonResponse({"error": "Plantilla de auditoría no encontrada."}, status=404)
             area.audit_form_template = audit_form_template
 
     if not area.name:
@@ -1714,7 +1757,7 @@ def audit_forms(request):
         return JsonResponse({"results": [_serialize_audit_form(form) for form in queryset.all()]})
 
     if not current_user or not _is_general_admin_user(current_user):
-        return JsonResponse({"error": "Solo el administrador general puede crear formularios de auditoría."}, status=403)
+        return JsonResponse({"error": "Solo el administrador general puede crear plantillas de auditoría."}, status=403)
 
     data, files = _extract_user_data(request)
     if data is None:
@@ -1722,23 +1765,59 @@ def audit_forms(request):
 
     name = str(data.get("name") or "").strip()
     if not name:
-        return JsonResponse({"error": "El nombre del formulario es obligatorio."}, status=400)
+        return JsonResponse({"error": "El nombre de la plantilla es obligatorio."}, status=400)
 
-    schema = data.get("schema")
-    if isinstance(schema, str):
-        try:
-            schema = json.loads(schema)
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "El esquema del formulario no tiene formato JSON válido."}, status=400)
-    if schema is None:
-        schema = {}
-    if not isinstance(schema, dict):
-        return JsonResponse({"error": "El esquema del formulario debe ser un objeto JSON."}, status=400)
+    schema, schema_error = _validate_template_schema(data.get("schema"))
+    if schema_error:
+        return JsonResponse({"error": schema_error}, status=400)
 
     is_active = _is_truthy(data.get("is_active", True))
 
     form = AuditForm.objects.create(name=name, schema=schema, is_active=is_active)
     return JsonResponse(_serialize_audit_form(form), status=201)
+
+
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PATCH", "DELETE"])
+def audit_form_detail(request, form_id: int):
+    form = AuditForm.objects.filter(pk=form_id).first()
+    if form is None:
+        return JsonResponse({"error": "Plantilla no encontrada."}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_audit_form(form))
+
+    current_user = _get_current_user(request)
+    if not current_user or not _is_general_admin_user(current_user):
+        return JsonResponse({"error": "Solo el administrador general puede modificar plantillas."}, status=403)
+
+    if request.method == "DELETE":
+        form.delete()
+        return JsonResponse({"ok": True})
+
+    data, files = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    if "name" in data:
+        name = str(data.get("name") or "").strip()
+        if not name:
+            return JsonResponse({"error": "El nombre de la plantilla es obligatorio."}, status=400)
+        form.name = name
+
+    if "is_active" in data:
+        form.is_active = _is_truthy(data.get("is_active"))
+
+    if "schema" in data:
+        schema, schema_error = _validate_template_schema(data.get("schema"))
+        if schema_error:
+            return JsonResponse({"error": schema_error}, status=400)
+        form.schema = schema
+
+    form.save()
+    return JsonResponse(_serialize_audit_form(form))
 
 
 @csrf_exempt
@@ -1789,7 +1868,7 @@ def audits(request):
     form = area.audit_form_template
     if form is None or not form.is_active:
         return JsonResponse(
-            {"error": "El área seleccionada no tiene una plantilla de formulario de auditoría activa."},
+            {"error": "El área seleccionada no tiene una plantilla de auditoría activa."},
             status=400,
         )
 
