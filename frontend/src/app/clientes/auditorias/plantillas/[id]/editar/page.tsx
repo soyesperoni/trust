@@ -31,6 +31,8 @@ type TemplateResponse = {
   };
 };
 
+type TemplateSchema = NonNullable<TemplateResponse["schema"]>;
+
 const createQuestion = (): QuestionDraft => ({
   id: crypto.randomUUID(),
   label: "",
@@ -39,7 +41,7 @@ const createQuestion = (): QuestionDraft => ({
   requires_image_evidence: false,
 });
 
-const parseQuestions = (questions: TemplateResponse["schema"]["questions"]): QuestionDraft[] => {
+const parseQuestions = (questions: TemplateSchema["questions"]): QuestionDraft[] => {
   if (!questions?.length) return [createQuestion()];
   return questions.map((question) => ({
     id: crypto.randomUUID(),
