@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/dashboard_stats.dart';
 import '../models/incident.dart';
+import '../models/audit.dart';
 import '../models/visit.dart';
 import 'api_client.dart';
 
@@ -73,6 +74,64 @@ class TrustRepository {
   Future<Visit> loadVisitById(String email, int visitId) async {
     final visits = await loadVisits(email);
     return visits.firstWhere((visit) => visit.id == visitId);
+  }
+
+  Future<List<Audit>> loadAudits(String email) async {
+    final json = await _apiClient.getJson('/audits/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().map(Audit.fromJson).toList(growable: false);
+  }
+
+  Future<Audit> startAudit({
+    required String email,
+    required int auditId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final response = await _apiClient.patchJson(
+      '/audits/$auditId/mobile-flow/',
+      email: email,
+      body: {
+        'action': 'start',
+        'start_latitude': latitude,
+        'start_longitude': longitude,
+      },
+    );
+    return Audit.fromJson(response);
+  }
+
+  Future<Audit> completeAudit({
+    required String email,
+    required int auditId,
+    required double latitude,
+    required double longitude,
+    required Map<String, dynamic> auditReport,
+    List<http.MultipartFile> evidenceFiles = const [],
+  }) async {
+    final hasEvidenceFiles = evidenceFiles.isNotEmpty;
+    final response = hasEvidenceFiles
+        ? await _apiClient.patchMultipart(
+            '/audits/$auditId/mobile-flow/',
+            email: email,
+            fields: {
+              'action': 'complete',
+              'end_latitude': latitude.toString(),
+              'end_longitude': longitude.toString(),
+              'audit_report': jsonEncode(auditReport),
+            },
+            files: evidenceFiles,
+          )
+        : await _apiClient.patchJson(
+            '/audits/$auditId/mobile-flow/',
+            email: email,
+            body: {
+              'action': 'complete',
+              'end_latitude': latitude,
+              'end_longitude': longitude,
+              'audit_report': auditReport,
+            },
+          );
+    return Audit.fromJson(response);
   }
 
 
