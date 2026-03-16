@@ -134,6 +134,36 @@ class TrustRepository {
     return Audit.fromJson(response);
   }
 
+  Future<Audit> createAudit({
+    required String email,
+    required int areaId,
+    int? inspectorId,
+    String? notes,
+    DateTime? auditedAt,
+  }) async {
+    final body = <String, dynamic>{
+      'area_id': areaId,
+    };
+
+    if (inspectorId != null) {
+      body['inspector_id'] = inspectorId;
+    }
+    if (notes != null && notes.trim().isNotEmpty) {
+      body['notes'] = notes.trim();
+    }
+    if (auditedAt != null) {
+      body['audited_at'] = auditedAt.toIso8601String();
+    }
+
+    final response = await _apiClient.postJson(
+      '/audits/',
+      email: email,
+      body: body,
+    );
+
+    return Audit.fromJson(response);
+  }
+
 
   Future<List<Map<String, dynamic>>> loadClients(String email) async {
     final json = await _apiClient.getJson('/clients/', email: email);
