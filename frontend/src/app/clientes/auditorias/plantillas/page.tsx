@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
@@ -17,19 +17,6 @@ type AuditFormApi = {
   schema: {
     category?: string;
   } & Record<string, unknown>;
-};
-
-const defaultSchema = {
-  version: "2.0",
-  category: "Seguridad Industrial",
-  sections: [
-    {
-      title: "Seguridad Perimetral",
-      questions: [
-        { type: "yes_no_na", label: "¿Se encuentran los accesos debidamente señalizados y bloqueados?", required: true, weight: 15 },
-      ],
-    },
-  ],
 };
 
 const statusFilters = [
@@ -48,14 +35,9 @@ export default function PlantillasAuditoriaPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTemplateId, setEditingTemplateId] = useState<number | null>(null);
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("Seguridad Industrial");
-  const [isActive, setIsActive] = useState(true);
 
   const loadTemplates = async () => {
     const response = await fetch("/api/audits/forms/", {
@@ -87,59 +69,6 @@ export default function PlantillasAuditoriaPage() {
       isMounted = false;
     };
   }, []);
-
-  const openEditModal = (template: AuditFormApi) => {
-    setEditingTemplateId(template.id);
-    setName(template.name);
-    setCategory(String(template.schema?.category || "Seguridad Industrial"));
-    setIsActive(template.is_active);
-    setError(null);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingTemplateId(null);
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!canManage) return;
-
-    setIsSaving(true);
-    setError(null);
-
-    try {
-      const requestUrl = editingTemplateId ? `/api/audits/forms/${editingTemplateId}/` : "/api/audits/forms/";
-      const requestMethod = editingTemplateId ? "PATCH" : "POST";
-
-      const response = await fetch(requestUrl, {
-        method: requestMethod,
-        headers: {
-          "Content-Type": "application/json",
-          "x-current-user-email": getSessionUserEmail(),
-        },
-        body: JSON.stringify({
-          name,
-          is_active: isActive,
-          schema: {
-            ...defaultSchema,
-            category,
-          },
-        }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "No se pudo guardar la plantilla.");
-
-      closeModal();
-      await loadTemplates();
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "No se pudo guardar la plantilla.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const filteredTemplates = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -177,6 +106,9 @@ export default function PlantillasAuditoriaPage() {
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
+        {error ? (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        ) : null}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <StatCard label="Total" value={String(templates.length)} />
           <StatCard label="Activas" value={String(templates.filter((item) => item.is_active).length)} valueClassName="text-green-600" />
@@ -258,14 +190,13 @@ export default function PlantillasAuditoriaPage() {
                       </td>
                       {canManage ? (
                         <td className="px-6 py-4 text-right">
-                          <button
+                          <Link
                             className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                            onClick={() => openEditModal(template)}
-                            type="button"
+                            href={`/clientes/auditorias/plantillas/${template.id}/editar`}
                           >
                             <span className="material-symbols-outlined text-sm">edit</span>
                             Editar
-                          </button>
+                          </Link>
                         </td>
                       ) : null}
                     </tr>
@@ -289,79 +220,6 @@ export default function PlantillasAuditoriaPage() {
           </div>
         </div>
       </PageTransition>
-
-      {isModalOpen ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/50 px-4">
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-[#161e27]">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                  {editingTemplateId ? "Editar plantilla" : "Crear plantilla"}
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">Configura nombre, categoría y estado de la plantilla.</p>
-              </div>
-              <button className="text-slate-500 hover:text-slate-700" onClick={closeModal} type="button">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            {error ? <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
-
-            <form className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex flex-col gap-1 md:col-span-2">
-                Nombre de la plantilla
-                <input
-                  required
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Ej: Auditoría de Seguridad Planta A"
-                  className="w-full rounded-lg border-slate-200 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 h-12 px-4 text-base"
-                />
-              </label>
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex flex-col gap-1">
-                Categoría técnica
-                <select
-                  value={category}
-                  onChange={(event) => setCategory(event.target.value)}
-                  className="w-full rounded-lg border-slate-200 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 h-12 px-4"
-                >
-                  <option>Seguridad Industrial</option>
-                  <option>Calidad Operativa</option>
-                  <option>Mantenimiento Preventivo</option>
-                  <option>Medio Ambiente</option>
-                </select>
-              </label>
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex flex-col gap-1">
-                Estado
-                <select
-                  value={isActive ? "active" : "inactive"}
-                  onChange={(event) => setIsActive(event.target.value === "active")}
-                  className="w-full rounded-lg border-slate-200 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 h-12 px-4"
-                >
-                  <option value="active">Activa</option>
-                  <option value="inactive">Inactiva</option>
-                </select>
-              </label>
-              <div className="md:col-span-2 flex justify-end gap-2 mt-2">
-                <button
-                  className="rounded-lg h-10 px-5 border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                  onClick={closeModal}
-                  type="button"
-                >
-                  Cancelar
-                </button>
-                <button
-                  disabled={isSaving}
-                  className="flex items-center justify-center rounded-lg h-10 px-6 bg-primary text-slate-900 text-sm font-bold shadow-sm hover:brightness-105 transition-all disabled:opacity-60"
-                  type="submit"
-                >
-                  {isSaving ? "Guardando..." : editingTemplateId ? "Guardar cambios" : "Guardar plantilla"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }

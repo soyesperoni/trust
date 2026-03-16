@@ -4,6 +4,28 @@ import { getBackendBaseUrl } from "../../../../lib/backend";
 
 const backendBaseUrl = getBackendBaseUrl();
 
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
+
+  const response = await fetch(`${backendBaseUrl}/api/audits/forms/${resolvedParams.id}/`, {
+    method: "GET",
+    headers: {
+      "X-Current-User-Email": currentUserEmail,
+    },
+    cache: "no-store",
+  });
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = { error: "No se pudo cargar la plantilla de auditoría." };
+  }
+
+  return NextResponse.json(payload, { status: response.status });
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
