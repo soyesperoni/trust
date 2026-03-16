@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import '../../models/dashboard_stats.dart';
 import '../../models/user_role.dart';
 import '../../models/visit.dart';
+import '../../models/audit.dart';
 import '../../services/trust_repository.dart';
 import '../../widgets/visit_summary_card.dart';
 import '../../theme/app_colors.dart';
+import '../audits/start_audit_screen.dart';
 
 class DashboardTab extends StatefulWidget {
   const DashboardTab({
@@ -88,6 +90,37 @@ class _DashboardTabState extends State<DashboardTab> {
               ),
             ],
           ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
+                  label: 'Auditorías Pendientes',
+                  value: payload.pendingAudits,
+                  cardColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFECFEFF),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: SizedBox(
+                  height: 120,
+                  child: FilledButton.icon(
+                    onPressed: widget.role.isInspector ? _openStartAuditFlow : null,
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('Comenzar auditoría'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.yellow,
+                      foregroundColor: Colors.black,
+                      disabledBackgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFE5E7EB),
+                      disabledForegroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -137,6 +170,18 @@ class _DashboardTabState extends State<DashboardTab> {
     );
   }
 
+  Future<void> _openStartAuditFlow() async {
+    final started = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => StartAuditScreen(email: widget.email),
+      ),
+    );
+
+    if (started == true) {
+      await _refreshData(showLoader: true);
+    }
+  }
+
   Future<void> _refreshData({bool showLoader = false}) async {
     if (showLoader && mounted) {
       setState(() => _isLoading = true);
@@ -167,12 +212,22 @@ class _DashboardTabState extends State<DashboardTab> {
     final results = await Future.wait<dynamic>([
       _repository.loadDashboardStats(widget.email),
       _repository.loadVisits(widget.email),
+      _repository.loadAudits(widget.email),
     ]);
 
     final stats = results[0] as DashboardStats;
     final visits = results[1] as List<Visit>;
+    final audits = results[2] as List<Audit>;
 
-    return _DashboardPayload(stats: stats, todayVisits: _pickVisits(visits));
+    return _DashboardPayload(
+      stats: stats,
+      todayVisits: _pickVisits(visits),
+      pendingAudits: _countPendingAudits(audits),
+    );
+  }
+
+  int _countPendingAudits(List<Audit> audits) {
+    return audits.where((audit) => audit.status.toLowerCase() == 'scheduled').length;
   }
 
   List<Visit> _pickVisits(List<Visit> visits) {
@@ -214,10 +269,15 @@ class _DashboardTabState extends State<DashboardTab> {
 }
 
 class _DashboardPayload {
-  const _DashboardPayload({required this.stats, required this.todayVisits});
+  const _DashboardPayload({
+    required this.stats,
+    required this.todayVisits,
+    required this.pendingAudits,
+  });
 
   final DashboardStats stats;
   final List<Visit> todayVisits;
+  final int pendingAudits;
 }
 
 class _MetricCard extends StatelessWidget {
