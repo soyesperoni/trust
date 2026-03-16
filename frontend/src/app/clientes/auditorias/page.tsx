@@ -192,11 +192,11 @@ export default function AuditoriasPage() {
         description="Consulta auditorías realizadas y aplica filtros por inspector, estado o texto."
         action={
           <Link
-            href="/clientes/auditorias/formularios"
+            href="/clientes/auditorias/plantillas"
             className="bg-slate-900 text-white hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2"
           >
             <span className="material-symbols-outlined text-[20px]">fact_check</span>
-            Formularios
+            Plantillas
           </Link>
         }
       />
@@ -356,7 +356,7 @@ export default function AuditoriasPage() {
                     <th className="px-6 py-4">Fecha</th>
                     <th className="px-6 py-4">Cliente / Sucursal</th>
                     <th className="px-6 py-4">Área</th>
-                    <th className="px-6 py-4">Formulario</th>
+                    <th className="px-6 py-4">Plantillas</th>
                     <th className="px-6 py-4">Inspector</th>
                     <th className="px-6 py-4">Puntaje</th>
                     <th className="px-6 py-4">Estado</th>
@@ -386,7 +386,7 @@ export default function AuditoriasPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{audit.area}</td>
-                        <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{audit.form_name ?? "Sin formulario"}</td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{audit.form_name ?? "Sin plantilla"}</td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{audit.inspector}</td>
                         <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200">
                           {score == null ? "--" : `${score}%`}

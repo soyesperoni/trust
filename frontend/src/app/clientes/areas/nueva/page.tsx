@@ -88,7 +88,7 @@ export default function NuevaAreaPage() {
         setError(
           loadError instanceof Error
             ? loadError.message
-            : "No se pudo cargar la información del formulario.",
+            : "No se pudo cargar la información de plantillas.",
         );
       } finally {
         if (!mounted) return;

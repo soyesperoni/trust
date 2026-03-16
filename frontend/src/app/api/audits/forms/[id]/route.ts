@@ -23,7 +23,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   try {
     payload = await response.json();
   } catch {
-    payload = { error: "No se pudo actualizar el formulario de auditoría." };
+    payload = { error: "No se pudo actualizar la plantilla de auditoría." };
   }
 
   return NextResponse.json(payload, { status: response.status });

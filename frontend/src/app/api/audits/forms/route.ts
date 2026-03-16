@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     payload = await response.json();
   } catch {
-    payload = { error: "No se pudieron cargar los formularios de auditoría." };
+    payload = { error: "No se pudieron cargar las plantillas de auditoría." };
   }
 
   return NextResponse.json(payload, { status: response.status });
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   try {
     payload = await response.json();
   } catch {
-    payload = { error: "No se pudo crear el formulario de auditoría." };
+    payload = { error: "No se pudo crear la plantilla de auditoría." };
   }
 
   return NextResponse.json(payload, { status: response.status });
