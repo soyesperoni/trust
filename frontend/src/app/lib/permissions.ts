@@ -23,7 +23,6 @@ const BRANCH_ADMIN_BLOCKED_PATH_PREFIXES = [
 const INSPECTOR_BLOCKED_PATH_PREFIXES = [
   "/clientes/sucursales/nueva",
   "/clientes/areas/nueva",
-  "/clientes/calendario/nueva",
   "/clientes/incidencias/nueva",
 ];
 
