@@ -159,6 +159,11 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
             height: 220,
             child: FlutterMap(
               mapController: _mapController,
+              key: ValueKey<String>(
+                _startPosition == null
+                    ? 'location-pending'
+                    : '${_startPosition!.latitude}-${_startPosition!.longitude}',
+              ),
               options: MapOptions(initialCenter: center, initialZoom: _startPosition == null ? 14 : 17),
               children: [
                 TileLayer(urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.trust.mobile'),
@@ -315,6 +320,11 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
       setState(() {
         _startPosition = position;
         _locationValidated = true;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final target = LatLng(position.latitude, position.longitude);
+        _mapController.move(target, 17);
       });
     } catch (error) {
       if (!mounted) return;
