@@ -304,7 +304,7 @@ class _TrustSplashScreenState extends State<TrustSplashScreen>
                               ),
                             ),
                             SvgPicture.asset(
-                              'assets/icon/trust_logo.svg',
+                              'assets/icon/trust_logo_s.svg',
                               height: 64,
                               colorFilter: const ColorFilter.mode(
                                 Colors.white,
