@@ -261,12 +261,6 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Informe ejecutivo</p>
               <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{ai?.executive_summary ?? "Sin informe ejecutivo."}</p>
             </div>
-            <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/70 p-4 dark:border-violet-900/40 dark:bg-violet-950/20">
-              <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">Bloque de informe ejecutivo IA</p>
-              <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
-                {ai?.executive_summary ?? "La IA generará un informe ejecutivo completo al finalizar la auditoría."}
-              </p>
-            </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
                 <p className="font-semibold">Fortalezas detectadas</p>

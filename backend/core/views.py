@@ -560,13 +560,29 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
             "contextual_response": contextual_response,
         })
 
+    if identified_risks:
+        primary_risks = " ".join(identified_risks[:3])
+        risk_impact_summary = (
+            "Las brechas detectadas pueden afectar directamente la continuidad operativa del área, "
+            "incrementar la probabilidad de incumplimientos y elevar la exposición a incidentes de servicio "
+            "si no se corrigen dentro de una ventana de control definida."
+        )
+    else:
+        primary_risks = "No se evidenciaron brechas críticas en las respuestas analizadas."
+        risk_impact_summary = (
+            "El foco debe mantenerse en sostener la disciplina operativa para evitar deterioro de controles "
+            "y prevenir desviaciones futuras."
+        )
+
     return {
         "score": score,
         "executive_summary": (
             f"Informe ejecutivo preliminar generado por Trust AI: el resultado consolidado indica {rating} "
             f"con un score estimado de {score}% sobre {len(answers)} respuestas analizadas. "
-            f"El análisis considera cumplimiento observado, brechas detectadas y acciones recomendadas para "
-            "fortalecer el control operativo del área auditada."
+            "A partir de los riesgos y brechas identificados en las evidencias levantadas, se observa que "
+            f"{primary_risks} {risk_impact_summary} "
+            "En consecuencia, se priorizan acciones correctivas con responsables, plazos y trazabilidad de cierre "
+            "para fortalecer el control operativo del área auditada y proteger sus objetivos de desempeño."
         ),
         "recommendations": identified_recommendations[:6] or ["Priorizar hallazgos con mayor impacto operativo y de cumplimiento."],
         "next_steps": identified_next_steps[:6] or ["Definir responsables, fechas y evidencias de cierre para cada hallazgo."],
@@ -596,7 +612,7 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
                 "content": json.dumps(
                     {
                         "rol": "Eres un analista senior de auditorías operativas y de cumplimiento.",
-                        "instrucciones": "Devuelve SOLO JSON válido con claves: score(0-100), executive_summary(string), recommendations(array), next_steps(array), strengths(array), risks(array), business_impact(string), context_notes(string) y question_insights(array). El executive_summary debe ser un informe ejecutivo integral EN TEXTO COMPLETO (mínimo un párrafo claro y profesional), alineado a normas internacionales de auditoría y buenas prácticas de gestión de riesgos. No dejes campos vacíos. Si no tienes un porcentaje explícito en alguna respuesta, estima el impacto con criterio técnico y evita devolver score=0 por ausencia de porcentajes. Fortalezas, riesgos, recomendaciones y siguientes pasos deben ser específicos de esta auditoría (no genéricos), accionables y NO repetir el mismo contenido entre listas. question_insights debe incluir TODAS las preguntas y para cada una: question, answer y contextual_response (explicación breve enfocada en el contexto de la pregunta).",
+                        "instrucciones": "Devuelve SOLO JSON válido con claves: score(0-100), executive_summary(string), recommendations(array), next_steps(array), strengths(array), risks(array), business_impact(string), context_notes(string) y question_insights(array). El executive_summary debe ser un informe ejecutivo integral EN TEXTO COMPLETO (mínimo un párrafo claro y profesional), alineado a normas internacionales de auditoría y buenas prácticas de gestión de riesgos. Debe ser amplio y explicar explícitamente qué riesgos/brechas fueron detectados y cómo pueden afectar al área auditada en operación, cumplimiento y continuidad. No dejes campos vacíos. Si no tienes un porcentaje explícito en alguna respuesta, estima el impacto con criterio técnico y evita devolver score=0 por ausencia de porcentajes. Fortalezas, riesgos, recomendaciones y siguientes pasos deben ser específicos de esta auditoría (no genéricos), accionables y NO repetir el mismo contenido entre listas. question_insights debe incluir TODAS las preguntas y para cada una: question, answer y contextual_response (explicación breve enfocada en el contexto de la pregunta).",
                         "contexto_auditoria": _build_audit_prompt_context(audit, report),
                         "comentarios": str(report.get("comments") or "").strip(),
                     },
