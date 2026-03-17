@@ -184,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: AppColors.yellow, width: 1.8),
+                                    borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
                                   ),
                                 ),
                                 style: TextStyle(color: onSurface, fontSize: 16),
@@ -226,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: AppColors.yellow, width: 1.8),
+                                    borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
                                   ),
                                 ),
                                 style: TextStyle(color: onSurface, fontSize: 16),
@@ -241,8 +241,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               FilledButton(
                                 onPressed: _isSubmitting ? null : _submit,
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: AppColors.yellow,
-                                  disabledBackgroundColor: const Color(0xFFFFE680),
+                                  backgroundColor: AppColors.secondary,
+                                  disabledBackgroundColor: AppColors.secondaryDark,
+                                  overlayColor: const WidgetStatePropertyAll<Color>(AppColors.secondaryDark),
                                   foregroundColor: AppColors.black,
                                   minimumSize: const Size.fromHeight(50),
                                   textStyle: const TextStyle(
@@ -284,7 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: const Text(
                                 'Términos y Condiciones',
                                 style: TextStyle(
-                                  color: AppColors.yellow,
+                                  color: AppColors.primary,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12,
                                 ),
@@ -303,7 +304,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: const Text(
                                 'Política de Privacidad',
                                 style: TextStyle(
-                                  color: AppColors.yellow,
+                                  color: AppColors.primary,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12,
                                 ),
