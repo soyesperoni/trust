@@ -261,7 +261,7 @@ export default function DashboardPage() {
                             <Link
                               aria-label={`Iniciar visita ${visit.id}`}
                               href={`/clientes/visitas/${visit.id}/realizar`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-yellow-400 text-black shadow-sm transition-transform hover:scale-105"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-yellow-400 text-white shadow-sm transition-transform hover:scale-105"
                             >
                               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                             </Link>

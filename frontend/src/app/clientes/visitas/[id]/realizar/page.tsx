@@ -1100,7 +1100,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
                 <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" onClick={onRetakeEvidence} type="button">
                   Comenzar de nuevo
                 </button>
-                <button className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-black" onClick={addPendingEvidence} type="button">
+                <button className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white" onClick={addPendingEvidence} type="button">
                   Utilizar evidencia
                 </button>
               </div>
@@ -1120,7 +1120,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
         </button>
         {step < 4 ? (
           <button
-            className="rounded-xl bg-primary py-3 font-bold text-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            className="rounded-xl bg-primary py-3 font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
             disabled={(step === 1 && !startCoords) || (step === 2 && !allDispensersChecked)}
             onClick={onGoToNextStep}
             type="button"
@@ -1129,7 +1129,7 @@ export default function RealizarVisitaPage({ params }: { params: Promise<{ id: s
           </button>
         ) : (
           <button
-            className="rounded-xl bg-primary py-3 font-bold text-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            className="rounded-xl bg-primary py-3 font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
             disabled={isSubmitting}
             onClick={onFinishVisit}
             type="button"

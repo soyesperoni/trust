@@ -348,7 +348,7 @@ export default function CalendarioPage() {
                         cell.date
                           ? "text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800"
                           : "text-slate-300 dark:text-slate-600"
-                      } ${isSelected ? "bg-primary text-black font-bold shadow-sm" : ""} ${
+                      } ${isSelected ? "bg-primary text-white font-bold shadow-sm" : ""} ${
                         isToday && !isSelected ? "ring-1 ring-primary/70" : ""
                       }`}
                       disabled={!cell.date}
@@ -407,7 +407,7 @@ export default function CalendarioPage() {
                           <Link
                             aria-label={`Iniciar actividad ${visit.id}`}
                             href={`/clientes/visitas/${visit.id}/realizar`}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-yellow-400 text-black shadow-sm transition-transform hover:scale-105"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-yellow-400 text-white shadow-sm transition-transform hover:scale-105"
                           >
                             <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                           </Link>
@@ -475,7 +475,7 @@ export default function CalendarioPage() {
                   >
                     {cell.date &&
                       (isToday ? (
-                        <span className="w-6 h-6 flex items-center justify-center rounded-full bg-primary text-black text-sm font-bold ml-0.5 mt-0.5">
+                        <span className="w-6 h-6 flex items-center justify-center rounded-full bg-primary text-white text-sm font-bold ml-0.5 mt-0.5">
                           {cell.date.getDate()}
                         </span>
                       ) : (
@@ -539,7 +539,7 @@ export default function CalendarioPage() {
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
                         emergency
-                          ? "bg-primary text-black"
+                          ? "bg-primary text-white"
                           : "bg-yellow-50 text-professional-green dark:bg-yellow-900/30 dark:text-yellow-300"
                       }`}
                     >
@@ -573,7 +573,7 @@ export default function CalendarioPage() {
                     {visit.type === "visit" && user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
                       <Link
                         href={`/clientes/visitas/${visit.id}/realizar`}
-                        className="inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-black"
+                        className="inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white"
                       >
                         Iniciar visita
                       </Link>
