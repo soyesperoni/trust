@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { useEffect, useState } from "react";
 
@@ -31,16 +31,8 @@ export default function DashboardHeader({
   title,
   description,
   action,
-  showSearch = true,
-  searchPlaceholder = "Buscar...",
-  searchValue,
-  onSearchChange,
 }: DashboardHeaderProps) {
   const router = useRouter();
-  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onSearchChange?.(event.target.value);
-  };
-
 
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -71,13 +63,6 @@ export default function DashboardHeader({
       unsubscribe();
     };
   }, []);
-
-  const searchProps = {
-    className:
-      "pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm w-64 focus:ring-2 focus:ring-primary",
-    placeholder: searchPlaceholder,
-    type: "text",
-  } as const;
 
   return (
     <>
@@ -121,18 +106,6 @@ export default function DashboardHeader({
         </div>
         <div className="flex items-center gap-4">
           {action ? <div className="hidden md:flex">{action}</div> : null}
-          {showSearch ? (
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">
-                search
-              </span>
-              <input
-                {...searchProps}
-                onChange={onSearchChange ? handleSearchChange : undefined}
-                value={typeof searchValue === "string" ? searchValue : undefined}
-              />
-            </div>
-          ) : null}
           <ThemeToggleButton />
           <Link
             href="/dashboard/notificaciones"
