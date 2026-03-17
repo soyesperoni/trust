@@ -7,6 +7,7 @@ import DashboardHeader from "../../../../components/DashboardHeader";
 import { getSessionUserEmail } from "../../../../lib/session";
 
 type AuditMedia = { id: number; type: string; file: string | null };
+type MediaModal = { type: "image" | "video"; url: string } | null;
 type AuditAnswer = { id?: number; label?: string; value?: string; response_type?: string };
 
 type Audit = {
@@ -31,6 +32,10 @@ type Audit = {
       score?: number;
       executive_summary?: string;
       recommendations?: string[];
+      strengths?: string[];
+      risks?: string[];
+      business_impact?: string;
+      context_notes?: string;
       provider?: string;
       model?: string;
     };
@@ -48,6 +53,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
   const [audit, setAudit] = useState<Audit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<MediaModal>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -114,6 +120,10 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
   const ai = audit?.audit_report?.ai_analysis;
   const answers = audit?.audit_report?.answers ?? [];
   const signature = toUrl(audit?.audit_report?.responsible_signature);
+
+  const score = typeof ai?.score === "number" ? Math.max(0, Math.min(100, ai.score)) : null;
+  const scoreColor = score == null ? "#94a3b8" : score >= 80 ? "#22c55e" : score >= 60 ? "#f59e0b" : "#ef4444";
+  const scoreLabel = score == null ? "Sin score" : score >= 80 ? "Salud operativa alta" : score >= 60 ? "Atención prioritaria" : "Riesgo crítico";
 
   const mapUrl = useMemo(() => {
     const lat = audit?.end_latitude ?? audit?.start_latitude;
@@ -219,10 +229,30 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
           </article>
 
           <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-2">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Análisis IA</h2>
-            <p className="mt-2 text-sm text-slate-500">Motor: {ai?.provider ?? "DeepSeek"} {ai?.model ? `· ${ai.model}` : ""}</p>
-            <p className="mt-4 text-4xl font-black text-slate-900 dark:text-white">{typeof ai?.score === "number" ? `${ai.score}%` : "Sin score"}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Análisis Trust AI</h2>
+            <p className="mt-2 text-sm text-slate-500">Este análisis y puntuación son generados por Trust AI para interpretar el contexto de preguntas, respuestas e impacto en el negocio.</p>
+            <div className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+              <div className="h-4 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div className="h-full rounded-full transition-all" style={{ width: `${score ?? 0}%`, backgroundColor: scoreColor }} />
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-4xl font-black text-slate-900 dark:text-white">{score == null ? "Sin score" : `${score}%`}</p>
+                <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ backgroundColor: `${scoreColor}22`, color: scoreColor }}>{scoreLabel}</span>
+              </div>
+            </div>
             <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{ai?.executive_summary ?? "Sin resumen ejecutivo."}</p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+                <p className="font-semibold">Fortalezas detectadas</p>
+                <ul className="mt-2 space-y-1">{(ai?.strengths ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul>
+              </div>
+              <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
+                <p className="font-semibold">Riesgos / brechas</p>
+                <ul className="mt-2 space-y-1">{(ai?.risks ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul>
+              </div>
+            </div>
+            <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700 dark:bg-[#0f172a] dark:text-slate-300"><span className="font-semibold">Impacto al negocio:</span> {ai?.business_impact ?? "Sin evaluación de impacto."}</p>
+            <p className="mt-2 text-xs text-slate-500">{ai?.context_notes ?? "Trust AI considera el contexto entre preguntas y respuestas para priorizar hallazgos."}</p>
             <ul className="mt-4 space-y-2 text-sm text-slate-700 dark:text-slate-300">
               {(ai?.recommendations ?? []).map((item, index) => <li key={index} className="rounded-lg bg-slate-50 p-3 dark:bg-[#0f172a]">• {item}</li>)}
             </ul>
@@ -250,19 +280,44 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
 
           <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3">
             <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">Evidencias multimedia</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {photos.map((photo) => (
-            <img key={photo.id} src={toUrl(photo.file) ?? ""} alt="Evidencia" className="h-28 w-full object-cover rounded-lg border" />
-          ))}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              {photos.map((photo) => {
+                const photoUrl = toUrl(photo.file);
+                if (!photoUrl) return null;
+                return (
+                  <button key={photo.id} className="group relative aspect-video overflow-hidden rounded-lg border" onClick={() => setSelectedMedia({ type: "image", url: photoUrl })} type="button">
+                    <img src={photoUrl} alt="Evidencia" className="h-full w-full object-contain bg-slate-100 dark:bg-slate-800" />
+                    <span className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">Ver</span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="mt-4 space-y-2">
-              {videos.map((video) => (
-                <video key={video.id} src={toUrl(video.file) ?? ""} controls className="w-full max-w-xl rounded-lg border" />
-              ))}
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {videos.map((video) => {
+                const videoUrl = toUrl(video.file);
+                if (!videoUrl) return null;
+                return (
+                  <button key={video.id} className="relative aspect-video overflow-hidden rounded-lg border bg-black" onClick={() => setSelectedMedia({ type: "video", url: videoUrl })} type="button">
+                    <video src={videoUrl} className="h-full w-full object-contain" />
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/25 text-white">▶</span>
+                  </button>
+                );
+              })}
             </div>
           </article>
         </div>
       </section>
+
+      {selectedMedia ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true">
+          <button className="absolute right-4 top-4 rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-900" onClick={() => setSelectedMedia(null)} type="button">Cerrar</button>
+          {selectedMedia.type === "image" ? (
+            <img alt="Evidencia en pantalla completa" className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain" src={selectedMedia.url} />
+          ) : (
+            <video className="max-h-[90vh] max-w-[90vw] rounded-xl" controls autoPlay src={selectedMedia.url} />
+          )}
+        </div>
+      ) : null}
     </>
   );
 }

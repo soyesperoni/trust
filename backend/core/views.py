@@ -448,6 +448,10 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
     else:
         rating = "cumplimiento crítico"
 
+    business_impact = "Riesgo alto para la operación y experiencia del cliente." if score < 60 else (
+        "Riesgo moderado con impacto controlable mediante acciones correctivas puntuales." if score < 80 else "Riesgo bajo y operación estable en el área auditada."
+    )
+
     return {
         "score": score,
         "executive_summary": f"Análisis preliminar automático: se observa {rating} con base en {len(answers)} respuestas registradas.",
@@ -455,6 +459,10 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
             "Atender primero las respuestas con incumplimientos o evidencias incompletas.",
             "Definir un plan de acción con responsables y fechas compromiso por hallazgo.",
         ],
+        "strengths": ["Se registró información suficiente para estimar el nivel de cumplimiento general."],
+        "risks": ["El análisis de respaldo no reemplaza la evaluación profesional del auditor."],
+        "business_impact": business_impact,
+        "context_notes": "Puntaje estimado a partir del sentido semántico básico de las respuestas.",
         "provider": "fallback",
     }
 
@@ -475,7 +483,7 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
                 "role": "user",
                 "content": json.dumps(
                     {
-                        "instrucciones": "Devuelve un JSON con claves score(0-100), executive_summary(string), recommendations(array de strings).",
+                        "instrucciones": "Devuelve un JSON con claves score(0-100), executive_summary(string), recommendations(array de strings), strengths(array de strings), risks(array de strings), business_impact(string) y context_notes(string). Evalúa el contexto entre pregunta y respuesta, severidad de hallazgos e impacto operativo/financiero/reputacional.",
                         "contexto": {
                             "cliente": audit.area.branch.client.name,
                             "sucursal": audit.area.branch.name,
@@ -518,10 +526,22 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
         if not isinstance(recommendations, list):
             recommendations = []
         recommendations = [str(item).strip() for item in recommendations if str(item).strip()]
+        strengths = parsed.get("strengths")
+        if not isinstance(strengths, list):
+            strengths = []
+        strengths = [str(item).strip() for item in strengths if str(item).strip()]
+        risks = parsed.get("risks")
+        if not isinstance(risks, list):
+            risks = []
+        risks = [str(item).strip() for item in risks if str(item).strip()]
         return {
             "score": score,
             "executive_summary": str(parsed.get("executive_summary") or "").strip(),
             "recommendations": recommendations,
+            "strengths": strengths,
+            "risks": risks,
+            "business_impact": str(parsed.get("business_impact") or "").strip(),
+            "context_notes": str(parsed.get("context_notes") or "").strip(),
             "provider": "deepseek",
             "model": settings.model or "deepseek-reasoner",
         }

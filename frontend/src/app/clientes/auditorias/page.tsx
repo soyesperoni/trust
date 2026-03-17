@@ -189,7 +189,7 @@ export default function AuditoriasPage() {
     <>
       <DashboardHeader
         title="Historial de Auditorías"
-        description="Consulta auditorías realizadas y aplica filtros por inspector, estado o texto."
+        description="Consulta auditorías realizadas y aplica filtros por inspector, estado o texto. El score mostrado es generado por Trust AI con base en las auditorías visibles según tu rol."
         action={
           <Link
             href="/clientes/auditorias/plantillas"
@@ -275,7 +275,7 @@ export default function AuditoriasPage() {
                 </div>
                 <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-2">
                   <p className="text-slate-500">Puntaje</p>
-                  <p className="font-semibold text-slate-700 dark:text-slate-200">{score == null ? "--" : `${score}%`}</p>
+                  <div className="mt-1"><ScoreGauge score={score} compact /></div>
                 </div>
               </div>
               {audit.status === "completed" ? (
@@ -305,6 +305,13 @@ export default function AuditoriasPage() {
             <StatCard label="Finalizadas" value={String(stats.completed)} valueClassName="text-green-600" />
             <StatCard label="Programadas" value={String(stats.pending)} valueClassName="text-amber-500" />
             <StatCard label="Puntaje promedio" value={`${stats.average}%`} />
+            <div className="md:col-span-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Score general de auditorías (Trust AI)</p>
+                <span className="text-xs text-slate-500">Basado en auditorías que puedes visualizar por permisos</span>
+              </div>
+              <div className="mt-3"><ScoreGauge score={stats.average} /></div>
+            </div>
           </div>
 
           <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27] lg:flex-row">
@@ -399,7 +406,7 @@ export default function AuditoriasPage() {
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{audit.form_name ?? "Sin plantilla"}</td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{audit.inspector}</td>
                         <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200">
-                          {score == null ? "--" : `${score}%`}
+                          <ScoreGauge score={score} compact />
                         </td>
                         <td className="px-6 py-4">
                           <span
@@ -444,6 +451,29 @@ function StatCard({ label, value, valueClassName = "" }: { label: string; value:
     <div className="bg-white dark:bg-[#161e27] p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
       <p className={`text-2xl font-black text-slate-900 dark:text-white ${valueClassName}`}>{value}</p>
+    </div>
+  );
+}
+
+
+function ScoreGauge({ score, compact = false }: { score: number | null; compact?: boolean }) {
+  const normalized = typeof score === "number" ? Math.max(0, Math.min(100, score)) : null;
+  const color = normalized == null ? "#94a3b8" : normalized >= 80 ? "#22c55e" : normalized >= 60 ? "#f59e0b" : "#ef4444";
+  const label = normalized == null ? "Sin score" : normalized >= 80 ? "Excelente" : normalized >= 60 ? "Moderado" : "Crítico";
+
+  return (
+    <div className={compact ? "min-w-[120px]" : "w-full"}>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+        <div className="h-full rounded-full" style={{ width: `${normalized ?? 0}%`, backgroundColor: color }} />
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <span className={compact ? "text-xs font-semibold text-slate-700 dark:text-slate-200" : "text-sm font-bold text-slate-800 dark:text-slate-100"}>
+          {normalized == null ? "--" : `${normalized}%`}
+        </span>
+        <span className="text-[11px] font-medium" style={{ color }}>
+          {label}
+        </span>
+      </div>
     </div>
   );
 }
