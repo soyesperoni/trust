@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'home_screen.dart';
@@ -130,12 +129,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Center(
-                          child: SvgPicture.asset(
-                            'assets/icon/trust_logo_s.svg',
+                          child: Image.asset(
+                            'assets/icon/trust_logo_s.png',
                             height: 64,
-                            colorFilter: isDark
-                                ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
-                                : null,
                           ),
                         ),
                         const SizedBox(height: 14),
