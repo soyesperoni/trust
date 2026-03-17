@@ -2145,6 +2145,141 @@ def audit_mobile_flow(request, audit_id: int):
 
     return JsonResponse({"error": "Acción no válida."}, status=400)
 
+
+
+
+def _build_audit_pdf(audit: Audit) -> bytes:
+    output = BytesIO()
+    pdf = canvas.Canvas(output, pagesize=LETTER)
+    width, height = LETTER
+
+    def line(label: str, value: str, y: float) -> float:
+        pdf.setFont(REPORT_FONT_BOLD, 10)
+        pdf.drawString(40, y, f"{label}:")
+        pdf.setFont(REPORT_FONT, 10)
+        pdf.drawString(165, y, value)
+        return y - 18
+
+    report = audit.audit_report or {}
+    ai_analysis = report.get("ai_analysis") if isinstance(report.get("ai_analysis"), dict) else {}
+    answers = report.get("answers") if isinstance(report.get("answers"), list) else []
+
+    pdf.setTitle(f"informe-auditoria-{audit.id}")
+    pdf.setFont(REPORT_FONT_BOLD, 18)
+    pdf.drawString(40, height - 55, "Informe de Auditoría")
+    pdf.setFont(REPORT_FONT, 9)
+    pdf.setFillColor(colors.HexColor("#64748b"))
+    pdf.drawString(40, height - 72, f"Generado: {timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')}")
+    pdf.setFillColor(colors.black)
+
+    y = height - 105
+    y = line("Auditoría", f"#{audit.id}", y)
+    y = line("Cliente", audit.area.branch.client.name, y)
+    y = line("Sucursal", audit.area.branch.name, y)
+    y = line("Área", audit.area.name, y)
+    inspector_name = audit.inspector.get_full_name() if audit.inspector else "Sin asignar"
+    y = line("Inspector", inspector_name or (audit.inspector.username if audit.inspector else "Sin asignar"), y)
+    y = line("Fecha programada", timezone.localtime(audit.audited_at).strftime('%d/%m/%Y %H:%M'), y)
+    y = line("Completada", timezone.localtime(audit.completed_at).strftime('%d/%m/%Y %H:%M') if audit.completed_at else "No registrada", y)
+    y = line("Responsable", str(report.get("responsible_name") or "No registrado"), y)
+
+    y -= 8
+    pdf.setFont(REPORT_FONT_BOLD, 12)
+    pdf.drawString(40, y, "Análisis IA")
+    y -= 18
+    pdf.setFont(REPORT_FONT, 10)
+    score = ai_analysis.get("score")
+    pdf.drawString(40, y, f"Puntaje: {score}%" if isinstance(score, (int, float)) else "Puntaje: Sin score")
+    y -= 15
+
+    summary = str(ai_analysis.get("executive_summary") or "Sin resumen ejecutivo.")
+    for row in textwrap.wrap(summary, width=95):
+        if y < 70:
+            pdf.showPage()
+            y = height - 50
+            pdf.setFont(REPORT_FONT, 10)
+        pdf.drawString(40, y, row)
+        y -= 14
+
+    recommendations = ai_analysis.get("recommendations") if isinstance(ai_analysis.get("recommendations"), list) else []
+    if recommendations:
+        y -= 4
+        pdf.setFont(REPORT_FONT_BOLD, 11)
+        pdf.drawString(40, y, "Recomendaciones")
+        y -= 16
+        pdf.setFont(REPORT_FONT, 10)
+        for item in recommendations:
+            for row in textwrap.wrap(f"• {str(item)}", width=93):
+                if y < 70:
+                    pdf.showPage()
+                    y = height - 50
+                    pdf.setFont(REPORT_FONT, 10)
+                pdf.drawString(40, y, row)
+                y -= 14
+
+    if answers:
+        if y < 130:
+            pdf.showPage()
+            y = height - 50
+        y -= 4
+        pdf.setFont(REPORT_FONT_BOLD, 12)
+        pdf.drawString(40, y, "Respuestas registradas")
+        y -= 18
+        pdf.setFont(REPORT_FONT, 10)
+        for index, answer in enumerate(answers, start=1):
+            if not isinstance(answer, dict):
+                continue
+            label = str(answer.get("label") or f"Pregunta {index}")
+            value = str(answer.get("value") or "Sin respuesta")
+            for row in textwrap.wrap(f"{index}. {label}", width=95):
+                if y < 70:
+                    pdf.showPage()
+                    y = height - 50
+                    pdf.setFont(REPORT_FONT, 10)
+                pdf.drawString(40, y, row)
+                y -= 14
+            pdf.setFillColor(colors.HexColor("#334155"))
+            for row in textwrap.wrap(f"Respuesta: {value}", width=92):
+                if y < 70:
+                    pdf.showPage()
+                    y = height - 50
+                    pdf.setFont(REPORT_FONT, 10)
+                    pdf.setFillColor(colors.HexColor("#334155"))
+                pdf.drawString(52, y, row)
+                y -= 14
+            pdf.setFillColor(colors.black)
+            y -= 6
+
+    pdf.showPage()
+    pdf.save()
+    return output.getvalue()
+
+
+@require_GET
+def audit_report_pdf(request, audit_id: int):
+    current_user = _get_current_user(request)
+    if not current_user:
+        return JsonResponse({"error": "Usuario no autenticado."}, status=401)
+
+    scope = _build_access_scope(current_user)
+
+    queryset = Audit.objects.select_related(
+        "area__branch__client", "inspector", "form"
+    ).prefetch_related("media")
+    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
+    audit = queryset.filter(pk=audit_id).first()
+    if audit is None:
+        return JsonResponse({"error": "Auditoría no encontrada."}, status=404)
+
+    if audit.status != Audit.Status.COMPLETED:
+        return JsonResponse({"error": "Solo puedes descargar informe de auditorías finalizadas."}, status=400)
+
+    pdf_content = _build_audit_pdf(audit)
+    response = HttpResponse(pdf_content, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="auditoria-{audit.id}-informe.pdf"'
+    return response
+
+
 @require_GET
 def visit_report_pdf(request, visit_id: int):
     current_user = _get_current_user(request)
