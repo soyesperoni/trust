@@ -23,7 +23,6 @@ class _TrustAppState extends State<TrustApp> {
 
   static const EdgeInsets _buttonPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 14);
 
-
   static InputDecorationTheme _inputDecorationTheme({required bool isDark}) {
     return InputDecorationTheme(
       filled: true,
@@ -43,7 +42,7 @@ class _TrustAppState extends State<TrustApp> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
+        borderSide: const BorderSide(color: AppColors.secondary, width: 1.8),
       ),
     );
   }
@@ -89,7 +88,7 @@ class _TrustAppState extends State<TrustApp> {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary).copyWith(
           primary: AppColors.primary,
-          onPrimary: AppColors.black,
+          onPrimary: Colors.white,
           secondary: AppColors.secondary,
           onSecondary: AppColors.black,
           secondaryContainer: AppColors.secondarySoft,
@@ -115,15 +114,23 @@ class _TrustAppState extends State<TrustApp> {
         inputDecorationTheme: _inputDecorationTheme(isDark: false),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
+            backgroundColor: AppColors.secondary,
+            foregroundColor: AppColors.black,
             shape: _buttonShape,
             padding: _buttonPadding,
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
             shape: _buttonShape,
             padding: _buttonPadding,
           ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: AppColors.secondary,
+          foregroundColor: AppColors.black,
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
@@ -147,7 +154,7 @@ class _TrustAppState extends State<TrustApp> {
           brightness: Brightness.dark,
         ).copyWith(
           primary: AppColors.primary,
-          onPrimary: AppColors.black,
+          onPrimary: Colors.white,
           secondary: AppColors.secondary,
           onSecondary: AppColors.black,
           secondaryContainer: AppColors.secondaryDark,
@@ -173,15 +180,23 @@ class _TrustAppState extends State<TrustApp> {
         inputDecorationTheme: _inputDecorationTheme(isDark: true),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
+            backgroundColor: AppColors.secondary,
+            foregroundColor: AppColors.black,
             shape: _buttonShape,
             padding: _buttonPadding,
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
             shape: _buttonShape,
             padding: _buttonPadding,
           ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: AppColors.secondary,
+          foregroundColor: AppColors.black,
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
@@ -263,7 +278,7 @@ class _TrustSplashScreenState extends State<TrustSplashScreen>
                 Positioned(
                   bottom: -80 + (25 * (1 - progress)),
                   left: -40,
-                  child: _glowBubble(220, const Color(0xFF60A5FA).withValues(alpha: 0.13)),
+                  child: _glowBubble(220, AppColors.primary.withValues(alpha: 0.18)),
                 ),
                 Center(
                   child: Column(
