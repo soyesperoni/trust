@@ -207,7 +207,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
 
     try {
       const currentUserEmail = getSessionUserEmail();
-      const response = await fetch(`/api/audits/${auditId}/report/`, {
+      const response = await fetch(`/api/audits/${auditId}/report`, {
         method: "GET",
         headers: { "x-current-user-email": currentUserEmail },
       });

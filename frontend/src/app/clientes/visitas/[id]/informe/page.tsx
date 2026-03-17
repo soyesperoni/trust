@@ -267,7 +267,7 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
 
     try {
       const currentUserEmail = getSessionUserEmail();
-      const response = await fetch(`/api/visits/${visitId}/report/`, {
+      const response = await fetch(`/api/visits/${visitId}/report`, {
         method: "GET",
         headers: { "x-current-user-email": currentUserEmail },
       });
