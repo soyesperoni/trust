@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'src/screens/login_screen.dart';
@@ -303,13 +302,9 @@ class _TrustSplashScreenState extends State<TrustSplashScreen>
                                 ),
                               ),
                             ),
-                            SvgPicture.asset(
-                              'assets/icon/trust_logo_s.svg',
+                            Image.asset(
+                              'assets/icon/trust_logo_s.png',
                               height: 64,
-                              colorFilter: const ColorFilter.mode(
-                                Colors.white,
-                                BlendMode.srcIn,
-                              ),
                             ),
                           ],
                         ),

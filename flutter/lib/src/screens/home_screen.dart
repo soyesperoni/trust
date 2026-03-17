@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import 'login_screen.dart';
 import 'tabs/calendar_tab.dart';
@@ -89,12 +88,9 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SvgPicture.asset(
-                'assets/icon/trust_logo_s.svg',
+              Image.asset(
+                'assets/icon/trust_logo_s.png',
                 height: 34,
-                colorFilter: Theme.of(context).brightness == Brightness.dark
-                    ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
-                    : null,
               ),
             ],
           ),
