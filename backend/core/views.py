@@ -1,6 +1,7 @@
 import base64
 import json
 import textwrap
+from functools import lru_cache
 from django.db import IntegrityError
 from datetime import datetime
 from io import BytesIO
@@ -38,6 +39,7 @@ REPORT_PUBLIC_LINK_SALT = "visit-report-public-link"
 REPORT_PUBLIC_LINK_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 REPORT_PAGE_PADDING = 36
 REPORT_CARD_RADIUS = 14
+REPORT_AUDIT_LOGO_URL = "https://trust.supplymax.net/trust_logo_s.svg"
 
 def _serialize_user(user: User) -> dict:
     full_name = user.get_full_name().strip()
@@ -857,6 +859,59 @@ def _draw_wrapped_text(pdf: canvas.Canvas, text: str, x: float, y: float, width:
     current_y = y
     for line in lines:
         pdf.drawString(x, current_y, line)
+        current_y -= line_height
+    return current_y
+
+
+@lru_cache(maxsize=1)
+def _get_audit_logo() -> ImageReader | None:
+    try:
+        request = Request(REPORT_AUDIT_LOGO_URL, headers={"User-Agent": "trust-report-generator/1.0"})
+        with urlopen(request, timeout=8) as response:
+            return ImageReader(BytesIO(response.read()))
+    except Exception:
+        return None
+
+
+def _split_text_to_lines(pdf: canvas.Canvas, text: str, width: float) -> list[str]:
+    lines: list[str] = []
+    for paragraph in str(text or "").splitlines() or [""]:
+        words = paragraph.split()
+        if not words:
+            lines.append("")
+            continue
+        current_line = words[0]
+        for word in words[1:]:
+            candidate = f"{current_line} {word}"
+            if pdf.stringWidth(candidate, REPORT_FONT, 10) <= width:
+                current_line = candidate
+            else:
+                lines.append(current_line)
+                current_line = word
+        lines.append(current_line)
+    return lines
+
+
+def _draw_justified_lines(pdf: canvas.Canvas, lines: list[str], x: float, y: float, width: float, line_height: float = 14):
+    current_y = y
+    for index, line in enumerate(lines):
+        words = line.split()
+        is_last_line = index == len(lines) - 1
+        if len(words) <= 1 or is_last_line:
+            pdf.drawString(x, current_y, line)
+        else:
+            words_width = sum(pdf.stringWidth(word, REPORT_FONT, 10) for word in words)
+            spaces = len(words) - 1
+            if spaces <= 0:
+                pdf.drawString(x, current_y, line)
+            else:
+                extra_space = max(width - words_width, 0)
+                gap = extra_space / spaces
+                cursor = x
+                for word in words[:-1]:
+                    pdf.drawString(cursor, current_y, word)
+                    cursor += pdf.stringWidth(word, REPORT_FONT, 10) + gap
+                pdf.drawString(cursor, current_y, words[-1])
         current_y -= line_height
     return current_y
 
@@ -2446,10 +2501,14 @@ def _build_audit_pdf(audit: Audit) -> bytes:
 
     def _header(title: str, subtitle: str):
         _draw_page_background(pdf)
-        pdf.setFillColor(colors.HexColor("#facc15"))
-        pdf.circle(54, height - 52, 12, fill=1, stroke=0)
-        pdf.setFont(REPORT_FONT_BOLD, 16)
-        pdf.drawString(74, height - 58, "trust")
+        logo = _get_audit_logo()
+        if logo:
+            pdf.drawImage(logo, 40, height - 72, width=112, height=30, preserveAspectRatio=True, mask="auto")
+        else:
+            pdf.setFillColor(colors.HexColor("#facc15"))
+            pdf.circle(54, height - 52, 12, fill=1, stroke=0)
+            pdf.setFont(REPORT_FONT_BOLD, 16)
+            pdf.drawString(74, height - 58, "trust")
         pdf.setFillColor(colors.HexColor("#0f172a"))
         pdf.setFont(REPORT_FONT_BOLD, 20)
         pdf.drawString(40, height - 88, title)
@@ -2489,7 +2548,13 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     pdf.drawString(56, height - 248, "Resumen Ejecutivo")
     pdf.setFillColor(colors.HexColor("#334155"))
     pdf.setFont(REPORT_FONT, 10)
-    _draw_wrapped_text(pdf, summary[:1800], 56, height - 270, width - 120, line_height=13)
+    summary_width = width - 120
+    summary_lines = _split_text_to_lines(pdf, summary[:1800], summary_width)
+    max_summary_lines = 11
+    if len(summary_lines) > max_summary_lines:
+        summary_lines = summary_lines[:max_summary_lines]
+        summary_lines[-1] = f"{summary_lines[-1][:max(0, len(summary_lines[-1]) - 3)].rstrip()}..."
+    _draw_justified_lines(pdf, summary_lines, 56, height - 270, summary_width, line_height=13)
 
     recommendations = ai_analysis.get("recommendations") if isinstance(ai_analysis.get("recommendations"), list) else []
     next_steps = ai_analysis.get("next_steps") if isinstance(ai_analysis.get("next_steps"), list) else []
