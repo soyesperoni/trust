@@ -6,6 +6,7 @@ from .models import (
     Audit,
     AuditForm,
     AuditMedia,
+    DeepSeekAPISettings,
     Branch,
     Client,
     Dispenser,
@@ -151,6 +152,17 @@ class AuditAdmin(admin.ModelAdmin):
 class AuditMediaAdmin(admin.ModelAdmin):
     list_display = ("audit", "media_type", "file")
     list_filter = ("media_type",)
+
+
+
+@admin.register(DeepSeekAPISettings)
+class DeepSeekAPISettingsAdmin(admin.ModelAdmin):
+    list_display = ("model", "is_enabled", "updated_at")
+
+    def has_add_permission(self, request):
+        if DeepSeekAPISettings.objects.exists():
+            return False
+        return super().has_add_permission(request)
 
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):

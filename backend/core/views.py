@@ -6,6 +6,7 @@ from datetime import datetime
 from io import BytesIO
 from typing import Any
 from urllib.parse import urlencode
+from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from django.core import signing
@@ -27,7 +28,7 @@ from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
 from reportlab.pdfgen import canvas
 
-from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, Dispenser, DispenserModel, Incident, IncidentMedia, Product, User, Visit, VisitMedia
+from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, Incident, IncidentMedia, Product, User, Visit, VisitMedia
 
 
 REPORT_FONT = "Helvetica"
@@ -397,6 +398,135 @@ def _serialize_audit(audit: Audit) -> dict:
             for medium in audit.media.all()
         ],
     }
+
+
+
+def _get_deepseek_settings() -> DeepSeekAPISettings | None:
+    return DeepSeekAPISettings.objects.order_by("id").first()
+
+
+def _extract_audit_answers(report: dict) -> list[dict[str, str]]:
+    normalized = []
+    for answer in report.get("answers") or []:
+        if not isinstance(answer, dict):
+            continue
+        normalized.append({
+            "pregunta": str(answer.get("label") or "").strip(),
+            "respuesta": str(answer.get("value") or "").strip(),
+            "tipo": str(answer.get("response_type") or "").strip(),
+        })
+    return normalized
+
+
+def _fallback_audit_ai_analysis(report: dict) -> dict:
+    answers = _extract_audit_answers(report)
+    if not answers:
+        return {
+            "score": 0,
+            "executive_summary": "No se registraron respuestas de auditoría para analizar.",
+            "recommendations": ["Completar todas las preguntas obligatorias en la próxima auditoría."],
+            "provider": "fallback",
+        }
+
+    positive = {"si", "sí", "ok", "cumple", "conforme", "aprobado"}
+    negative = {"no", "incumple", "falla", "no cumple", "no conforme", "rechazado"}
+    score_pool = 0
+    for item in answers:
+        value = item["respuesta"].lower()
+        if any(token in value for token in positive):
+            score_pool += 1
+        elif any(token in value for token in negative):
+            score_pool += 0
+        else:
+            score_pool += 0.5
+
+    score = round((score_pool / max(len(answers), 1)) * 100)
+    if score >= 80:
+        rating = "alto cumplimiento"
+    elif score >= 60:
+        rating = "cumplimiento medio"
+    else:
+        rating = "cumplimiento crítico"
+
+    return {
+        "score": score,
+        "executive_summary": f"Análisis preliminar automático: se observa {rating} con base en {len(answers)} respuestas registradas.",
+        "recommendations": [
+            "Atender primero las respuestas con incumplimientos o evidencias incompletas.",
+            "Definir un plan de acción con responsables y fechas compromiso por hallazgo.",
+        ],
+        "provider": "fallback",
+    }
+
+
+def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
+    settings = _get_deepseek_settings()
+    if settings is None or not settings.is_enabled or not settings.api_key:
+        return _fallback_audit_ai_analysis(report)
+
+    payload = {
+        "model": settings.model or "deepseek-reasoner",
+        "messages": [
+            {
+                "role": "system",
+                "content": "Eres un auditor senior. Evalúa respuestas de auditoría y responde JSON válido.",
+            },
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "instrucciones": "Devuelve un JSON con claves score(0-100), executive_summary(string), recommendations(array de strings).",
+                        "contexto": {
+                            "cliente": audit.area.branch.client.name,
+                            "sucursal": audit.area.branch.name,
+                            "area": audit.area.name,
+                            "formulario": audit.form_name or audit.form.name,
+                        },
+                        "respuestas": _extract_audit_answers(report),
+                        "comentarios": str(report.get("comments") or "").strip(),
+                    },
+                    ensure_ascii=False,
+                ),
+            },
+        ],
+        "temperature": 0.2,
+        "response_format": {"type": "json_object"},
+    }
+
+    req = Request(
+        "https://api.deepseek.com/chat/completions",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {settings.api_key}",
+        },
+        method="POST",
+    )
+
+    try:
+        with urlopen(req, timeout=20) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except (URLError, TimeoutError, json.JSONDecodeError):
+        return _fallback_audit_ai_analysis(report)
+
+    try:
+        content = body["choices"][0]["message"]["content"]
+        parsed = json.loads(content) if isinstance(content, str) else content
+        score = int(float(parsed.get("score", 0)))
+        score = max(0, min(100, score))
+        recommendations = parsed.get("recommendations")
+        if not isinstance(recommendations, list):
+            recommendations = []
+        recommendations = [str(item).strip() for item in recommendations if str(item).strip()]
+        return {
+            "score": score,
+            "executive_summary": str(parsed.get("executive_summary") or "").strip(),
+            "recommendations": recommendations,
+            "provider": "deepseek",
+            "model": settings.model or "deepseek-reasoner",
+        }
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return _fallback_audit_ai_analysis(report)
 
 def _serialize_notification(item: dict[str, Any]) -> dict[str, Any]:
     return {
@@ -1987,6 +2117,12 @@ def audit_mobile_flow(request, audit_id: int):
         }
         report["start_location"] = {"latitude": audit.start_latitude, "longitude": audit.start_longitude}
         report["end_location"] = {"latitude": end_latitude, "longitude": end_longitude}
+        report["ai_analysis"] = _generate_deepseek_audit_analysis(audit, report)
+        report["score"] = report["ai_analysis"].get("score")
+        report["summary"] = {
+            "score": report["ai_analysis"].get("score"),
+            "executive_summary": report["ai_analysis"].get("executive_summary"),
+        }
         audit.audit_report = report
         audit.save(update_fields=["status", "completed_at", "end_latitude", "end_longitude", "audit_report"])
 
