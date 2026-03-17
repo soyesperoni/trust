@@ -130,7 +130,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Center(
-                          child: SvgPicture.asset('assets/icon/trust_logo.svg', height: 64),
+                          child: SvgPicture.asset(
+                            'assets/icon/trust_logo.svg',
+                            height: 64,
+                            colorFilter: isDark
+                                ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+                                : null,
+                          ),
                         ),
                         const SizedBox(height: 14),
                         Text(

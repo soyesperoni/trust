@@ -89,7 +89,13 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SvgPicture.asset('assets/icon/trust_logo.svg', height: 34),
+              SvgPicture.asset(
+                'assets/icon/trust_logo.svg',
+                height: 34,
+                colorFilter: Theme.of(context).brightness == Brightness.dark
+                    ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+                    : null,
+              ),
             ],
           ),
         ),
