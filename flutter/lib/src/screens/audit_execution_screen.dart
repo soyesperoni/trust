@@ -87,6 +87,9 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
                 options: (entry.value['options'] as List<dynamic>? ?? const ['Sí', 'No', 'No aplica'])
                     .map((item) => item.toString())
                     .toList(growable: false),
+                questionWeight: (entry.value['question_weight'] as num?)?.toDouble() ?? 0,
+                responseScores: ((entry.value['response_scores'] as Map<String, dynamic>?) ?? const <String, dynamic>{})
+                    .map((key, value) => MapEntry(key, (value as num?)?.toDouble() ?? 0)),
               ),
             ),
       );
@@ -421,7 +424,14 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
         longitude: endPosition.longitude,
         auditReport: {
           'answers': _answers
-              .map((item) => {'id': item.id, 'label': item.label, 'response_type': item.responseType, 'value': item.value ?? ''})
+              .map((item) => {
+                    'id': item.id,
+                    'label': item.label,
+                    'response_type': item.responseType,
+                    'value': item.value ?? '',
+                    'question_weight': item.questionWeight,
+                    'response_scores': item.responseScores,
+                  })
               .toList(growable: false),
           'comments': _commentsController.text.trim(),
           'location_verified': _locationCheck,
@@ -552,13 +562,23 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
 }
 
 class _AuditQuestionAnswer {
-  _AuditQuestionAnswer({required this.id, required this.label, required this.responseType, required this.required, this.options = const <String>[]});
+  _AuditQuestionAnswer({
+    required this.id,
+    required this.label,
+    required this.responseType,
+    required this.required,
+    this.options = const <String>[],
+    this.questionWeight = 0,
+    this.responseScores = const <String, double>{},
+  });
 
   final int id;
   final String label;
   final String responseType;
   final bool required;
   final List<String> options;
+  final double questionWeight;
+  final Map<String, double> responseScores;
   String? value;
 }
 

@@ -14,22 +14,37 @@ type QuestionDraft = {
   response_type: "yes_no" | "number" | "text";
   required: boolean;
   requires_image_evidence: boolean;
+  question_weight: number;
+  response_scores: {
+    yes: number;
+    no: number;
+    not_applicable: number;
+  };
 };
 
-const createQuestion = (): QuestionDraft => ({
+const createQuestion = (weight: number): QuestionDraft => ({
   id: crypto.randomUUID(),
   label: "",
   response_type: "yes_no",
   required: true,
   requires_image_evidence: false,
+  question_weight: weight,
+  response_scores: { yes: 100, no: 0, not_applicable: 0 },
 });
+
+
+
+const distributeWeight = (count: number) => {
+  if (count <= 0) return 0;
+  return Number((100 / count).toFixed(2));
+};
 
 export default function NuevaPlantillaPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [category, setCategory] = useState("General");
   const [isActive, setIsActive] = useState(true);
-  const [questions, setQuestions] = useState<QuestionDraft[]>([createQuestion()]);
+  const [questions, setQuestions] = useState<QuestionDraft[]>([createQuestion(100)]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,10 +53,20 @@ export default function NuevaPlantillaPage() {
   };
 
   const removeQuestion = (id: string) => {
-    setQuestions((prev) => (prev.length <= 1 ? prev : prev.filter((item) => item.id !== id)));
+    setQuestions((prev) => {
+      if (prev.length <= 1) return prev;
+      const next = prev.filter((item) => item.id !== id);
+      const weight = distributeWeight(next.length);
+      return next.map((item) => ({ ...item, question_weight: weight }));
+    });
   };
 
-  const addQuestion = () => setQuestions((prev) => [...prev, createQuestion()]);
+  const addQuestion = () =>
+    setQuestions((prev) => {
+      const next = [...prev, createQuestion(0)];
+      const weight = distributeWeight(next.length);
+      return next.map((item) => ({ ...item, question_weight: weight }));
+    });
 
   const completionStats = useMemo(() => {
     const total = questions.length;
@@ -49,6 +74,8 @@ export default function NuevaPlantillaPage() {
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { total, completed, percentage };
   }, [questions]);
+
+  const totalWeight = useMemo(() => questions.reduce((sum, question) => sum + question.question_weight, 0), [questions]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -60,6 +87,10 @@ export default function NuevaPlantillaPage() {
     }
 
     const hasInvalidQuestion = questions.some((question) => !question.label.trim());
+    if (totalWeight > 100) {
+      setError("La suma de porcentajes ponderados no puede superar 100%.");
+      return;
+    }
     if (hasInvalidQuestion) {
       setError("Todas las preguntas deben tener un enunciado.");
       return;
@@ -83,7 +114,9 @@ export default function NuevaPlantillaPage() {
               response_type: question.response_type,
               required: question.required,
               requires_image_evidence: question.requires_image_evidence,
+              question_weight: question.question_weight,
               options: question.response_type === "yes_no" ? ["Sí", "No", "No aplica"] : undefined,
+              response_scores: question.response_type === "yes_no" ? question.response_scores : undefined,
               min: question.response_type === "number" ? 1 : undefined,
               max: question.response_type === "number" ? 10 : undefined,
             })),
@@ -179,7 +212,7 @@ export default function NuevaPlantillaPage() {
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Preguntas del formulario</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Configura el tipo de respuesta y si requiere evidencia de imagen.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Configura tipo de respuesta, peso (%) y evidencia por pregunta.</p>
               </div>
               <button
                 type="button"
@@ -190,6 +223,7 @@ export default function NuevaPlantillaPage() {
                 Agregar pregunta
               </button>
             </div>
+            <p className="mb-4 text-sm font-medium text-slate-600 dark:text-slate-300">Peso total asignado: {totalWeight.toFixed(2)}%</p>
 
             <div className="space-y-4">
               {questions.map((question, index) => (
@@ -216,7 +250,7 @@ export default function NuevaPlantillaPage() {
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
                   />
 
-                  <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_1fr_1fr]">
+                  <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1.2fr_1fr_1fr_1fr]">
                     <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
                       Tipo de respuesta
                       <select
@@ -228,6 +262,19 @@ export default function NuevaPlantillaPage() {
                         <option value="number">Valor del 1 al 10</option>
                         <option value="text">Texto libre</option>
                       </select>
+                    </label>
+
+                    <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Peso de la pregunta (%)
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.01}
+                        value={question.question_weight}
+                        onChange={(event) => updateQuestion(question.id, { question_weight: Number(event.target.value) })}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+                      />
                     </label>
 
                     <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -250,6 +297,20 @@ export default function NuevaPlantillaPage() {
                       Evidencia de imagen
                     </label>
                   </div>
+
+                  {question.response_type === "yes_no" ? (
+                    <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Sí (%)
+                        <input type="number" min={0} max={100} step={0.01} value={question.response_scores.yes} onChange={(event) => updateQuestion(question.id, { response_scores: { ...question.response_scores, yes: Number(event.target.value) } })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800" />
+                      </label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">No (%)
+                        <input type="number" min={0} max={100} step={0.01} value={question.response_scores.no} onChange={(event) => updateQuestion(question.id, { response_scores: { ...question.response_scores, no: Number(event.target.value) } })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800" />
+                      </label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">No aplica (%)
+                        <input type="number" min={0} max={100} step={0.01} value={question.response_scores.not_applicable} onChange={(event) => updateQuestion(question.id, { response_scores: { ...question.response_scores, not_applicable: Number(event.target.value) } })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800" />
+                      </label>
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>

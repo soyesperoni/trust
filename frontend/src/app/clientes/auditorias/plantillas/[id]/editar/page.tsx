@@ -14,6 +14,12 @@ type QuestionDraft = {
   response_type: "yes_no" | "number" | "text";
   required: boolean;
   requires_image_evidence: boolean;
+  question_weight: number;
+  response_scores: {
+    yes: number;
+    no: number;
+    not_applicable: number;
+  };
 };
 
 type TemplateResponse = {
@@ -27,22 +33,27 @@ type TemplateResponse = {
       response_type?: "yes_no" | "number" | "text";
       required?: boolean;
       requires_image_evidence?: boolean;
+      question_weight?: number;
+      response_scores?: { yes?: number; no?: number; not_applicable?: number };
     }>;
   };
 };
 
 type TemplateSchema = NonNullable<TemplateResponse["schema"]>;
 
-const createQuestion = (): QuestionDraft => ({
+const createQuestion = (weight: number): QuestionDraft => ({
   id: crypto.randomUUID(),
   label: "",
   response_type: "yes_no",
   required: true,
   requires_image_evidence: false,
+  question_weight: weight,
+  response_scores: { yes: 100, no: 0, not_applicable: 0 },
 });
 
 const parseQuestions = (questions: TemplateSchema["questions"]): QuestionDraft[] => {
-  if (!questions?.length) return [createQuestion()];
+  if (!questions?.length) return [createQuestion(100)];
+  const defaultWeight = Number((100 / questions.length).toFixed(2));
   return questions.map((question) => ({
     id: crypto.randomUUID(),
     label: String(question.label ?? ""),
@@ -52,7 +63,19 @@ const parseQuestions = (questions: TemplateSchema["questions"]): QuestionDraft[]
         : "yes_no",
     required: question.required ?? true,
     requires_image_evidence: question.requires_image_evidence ?? false,
+    question_weight: question.question_weight ?? defaultWeight,
+    response_scores: {
+      yes: question.response_scores?.yes ?? 100,
+      no: question.response_scores?.no ?? 0,
+      not_applicable: question.response_scores?.not_applicable ?? 0,
+    },
   }));
+};
+
+
+const distributeWeight = (count: number) => {
+  if (count <= 0) return 0;
+  return Number((100 / count).toFixed(2));
 };
 
 export default function EditarPlantillaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -62,7 +85,7 @@ export default function EditarPlantillaPage({ params }: { params: Promise<{ id: 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("General");
   const [isActive, setIsActive] = useState(true);
-  const [questions, setQuestions] = useState<QuestionDraft[]>([createQuestion()]);
+  const [questions, setQuestions] = useState<QuestionDraft[]>([createQuestion(100)]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,10 +132,20 @@ export default function EditarPlantillaPage({ params }: { params: Promise<{ id: 
   };
 
   const removeQuestion = (id: string) => {
-    setQuestions((prev) => (prev.length <= 1 ? prev : prev.filter((item) => item.id !== id)));
+    setQuestions((prev) => {
+      if (prev.length <= 1) return prev;
+      const next = prev.filter((item) => item.id !== id);
+      const weight = distributeWeight(next.length);
+      return next.map((item) => ({ ...item, question_weight: weight }));
+    });
   };
 
-  const addQuestion = () => setQuestions((prev) => [...prev, createQuestion()]);
+  const addQuestion = () =>
+    setQuestions((prev) => {
+      const next = [...prev, createQuestion(0)];
+      const weight = distributeWeight(next.length);
+      return next.map((item) => ({ ...item, question_weight: weight }));
+    });
 
   const completionStats = useMemo(() => {
     const total = questions.length;
@@ -120,6 +153,8 @@ export default function EditarPlantillaPage({ params }: { params: Promise<{ id: 
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { total, completed, percentage };
   }, [questions]);
+
+  const totalWeight = useMemo(() => questions.reduce((sum, question) => sum + question.question_weight, 0), [questions]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -131,6 +166,10 @@ export default function EditarPlantillaPage({ params }: { params: Promise<{ id: 
     }
 
     const hasInvalidQuestion = questions.some((question) => !question.label.trim());
+    if (totalWeight > 100) {
+      setError("La suma de porcentajes ponderados no puede superar 100%.");
+      return;
+    }
     if (hasInvalidQuestion) {
       setError("Todas las preguntas deben tener un enunciado.");
       return;
@@ -154,7 +193,9 @@ export default function EditarPlantillaPage({ params }: { params: Promise<{ id: 
               response_type: question.response_type,
               required: question.required,
               requires_image_evidence: question.requires_image_evidence,
+              question_weight: question.question_weight,
               options: question.response_type === "yes_no" ? ["Sí", "No", "No aplica"] : undefined,
+              response_scores: question.response_type === "yes_no" ? question.response_scores : undefined,
               min: question.response_type === "number" ? 1 : undefined,
               max: question.response_type === "number" ? 10 : undefined,
             })),
@@ -245,7 +286,9 @@ export default function EditarPlantillaPage({ params }: { params: Promise<{ id: 
               <div className="mb-5 flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">Preguntas del formulario</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Define pesos por pregunta y puntajes para Sí/No/No aplica.</p>
                 </div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Peso total asignado: {totalWeight.toFixed(2)}%</p>
                 <button
                   type="button"
                   className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
@@ -281,7 +324,7 @@ export default function EditarPlantillaPage({ params }: { params: Promise<{ id: 
                       className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
                     />
 
-                    <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_1fr_1fr]">
+                    <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1.2fr_1fr_1fr_1fr]">
                       <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
                         Tipo de respuesta
                         <select
@@ -295,7 +338,12 @@ export default function EditarPlantillaPage({ params }: { params: Promise<{ id: 
                         </select>
                       </label>
 
-                      <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Peso de la pregunta (%)
+                      <input type="number" min={0} max={100} step={0.01} value={question.question_weight} onChange={(event) => updateQuestion(question.id, { question_weight: Number(event.target.value) })} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800" />
+                    </label>
+
+                    <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                         <input
                           type="checkbox"
                           checked={question.required}
@@ -315,6 +363,20 @@ export default function EditarPlantillaPage({ params }: { params: Promise<{ id: 
                         Evidencia de imagen
                       </label>
                     </div>
+
+                    {question.response_type === "yes_no" ? (
+                      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Sí (%)
+                          <input type="number" min={0} max={100} step={0.01} value={question.response_scores.yes} onChange={(event) => updateQuestion(question.id, { response_scores: { ...question.response_scores, yes: Number(event.target.value) } })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800" />
+                        </label>
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">No (%)
+                          <input type="number" min={0} max={100} step={0.01} value={question.response_scores.no} onChange={(event) => updateQuestion(question.id, { response_scores: { ...question.response_scores, no: Number(event.target.value) } })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800" />
+                        </label>
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">No aplica (%)
+                          <input type="number" min={0} max={100} step={0.01} value={question.response_scores.not_applicable} onChange={(event) => updateQuestion(question.id, { response_scores: { ...question.response_scores, not_applicable: Number(event.target.value) } })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800" />
+                        </label>
+                      </div>
+                    ) : null}
                   </article>
                 ))}
               </div>
