@@ -8,6 +8,11 @@ import { getSessionUserEmail } from "../../../../lib/session";
 
 type AuditMedia = { id: number; type: string; file: string | null };
 type MediaModal = { type: "image" | "video"; url: string } | null;
+type ExecutiveSection = {
+  title: string;
+  icon: string;
+  content: string[];
+};
 type Audit = {
   id: number;
   client: string;
@@ -131,6 +136,44 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
   const strengths = (ai?.strengths ?? []).filter((item) => item.trim());
   const risks = (ai?.risks ?? []).filter((item) => item.trim());
   const recommendations = (ai?.recommendations ?? []).filter((item) => item.trim());
+
+  const executiveSections = useMemo<ExecutiveSection[]>(() => {
+    const summary = ai?.executive_summary?.trim();
+    if (!summary) return [];
+
+    const lines = summary
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const sectionRegex = /^(?<icon>[^\p{L}\p{N}\s-]{1,3})\s+(?<title>[\p{L}\p{N}][\p{L}\p{N}\s]+)$/u;
+    const sections: ExecutiveSection[] = [];
+    let currentSection: ExecutiveSection | null = null;
+
+    for (const line of lines) {
+      const parsedSection = line.match(sectionRegex);
+      if (parsedSection?.groups?.title && parsedSection.groups.icon) {
+        currentSection = {
+          title: parsedSection.groups.title.trim(),
+          icon: parsedSection.groups.icon,
+          content: [],
+        };
+        sections.push(currentSection);
+        continue;
+      }
+
+      const cleanedLine = line.replace(/^[-•]\s*/, "").trim();
+      if (!cleanedLine) continue;
+
+      if (!currentSection) {
+        currentSection = { title: "Resumen", icon: "📝", content: [] };
+        sections.push(currentSection);
+      }
+      currentSection.content.push(cleanedLine);
+    }
+
+    return sections;
+  }, [ai?.executive_summary]);
 
   const mapUrl = useMemo(() => {
     const lat = audit?.end_latitude ?? audit?.start_latitude;
@@ -259,7 +302,22 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
             </div>
             <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Informe ejecutivo</p>
-              <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{ai?.executive_summary ?? "Sin informe ejecutivo."}</p>
+              {executiveSections.length > 0 ? (
+                <div className="mt-3 space-y-3">
+                  {executiveSections.map((section, index) => (
+                    <article key={`${section.title}-${index}`} className="rounded-lg border border-blue-100 bg-white/90 p-3 dark:border-blue-900/50 dark:bg-slate-900/60">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{section.icon} {section.title}</p>
+                      <div className="mt-2 space-y-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+                        {section.content.map((line, lineIndex) => (
+                          <p key={`${lineIndex}-${line}`}>{line}</p>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{ai?.executive_summary ?? "Sin informe ejecutivo."}</p>
+              )}
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
