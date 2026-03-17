@@ -131,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Center(
                           child: SvgPicture.asset(
-                            'assets/icon/trust_logo.svg',
+                            'assets/icon/trust_logo_s.svg',
                             height: 64,
                             colorFilter: isDark
                                 ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
@@ -314,16 +314,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Trust es una plataforma desarrollada por SupplyMax de Panamá.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: mutedTextColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
                         ),
                       ],
                     ),

@@ -33,17 +33,9 @@ export default function BrandLogo({
   return (
     <div className={`flex items-center ${className}`.trim()}>
       <Image
-        src="/trust_logo.svg"
+        src="/trust_logo_s.svg"
         alt="Trust"
-        className={`${styles.logo} w-auto dark:hidden`}
-        width={512}
-        height={128}
-        priority
-      />
-      <Image
-        src="/trust_logo_white.svg"
-        alt="Trust"
-        className={`${styles.logo} hidden w-auto dark:block`}
+        className={`${styles.logo} w-auto`}
         width={512}
         height={128}
         priority

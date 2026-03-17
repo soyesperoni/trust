@@ -134,7 +134,6 @@ export default function Home() {
             </Link>
             .
           </p>
-          <p className="text-[11px] sm:text-xs">trust es una plataforma desarrollada por SupplyMax de Panamá</p>
         </div>
       </div>
     </div>
