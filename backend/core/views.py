@@ -471,23 +471,51 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
         if isinstance(item, dict)
     }
 
+    configured_weights = []
+    for item in answers:
+        question = question_map.get(item["pregunta"].lower(), {})
+        raw_weight = question.get("question_weight")
+        if raw_weight in (None, ""):
+            raw_weight = item.get("question_weight")
+        try:
+            parsed_weight = float(raw_weight)
+        except (TypeError, ValueError):
+            continue
+        if parsed_weight > 0:
+            configured_weights.append(parsed_weight)
+
+    dynamic_default_weight = (100 / len(answers)) if answers and not configured_weights else 0
+
     score_pool = 0.0
     for item in answers:
         value = item["respuesta"].lower()
         question = question_map.get(item["pregunta"].lower(), {})
 
+        raw_weight = question.get("question_weight")
+        if raw_weight in (None, ""):
+            raw_weight = item.get("question_weight")
         try:
-            question_weight = float(question.get("question_weight", 0))
+            question_weight = float(raw_weight)
         except (TypeError, ValueError):
-            question_weight = 0
+            question_weight = dynamic_default_weight
+
+        if question_weight <= 0:
+            question_weight = dynamic_default_weight
 
         response_scores = question.get("response_scores") if isinstance(question.get("response_scores"), dict) else {}
+        if not response_scores and isinstance(item.get("response_scores"), dict):
+            response_scores = item.get("response_scores")
+
+        yes_score = response_scores.get("yes", 100)
+        no_score = response_scores.get("no", 0)
+        not_applicable_score = response_scores.get("not_applicable", 100)
+
         if any(token in value for token in positive):
-            ratio = float(response_scores.get("yes", 100)) / 100
+            ratio = float(yes_score) / 100
         elif value in {"no aplica", "n/a", "na"}:
-            ratio = float(response_scores.get("not_applicable", 0)) / 100
+            ratio = float(not_applicable_score) / 100
         elif any(token in value for token in negative):
-            ratio = float(response_scores.get("no", 0)) / 100
+            ratio = float(no_score) / 100
         else:
             ratio = 0.5
 
@@ -534,7 +562,12 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
 
     return {
         "score": score,
-        "executive_summary": f"Análisis preliminar automático: se observa {rating} con base en {len(answers)} respuestas registradas.",
+        "executive_summary": (
+            f"Informe ejecutivo preliminar generado por Trust AI: el resultado consolidado indica {rating} "
+            f"con un score estimado de {score}% sobre {len(answers)} respuestas analizadas. "
+            f"El análisis considera cumplimiento observado, brechas detectadas y acciones recomendadas para "
+            "fortalecer el control operativo del área auditada."
+        ),
         "recommendations": identified_recommendations[:6] or ["Priorizar hallazgos con mayor impacto operativo y de cumplimiento."],
         "next_steps": identified_next_steps[:6] or ["Definir responsables, fechas y evidencias de cierre para cada hallazgo."],
         "strengths": identified_strengths[:6] or ["Se registró información suficiente para estimar el nivel de cumplimiento general."],
@@ -552,7 +585,7 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
         return _fallback_audit_ai_analysis(report)
 
     payload = {
-        "model": settings.model or "deepseek-reasoner",
+        "model": "deepseek-chat",
         "messages": [
             {
                 "role": "system",
@@ -563,7 +596,7 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
                 "content": json.dumps(
                     {
                         "rol": "Eres un analista senior de auditorías operativas y de cumplimiento.",
-                        "instrucciones": "Devuelve SOLO JSON válido con claves: score(0-100), executive_summary(string), recommendations(array), next_steps(array), strengths(array), risks(array), business_impact(string), context_notes(string) y question_insights(array). El executive_summary debe ser un informe ejecutivo integral, con enfoque profesional, alineado a normas internacionales de auditoría y buenas prácticas de gestión de riesgos. Fortalezas, riesgos, recomendaciones y siguientes pasos deben ser específicos de esta auditoría (no genéricos), accionables y NO repetir el mismo contenido entre listas. question_insights debe incluir TODAS las preguntas y para cada una: question, answer y contextual_response (explicación breve enfocada en el contexto de la pregunta).",
+                        "instrucciones": "Devuelve SOLO JSON válido con claves: score(0-100), executive_summary(string), recommendations(array), next_steps(array), strengths(array), risks(array), business_impact(string), context_notes(string) y question_insights(array). El executive_summary debe ser un informe ejecutivo integral EN TEXTO COMPLETO (mínimo un párrafo claro y profesional), alineado a normas internacionales de auditoría y buenas prácticas de gestión de riesgos. No dejes campos vacíos. Si no tienes un porcentaje explícito en alguna respuesta, estima el impacto con criterio técnico y evita devolver score=0 por ausencia de porcentajes. Fortalezas, riesgos, recomendaciones y siguientes pasos deben ser específicos de esta auditoría (no genéricos), accionables y NO repetir el mismo contenido entre listas. question_insights debe incluir TODAS las preguntas y para cada una: question, answer y contextual_response (explicación breve enfocada en el contexto de la pregunta).",
                         "contexto_auditoria": _build_audit_prompt_context(audit, report),
                         "comentarios": str(report.get("comments") or "").strip(),
                     },
@@ -586,7 +619,7 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
     )
 
     try:
-        with urlopen(req, timeout=20) as response:
+        with urlopen(req, timeout=45) as response:
             body = json.loads(response.read().decode("utf-8"))
     except (URLError, TimeoutError, json.JSONDecodeError):
         return _fallback_audit_ai_analysis(report)
@@ -594,7 +627,12 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
     try:
         content = body["choices"][0]["message"]["content"]
         parsed = json.loads(content) if isinstance(content, str) else content
-        score = int(float(parsed.get("score", 0)))
+        fallback_analysis = _fallback_audit_ai_analysis(report)
+        fallback_score = fallback_analysis.get("score", 0)
+        score_source = parsed.get("score")
+        if score_source in (None, ""):
+            score_source = fallback_score
+        score = int(float(score_source))
         score = max(0, min(100, score))
         recommendations = parsed.get("recommendations")
         if not isinstance(recommendations, list):
@@ -656,18 +694,31 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
         if completed_insights:
             normalized_insights = completed_insights
 
+        executive_summary = str(parsed.get("executive_summary") or "").strip()
+        if not executive_summary:
+            executive_summary = str(fallback_analysis.get("executive_summary") or "").strip()
+
+        if not recommendations:
+            recommendations = list(fallback_analysis.get("recommendations") or [])
+        if not next_steps:
+            next_steps = list(fallback_analysis.get("next_steps") or [])
+        if not strengths:
+            strengths = list(fallback_analysis.get("strengths") or [])
+        if not risks:
+            risks = list(fallback_analysis.get("risks") or [])
+
         return {
             "score": score,
-            "executive_summary": str(parsed.get("executive_summary") or "").strip(),
+            "executive_summary": executive_summary,
             "recommendations": recommendations,
             "next_steps": next_steps,
             "strengths": strengths,
             "risks": risks,
-            "business_impact": str(parsed.get("business_impact") or "").strip(),
-            "context_notes": str(parsed.get("context_notes") or "").strip(),
+            "business_impact": str(parsed.get("business_impact") or fallback_analysis.get("business_impact") or "").strip(),
+            "context_notes": str(parsed.get("context_notes") or fallback_analysis.get("context_notes") or "").strip(),
             "question_insights": normalized_insights,
             "provider": "deepseek",
-            "model": settings.model or "deepseek-reasoner",
+            "model": "deepseek-chat",
         }
     except (KeyError, TypeError, ValueError, json.JSONDecodeError):
         return _fallback_audit_ai_analysis(report)
