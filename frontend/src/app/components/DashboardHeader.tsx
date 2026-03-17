@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,10 +12,21 @@ import {
   getUnreadNotificationCount,
   subscribeToRealtimeNotifications,
 } from "../lib/notifications";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 import { clearSessionUser } from "../lib/session";
 
 import BrandLogo from "./BrandLogo";
 import ThemeToggleButton from "./ThemeToggleButton";
+
+
+const getInitials = (fullName: string) => {
+  const initials = fullName
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join("");
+  return initials.slice(0, 2).toUpperCase();
+};
 
 type DashboardHeaderProps = {
   title: string;
@@ -33,8 +44,14 @@ export default function DashboardHeader({
   action,
 }: DashboardHeaderProps) {
   const router = useRouter();
+  const { user } = useCurrentUser();
 
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const userInitials = useMemo(() => {
+    if (!user?.full_name) return "?";
+    return getInitials(user.full_name);
+  }, [user]);
 
   const handleLogout = () => {
     clearSessionUser();
@@ -106,6 +123,27 @@ export default function DashboardHeader({
         </div>
         <div className="flex items-center gap-4">
           {action ? <div className="hidden md:flex">{action}</div> : null}
+          <button
+            aria-label="Abrir ajustes"
+            className="group flex items-center gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/80"
+            onClick={() => router.push("/ajustes")}
+            type="button"
+          >
+            <div className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 font-semibold text-sm">
+              {userInitials}
+            </div>
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-bold text-slate-900 dark:text-white">
+                {user?.full_name ?? "Usuario"}
+              </span>
+              <span className="truncate text-xs text-slate-500">
+                {user?.email ?? user?.role_label ?? "-"}
+              </span>
+            </div>
+            <span className="material-symbols-outlined text-[18px] text-slate-400 transition-colors group-hover:text-slate-700 dark:group-hover:text-slate-200">
+              settings
+            </span>
+          </button>
           <ThemeToggleButton />
           <Link
             href="/dashboard/notificaciones"
