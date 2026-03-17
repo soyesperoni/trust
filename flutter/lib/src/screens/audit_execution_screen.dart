@@ -13,7 +13,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:mime/mime.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:signature/signature.dart';
-import 'package:video_compress/video_compress.dart';
 
 import '../models/audit.dart';
 import '../services/trust_repository.dart';
@@ -272,7 +271,7 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
       children: [
         const Text('Hallazgos y Evidencias', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 24)),
         const SizedBox(height: 4),
-        Text('Registra comentarios y captura evidencias en fotos o videos.', style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500)),
+        Text('Registra comentarios y captura evidencias únicamente con fotos.', style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500)),
         const SizedBox(height: 12),
         TextField(controller: _commentsController, maxLines: 4, decoration: const InputDecoration(labelText: 'Comentarios')),
         const SizedBox(height: 12),
@@ -493,30 +492,13 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
       setState(() => _error = 'Solo puedes adjuntar hasta $_maxEvidenceItems evidencias.');
       return;
     }
-    final mode = await showModalBottomSheet<_EvidenceMode>(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(child: OutlinedButton(onPressed: () => Navigator.of(context).pop(_EvidenceMode.photo), child: const Text('Foto'))),
-              const SizedBox(width: 8),
-              Expanded(child: OutlinedButton(onPressed: () => Navigator.of(context).pop(_EvidenceMode.video), child: const Text('Video'))),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (mode == null) return;
 
     try {
-      await _requestCameraPermissions(requireMicrophone: mode == _EvidenceMode.video);
+      await _requestCameraPermissions();
       if (!mounted) return;
-      final XFile? capturedFile = await showDialog<XFile>(context: context, barrierDismissible: false, builder: (_) => _MiniCameraCaptureDialog(mode: mode));
+      final XFile? capturedFile = await showDialog<XFile>(context: context, barrierDismissible: false, builder: (_) => const _MiniCameraCaptureDialog());
       if (capturedFile == null) return;
-      final selectedFile = mode == _EvidenceMode.photo ? await _compressPhoto(File(capturedFile.path)) : await _compressVideo(File(capturedFile.path));
+      final selectedFile = await _compressPhoto(File(capturedFile.path));
       if (!mounted) return;
       setState(() => _evidenceFiles.add(selectedFile));
     } catch (error) {
@@ -538,27 +520,10 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
     return target;
   }
 
-  Future<File> _compressVideo(File file) async {
-    try {
-      final mediaInfo = await VideoCompress.compressVideo(file.path, quality: VideoQuality.MediumQuality, includeAudio: true, deleteOrigin: false);
-      final compressedPath = mediaInfo?.file?.path ?? file.path;
-      final compressedFile = File(compressedPath);
-      if (await compressedFile.length() > _maxEvidenceBytes) {
-        throw Exception('El video comprimido supera 10MB.');
-      }
-      return compressedFile;
-    } finally {
-      await VideoCompress.cancelCompression();
-    }
-  }
-
-  Future<void> _requestCameraPermissions({required bool requireMicrophone}) async {
-    final requestedPermissions = <Permission>[Permission.camera, if (requireMicrophone) Permission.microphone];
-    final statuses = await requestedPermissions.request();
-    final hasCamera = (statuses[Permission.camera] ?? PermissionStatus.denied).isGranted;
-    final hasMicrophone = !requireMicrophone || (statuses[Permission.microphone] ?? PermissionStatus.denied).isGranted;
-    if (!hasCamera || !hasMicrophone) {
-      throw Exception('Debes otorgar permisos de cámara ${requireMicrophone ? 'y micrófono ' : ''}para continuar.');
+  Future<void> _requestCameraPermissions() async {
+    final status = await Permission.camera.request();
+    if (!status.isGranted) {
+      throw Exception('Debes otorgar permisos de cámara para continuar.');
     }
   }
 
@@ -598,9 +563,7 @@ class _AuditQuestionAnswer {
 }
 
 class _MiniCameraCaptureDialog extends StatefulWidget {
-  const _MiniCameraCaptureDialog({required this.mode});
-
-  final _EvidenceMode mode;
+  const _MiniCameraCaptureDialog();
 
   @override
   State<_MiniCameraCaptureDialog> createState() => _MiniCameraCaptureDialogState();
@@ -610,7 +573,6 @@ class _MiniCameraCaptureDialogState extends State<_MiniCameraCaptureDialog> {
   CameraController? _controller;
   bool _initializing = true;
   bool _capturing = false;
-  bool _recording = false;
   String? _error;
 
   @override
@@ -629,7 +591,7 @@ class _MiniCameraCaptureDialogState extends State<_MiniCameraCaptureDialog> {
     try {
       final cameras = await availableCameras();
       final camera = cameras.first;
-      final controller = CameraController(camera, ResolutionPreset.medium, enableAudio: widget.mode == _EvidenceMode.video);
+      final controller = CameraController(camera, ResolutionPreset.medium, enableAudio: false);
       await controller.initialize();
       if (!mounted) return;
       setState(() {
@@ -651,25 +613,12 @@ class _MiniCameraCaptureDialogState extends State<_MiniCameraCaptureDialog> {
 
     try {
       setState(() => _capturing = true);
-      if (widget.mode == _EvidenceMode.photo) {
-        Navigator.of(context).pop(await controller.takePicture());
-        return;
-      }
-      if (!_recording) {
-        await controller.startVideoRecording();
-        setState(() {
-          _capturing = false;
-          _recording = true;
-        });
-        return;
-      }
-      Navigator.of(context).pop(await controller.stopVideoRecording());
+      Navigator.of(context).pop(await controller.takePicture());
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _error = 'No se pudo capturar evidencia: $error';
         _capturing = false;
-        _recording = false;
       });
     }
   }
@@ -686,7 +635,7 @@ class _MiniCameraCaptureDialogState extends State<_MiniCameraCaptureDialog> {
           padding: const EdgeInsets.all(12),
           child: Column(
             children: [
-              Row(children: [Expanded(child: Text(widget.mode == _EvidenceMode.photo ? 'Mini cámara (Foto)' : 'Mini cámara (Video)', style: const TextStyle(fontWeight: FontWeight.w700))), IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close))]),
+              Row(children: [Expanded(child: Text('Mini cámara (Foto)', style: const TextStyle(fontWeight: FontWeight.w700))), IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close))]),
               Expanded(
                 child: Center(
                   child: AspectRatio(
@@ -703,8 +652,8 @@ class _MiniCameraCaptureDialogState extends State<_MiniCameraCaptureDialog> {
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: canCapture ? _capture : null,
-                  icon: Icon(widget.mode == _EvidenceMode.photo ? Icons.camera_alt_outlined : (_recording ? Icons.stop_circle_outlined : Icons.videocam_outlined)),
-                  label: Text(widget.mode == _EvidenceMode.photo ? 'Tomar foto' : (_recording ? 'Detener grabación' : 'Iniciar grabación')),
+                  icon: const Icon(Icons.camera_alt_outlined),
+                  label: const Text('Tomar foto'),
                 ),
               ),
             ],
@@ -714,5 +663,3 @@ class _MiniCameraCaptureDialogState extends State<_MiniCameraCaptureDialog> {
     );
   }
 }
-
-enum _EvidenceMode { photo, video }
