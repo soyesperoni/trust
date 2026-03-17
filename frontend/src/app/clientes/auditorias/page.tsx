@@ -278,6 +278,15 @@ export default function AuditoriasPage() {
                   <p className="font-semibold text-slate-700 dark:text-slate-200">{score == null ? "--" : `${score}%`}</p>
                 </div>
               </div>
+              {audit.status === "completed" ? (
+                <Link
+                  className="mt-3 inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                  href={`/clientes/auditorias/${audit.id}/informe`}
+                >
+                  Ver informe
+                  <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                </Link>
+              ) : null}
             </article>
           );
         })}
@@ -360,6 +369,7 @@ export default function AuditoriasPage() {
                     <th className="px-6 py-4">Inspector</th>
                     <th className="px-6 py-4">Puntaje</th>
                     <th className="px-6 py-4">Estado</th>
+                    <th className="px-6 py-4">Detalle</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
@@ -400,12 +410,21 @@ export default function AuditoriasPage() {
                             {typeLabel}
                           </span>
                         </td>
+                        <td className="px-6 py-4">
+                          {audit.status === "completed" ? (
+                            <Link className="text-sm font-semibold text-primary hover:underline" href={`/clientes/auditorias/${audit.id}/informe`}>
+                              Ver informe
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-slate-400">Pendiente</span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                   {filteredAudits.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                      <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
                         {emptyMessage}
                       </td>
                     </tr>

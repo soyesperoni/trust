@@ -223,6 +223,20 @@ class AuditMedia(models.Model):
         return f"{self.get_media_type_display()} - {self.audit}"
 
 
+class DeepSeekAPISettings(models.Model):
+    api_key = models.CharField(max_length=255, blank=True)
+    model = models.CharField(max_length=120, default="deepseek-reasoner")
+    is_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "DeepSeek API"
+        verbose_name_plural = "DeepSeek API"
+
+    def __str__(self) -> str:
+        return "DeepSeek API"
+
+
 class Incident(models.Model):
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="incidents")
     branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="incidents")
