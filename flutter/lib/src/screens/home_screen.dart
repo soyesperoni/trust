@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               SvgPicture.asset(
-                'assets/icon/trust_logo.svg',
+                'assets/icon/trust_logo_s.svg',
                 height: 34,
                 colorFilter: Theme.of(context).brightness == Brightness.dark
                     ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
