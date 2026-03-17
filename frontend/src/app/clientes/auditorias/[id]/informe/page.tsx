@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import DashboardHeader from "../../../../../components/DashboardHeader";
-import { getSessionUserEmail } from "../../../../../lib/session";
+import DashboardHeader from "../../../../components/DashboardHeader";
+import { getSessionUserEmail } from "../../../../lib/session";
 
 type AuditMedia = { id: number; type: string; file: string | null };
 type AuditAnswer = { id?: number; label?: string; value?: string; response_type?: string };
