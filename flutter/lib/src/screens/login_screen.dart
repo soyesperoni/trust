@@ -243,7 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: FilledButton.styleFrom(
                                   backgroundColor: AppColors.secondary,
                                   disabledBackgroundColor: AppColors.secondaryDark,
-                                  overlayColor: const WidgetStatePropertyAll<Color>(AppColors.secondaryDark),
+                                  overlayColor: AppColors.secondaryDark,
                                   foregroundColor: AppColors.black,
                                   minimumSize: const Size.fromHeight(50),
                                   textStyle: const TextStyle(
