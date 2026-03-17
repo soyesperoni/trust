@@ -452,6 +452,32 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
         "Riesgo moderado con impacto controlable mediante acciones correctivas puntuales." if score < 80 else "Riesgo bajo y operación estable en el área auditada."
     )
 
+    question_insights = []
+    for item in answers:
+        response = item["respuesta"]
+        response_lower = response.lower()
+        if any(token in response_lower for token in positive):
+            meaning = "La respuesta indica cumplimiento del control auditado."
+            impact = "Contribuye a la continuidad operativa y reduce riesgo de incidencias."
+            recommendation = "Mantener el control y documentar evidencia periódicamente."
+        elif any(token in response_lower for token in negative):
+            meaning = "La respuesta refleja un incumplimiento o brecha operativa."
+            impact = "Puede generar reprocesos, costos adicionales y deterioro de la experiencia del cliente."
+            recommendation = "Corregir el hallazgo con responsable, plazo y seguimiento semanal."
+        else:
+            meaning = "La respuesta es parcial o ambigua y requiere validación adicional."
+            impact = "Existe riesgo de interpretación incorrecta y decisiones tardías."
+            recommendation = "Solicitar evidencia complementaria y precisar el estado real del control."
+
+        question_insights.append({
+            "question": item["pregunta"] or "Pregunta sin descripción",
+            "answer": response or "Sin respuesta",
+            "meaning": meaning,
+            "business_area": "Operación del área auditada",
+            "business_impact": impact,
+            "recommendation": recommendation,
+        })
+
     return {
         "score": score,
         "executive_summary": f"Análisis preliminar automático: se observa {rating} con base en {len(answers)} respuestas registradas.",
@@ -463,6 +489,7 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
         "risks": ["El análisis de respaldo no reemplaza la evaluación profesional del auditor."],
         "business_impact": business_impact,
         "context_notes": "Puntaje estimado a partir del sentido semántico básico de las respuestas.",
+        "question_insights": question_insights,
         "provider": "fallback",
     }
 
@@ -483,7 +510,7 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
                 "role": "user",
                 "content": json.dumps(
                     {
-                        "instrucciones": "Devuelve un JSON con claves score(0-100), executive_summary(string), recommendations(array de strings), strengths(array de strings), risks(array de strings), business_impact(string) y context_notes(string). Evalúa el contexto entre pregunta y respuesta, severidad de hallazgos e impacto operativo/financiero/reputacional.",
+                        "instrucciones": "Devuelve un JSON con claves score(0-100), executive_summary(string), recommendations(array de strings), strengths(array de strings), risks(array de strings), business_impact(string), context_notes(string) y question_insights(array). question_insights debe incluir por cada pregunta: question, answer, meaning, business_area, business_impact y recommendation. No entregues solo métricas: explica qué significa cada respuesta y su impacto específico para el negocio/área.",
                         "contexto": {
                             "cliente": audit.area.branch.client.name,
                             "sucursal": audit.area.branch.name,
@@ -534,6 +561,26 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
         if not isinstance(risks, list):
             risks = []
         risks = [str(item).strip() for item in risks if str(item).strip()]
+        question_insights = parsed.get("question_insights")
+        normalized_insights = []
+        if isinstance(question_insights, list):
+            for item in question_insights:
+                if not isinstance(item, dict):
+                    continue
+                normalized_insights.append({
+                    "question": str(item.get("question") or "").strip(),
+                    "answer": str(item.get("answer") or "").strip(),
+                    "meaning": str(item.get("meaning") or "").strip(),
+                    "business_area": str(item.get("business_area") or "").strip(),
+                    "business_impact": str(item.get("business_impact") or "").strip(),
+                    "recommendation": str(item.get("recommendation") or "").strip(),
+                })
+            normalized_insights = [
+                item
+                for item in normalized_insights
+                if item["question"] or item["answer"] or item["meaning"] or item["business_impact"] or item["recommendation"]
+            ]
+
         return {
             "score": score,
             "executive_summary": str(parsed.get("executive_summary") or "").strip(),
@@ -542,6 +589,7 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
             "risks": risks,
             "business_impact": str(parsed.get("business_impact") or "").strip(),
             "context_notes": str(parsed.get("context_notes") or "").strip(),
+            "question_insights": normalized_insights,
             "provider": "deepseek",
             "model": settings.model or "deepseek-reasoner",
         }

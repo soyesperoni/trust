@@ -44,6 +44,10 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
 
   int _step = 1;
   bool _isSubmitting = false;
+  bool _showUploadProgress = false;
+  double _uploadProgress = 0;
+  String _uploadStatus = 'Preparando auditoría...';
+  Timer? _uploadTimer;
   String? _error;
 
   Position? _startPosition;
@@ -60,6 +64,7 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
 
   @override
   void dispose() {
+    _uploadTimer?.cancel();
     _signatureController.dispose();
     _commentsController.dispose();
     _responsibleNameController.dispose();
@@ -126,6 +131,29 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
           ),
         ),
       ),
+      bottomSheet: _showUploadProgress
+          ? Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkCard : Colors.white,
+                border: Border(top: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.gray300)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Finalizando auditoría...', style: TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(_uploadStatus, style: TextStyle(color: isDark ? AppColors.darkMuted : AppColors.gray500)),
+                  const SizedBox(height: 10),
+                  LinearProgressIndicator(value: _uploadProgress, color: AppColors.yellow, backgroundColor: isDark ? AppColors.darkCardBorder : AppColors.gray300),
+                  const SizedBox(height: 6),
+                  Text('${(_uploadProgress * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w600)),
+                ],
+              ),
+            )
+          : null,
     );
   }
 
@@ -343,6 +371,10 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
       setState(() => _error = 'Debes responder todas las preguntas obligatorias.');
       return;
     }
+    if (_step == 3 && !_locationCheck) {
+      setState(() => _error = 'Debes marcar la verificación de ubicación para continuar.');
+      return;
+    }
     if (_step < 4) {
       setState(() {
         _error = null;
@@ -359,6 +391,7 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
         _error = null;
         _isSubmitting = true;
       });
+      _startUploadProgress();
       final signatureBytes = await _signatureController.toPngBytes();
       if (signatureBytes == null || signatureBytes.isEmpty) {
         throw Exception('Debes registrar la firma del responsable para finalizar.');
@@ -399,15 +432,60 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
         evidenceFiles: files,
       );
 
+      _completeUploadProgress();
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Auditoría finalizada correctamente.')));
       Navigator.of(context).pop(true);
     } catch (error) {
+      _hideUploadProgress();
       if (!mounted) return;
       setState(() => _error = _toError(error));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _startUploadProgress() {
+    _uploadTimer?.cancel();
+    setState(() {
+      _showUploadProgress = true;
+      _uploadProgress = 0.08;
+      _uploadStatus = 'Preparando evidencias y respuestas...';
+    });
+    _uploadTimer = Timer.periodic(const Duration(milliseconds: 450), (timer) {
+      if (!mounted) return;
+      setState(() {
+        if (_uploadProgress < 0.35) {
+          _uploadStatus = 'Subiendo evidencias a servidores seguros...';
+        } else if (_uploadProgress < 0.7) {
+          _uploadStatus = 'Procesando análisis de Trust AI...';
+        } else {
+          _uploadStatus = 'Cerrando auditoría y confirmando datos...';
+        }
+        _uploadProgress = (_uploadProgress + 0.05).clamp(0, 0.92);
+      });
+    });
+  }
+
+  void _completeUploadProgress() {
+    _uploadTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _uploadProgress = 1;
+      _uploadStatus = 'Auditoría finalizada con éxito.';
+    });
+    Future.delayed(const Duration(milliseconds: 450), _hideUploadProgress);
+  }
+
+  void _hideUploadProgress() {
+    _uploadTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _showUploadProgress = false;
+      _uploadProgress = 0;
+      _uploadStatus = 'Preparando auditoría...';
+    });
   }
 
   Future<void> _openMiniCamera() async {

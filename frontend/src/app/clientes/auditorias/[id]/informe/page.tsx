@@ -37,6 +37,14 @@ type Audit = {
       risks?: string[];
       business_impact?: string;
       context_notes?: string;
+      question_insights?: Array<{
+        question?: string;
+        answer?: string;
+        meaning?: string;
+        business_area?: string;
+        business_impact?: string;
+        recommendation?: string;
+      }>;
       provider?: string;
       model?: string;
     };
@@ -290,6 +298,25 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
                     <li className="rounded-lg bg-white p-3 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">Sin próximos pasos sugeridos.</li>
                   )}
                 </ol>
+              </div>
+            </div>
+            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-[#0f172a]">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Interpretación por pregunta (contexto e impacto)</p>
+              <div className="mt-3 space-y-3 text-sm text-slate-700 dark:text-slate-300">
+                {(ai?.question_insights ?? []).length > 0 ? (
+                  (ai?.question_insights ?? []).map((item, index) => (
+                    <article key={`${item.question ?? 'q'}-${index}`} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900/60">
+                      <p className="font-semibold text-slate-900 dark:text-white">{item.question ?? `Pregunta ${index + 1}`}</p>
+                      <p className="mt-1"><span className="font-semibold">Respuesta:</span> {item.answer ?? "Sin respuesta"}</p>
+                      <p className="mt-1"><span className="font-semibold">¿Qué significa?:</span> {item.meaning ?? "Sin interpretación"}</p>
+                      <p className="mt-1"><span className="font-semibold">Área afectada:</span> {item.business_area ?? "Área auditada"}</p>
+                      <p className="mt-1"><span className="font-semibold">Impacto en negocio:</span> {item.business_impact ?? "Sin impacto definido"}</p>
+                      <p className="mt-1"><span className="font-semibold">Recomendación específica:</span> {item.recommendation ?? "Sin recomendación"}</p>
+                    </article>
+                  ))
+                ) : (
+                  <p className="rounded-lg bg-white p-3 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">No hay interpretación detallada por pregunta en esta auditoría.</p>
+                )}
               </div>
             </div>
           </article>
