@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'login_screen.dart';
 import 'tabs/calendar_tab.dart';
@@ -89,26 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'trust',
-                style: GoogleFonts.poppins(
-                  color: AppColors.yellow,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 34,
-                  letterSpacing: -1,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'by',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Image.asset('assets/icon/supply.png', height: 34),
+              SvgPicture.asset('assets/icon/trust_logo.svg', height: 34),
             ],
           ),
         ),
