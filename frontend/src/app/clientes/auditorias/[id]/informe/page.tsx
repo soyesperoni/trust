@@ -32,6 +32,7 @@ type Audit = {
       score?: number;
       executive_summary?: string;
       recommendations?: string[];
+      next_steps?: string[];
       strengths?: string[];
       risks?: string[];
       business_impact?: string;
@@ -124,6 +125,8 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
   const score = typeof ai?.score === "number" ? Math.max(0, Math.min(100, ai.score)) : null;
   const scoreColor = score == null ? "#94a3b8" : score >= 80 ? "#22c55e" : score >= 60 ? "#f59e0b" : "#ef4444";
   const scoreLabel = score == null ? "Sin score" : score >= 80 ? "Salud operativa alta" : score >= 60 ? "Atención prioritaria" : "Riesgo crítico";
+  const confidenceLevel = score == null ? "N/D" : score >= 80 ? "Alta" : score >= 60 ? "Media" : "Baja";
+  const nextSteps = ai?.next_steps?.length ? ai.next_steps : (ai?.recommendations ?? []).slice(0, 3);
 
   const mapUrl = useMemo(() => {
     const lat = audit?.end_latitude ?? audit?.start_latitude;
@@ -231,16 +234,29 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
           <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-2">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Análisis Trust AI</h2>
             <p className="mt-2 text-sm text-slate-500">Este análisis y puntuación son generados por Trust AI para interpretar el contexto de preguntas, respuestas e impacto en el negocio.</p>
-            <div className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-              <div className="h-4 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 dark:border-slate-700 dark:from-[#0b1220] dark:to-[#111827]">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-xl bg-white/80 p-3 shadow-sm dark:bg-slate-900/60">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Score</p>
+                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{score == null ? "Sin score" : `${score}%`}</p>
+                </div>
+                <div className="rounded-xl bg-white/80 p-3 shadow-sm dark:bg-slate-900/60">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Estado operativo</p>
+                  <p className="mt-1 text-sm font-semibold" style={{ color: scoreColor }}>{scoreLabel}</p>
+                </div>
+                <div className="rounded-xl bg-white/80 p-3 shadow-sm dark:bg-slate-900/60">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Confianza del modelo</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{confidenceLevel}</p>
+                </div>
+              </div>
+              <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                 <div className="h-full rounded-full transition-all" style={{ width: `${score ?? 0}%`, backgroundColor: scoreColor }} />
               </div>
-              <div className="mt-2 flex items-center justify-between">
-                <p className="text-4xl font-black text-slate-900 dark:text-white">{score == null ? "Sin score" : `${score}%`}</p>
-                <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ backgroundColor: `${scoreColor}22`, color: scoreColor }}>{scoreLabel}</span>
-              </div>
             </div>
-            <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{ai?.executive_summary ?? "Sin resumen ejecutivo."}</p>
+            <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Resumen ejecutivo en texto</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{ai?.executive_summary ?? "Sin resumen ejecutivo."}</p>
+            </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
                 <p className="font-semibold">Fortalezas detectadas</p>
@@ -253,9 +269,29 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
             </div>
             <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700 dark:bg-[#0f172a] dark:text-slate-300"><span className="font-semibold">Impacto al negocio:</span> {ai?.business_impact ?? "Sin evaluación de impacto."}</p>
             <p className="mt-2 text-xs text-slate-500">{ai?.context_notes ?? "Trust AI considera el contexto entre preguntas y respuestas para priorizar hallazgos."}</p>
-            <ul className="mt-4 space-y-2 text-sm text-slate-700 dark:text-slate-300">
-              {(ai?.recommendations ?? []).map((item, index) => <li key={index} className="rounded-lg bg-slate-50 p-3 dark:bg-[#0f172a]">• {item}</li>)}
-            </ul>
+            <div className="mt-5 grid gap-3 lg:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-[#0f172a]">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Recomendaciones</p>
+                <ul className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                  {(ai?.recommendations ?? []).map((item, index) => <li key={index} className="rounded-lg bg-white p-3 dark:bg-slate-900/60">• {item}</li>)}
+                </ul>
+              </div>
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Siguientes pasos</p>
+                <ol className="mt-3 space-y-3 text-sm text-slate-700 dark:text-slate-300">
+                  {nextSteps.length > 0 ? (
+                    nextSteps.map((item, index) => (
+                      <li key={`${item}-${index}`} className="flex gap-3 rounded-lg bg-white p-3 dark:bg-slate-900/60">
+                        <span className="mt-0.5 inline-flex h-6 w-6 flex-none items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">{index + 1}</span>
+                        <span>{item}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="rounded-lg bg-white p-3 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">Sin próximos pasos sugeridos.</li>
+                  )}
+                </ol>
+              </div>
+            </div>
           </article>
 
           <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27]">
