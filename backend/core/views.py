@@ -574,15 +574,43 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
             "y prevenir desviaciones futuras."
         )
 
+    area_name = str(((report.get("form") or {}).get("area") or "Área auditada")).strip() or "Área auditada"
+
+    top_risk_lines = []
+    for risk in identified_risks[:3]:
+        risk_question = risk.replace("Brecha detectada en:", "").strip().rstrip(".")
+        if not risk_question:
+            continue
+        top_risk_lines.append(
+            f"- ❌ {risk_question}."
+        )
+    if not top_risk_lines:
+        top_risk_lines.append("- ✅ No se identificaron brechas críticas en los controles evaluados.")
+
     return {
         "score": score,
         "executive_summary": (
-            f"Informe ejecutivo preliminar generado por Trust AI: el resultado consolidado indica {rating} "
-            f"con un score estimado de {score}% sobre {len(answers)} respuestas analizadas. "
-            "A partir de los riesgos y brechas identificados en las evidencias levantadas, se observa que "
-            f"{primary_risks} {risk_impact_summary} "
-            "En consecuencia, se priorizan acciones correctivas con responsables, plazos y trazabilidad de cierre "
-            "para fortalecer el control operativo del área auditada y proteger sus objetivos de desempeño."
+            "📊 Informe Ejecutivo de Auditoría\n"
+            f"Área: {area_name}\n\n"
+            "Generado por: Trust AI\n"
+            "Tipo: Preliminar\n"
+            f"Nivel de cumplimiento: {score}%\n\n"
+            "🔎 Resumen Ejecutivo\n\n"
+            f"La auditoría realizada al área de {area_name.lower()} evidencia un {rating} "
+            f"({score}%) sobre un total de {len(answers)} puntos evaluados.\n\n"
+            "No obstante, se identificaron brechas que requieren atención prioritaria para evitar impactos "
+            "en la calidad del servicio, cumplimiento normativo y continuidad operativa.\n\n"
+            "⚠️ Hallazgos Relevantes\n\n"
+            f"{chr(10).join(top_risk_lines)}\n\n"
+            "📉 Evaluación de Riesgos\n\n"
+            f"{risk_impact_summary}\n\n"
+            "🎯 Recomendaciones Estratégicas\n\n"
+            "- ✔️ Implementar acciones correctivas inmediatas para cada brecha detectada.\n"
+            "- ✔️ Definir responsables, plazos y evidencia objetiva de cierre.\n"
+            "- ✔️ Ejecutar seguimiento de verificación para asegurar sostenibilidad de los controles.\n\n"
+            "📈 Conclusión\n\n"
+            f"{primary_risks} La implementación disciplinada del plan de acción permitirá elevar el nivel de "
+            "cumplimiento y fortalecer el desempeño del área auditada."
         ),
         "recommendations": identified_recommendations[:6] or ["Priorizar hallazgos con mayor impacto operativo y de cumplimiento."],
         "next_steps": identified_next_steps[:6] or ["Definir responsables, fechas y evidencias de cierre para cada hallazgo."],
