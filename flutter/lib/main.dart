@@ -42,7 +42,7 @@ class _TrustAppState extends State<TrustApp> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.yellow, width: 1.8),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
       ),
     );
   }
@@ -86,12 +86,12 @@ class _TrustAppState extends State<TrustApp> {
       title: 'Trust Mobile',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.yellow).copyWith(
-          primary: AppColors.yellow,
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary).copyWith(
+          primary: AppColors.primary,
           onPrimary: AppColors.black,
-          secondary: AppColors.charcoal,
-          onSecondary: Colors.white,
-          secondaryContainer: AppColors.yellowSoft,
+          secondary: AppColors.secondary,
+          onSecondary: AppColors.black,
+          secondaryContainer: AppColors.secondarySoft,
           onSecondaryContainer: AppColors.black,
           surface: Colors.white,
           onSurface: AppColors.gray900,
@@ -142,15 +142,15 @@ class _TrustAppState extends State<TrustApp> {
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.yellowDark,
+          seedColor: AppColors.primaryDark,
           brightness: Brightness.dark,
         ).copyWith(
-          primary: AppColors.yellow,
+          primary: AppColors.primary,
           onPrimary: AppColors.black,
-          secondary: AppColors.darkMuted,
-          onSecondary: Colors.white,
-          secondaryContainer: const Color(0xFF3F3A1B),
-          onSecondaryContainer: const Color(0xFFF5E9A8),
+          secondary: AppColors.secondary,
+          onSecondary: AppColors.black,
+          secondaryContainer: AppColors.secondaryDark,
+          onSecondaryContainer: Colors.white,
           surface: AppColors.darkSurface,
           onSurface: const Color(0xFFF8FAFC),
           onSurfaceVariant: AppColors.darkMuted,
@@ -220,7 +220,7 @@ class TrustSplashScreen extends StatelessWidget {
         child: Text(
           'trust',
           style: GoogleFonts.poppins(
-            color: AppColors.yellow,
+            color: AppColors.primary,
             fontSize: 54,
             fontWeight: FontWeight.bold,
           ),

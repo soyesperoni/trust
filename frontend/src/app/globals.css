@@ -23,8 +23,18 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-primary: #facc15;
-  --color-professional-green: #facc15;
+  --color-primary: #2e3192;
+  --color-professional-green: #92b93b;
+  --color-yellow-50: #eef0ff;
+  --color-yellow-100: #dde1ff;
+  --color-yellow-200: #c2c9ff;
+  --color-yellow-300: #9ba7ff;
+  --color-yellow-400: #6f7af3;
+  --color-yellow-500: #2e3192;
+  --color-yellow-600: #252876;
+  --color-yellow-700: #1d205d;
+  --color-yellow-800: #161844;
+  --color-yellow-900: #10122c;
   --color-background-light: #fdfdfd;
   --color-background-dark: #0a0f14;
   --font-display: "Manrope", sans-serif;
