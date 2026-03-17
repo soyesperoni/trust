@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Image.asset(
                 'assets/icon/trust_logo_s.png',
-                height: 34,
+                height: 44.2,
               ),
             ],
           ),
