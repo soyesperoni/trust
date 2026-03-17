@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from config import settings_prod
 from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, User, Visit
+from .views import _fallback_audit_ai_analysis
 
 
 class ClientApiTests(TestCase):
@@ -738,3 +739,42 @@ class AuditApiTests(TestCase):
         self.assertEqual(audit.status, Audit.Status.COMPLETED)
         self.assertIsNotNone(audit.audit_report)
         self.assertEqual(audit.audit_report["form"]["id"], form.id)
+
+    def test_fallback_ai_analysis_assigns_score_when_percentages_are_missing(self):
+        report = {
+            "form": {
+                "schema": {
+                    "questions": [
+                        {"label": "Orden de estación", "response_type": "yes_no"},
+                        {"label": "Limpieza general", "response_type": "yes_no"},
+                    ]
+                }
+            },
+            "answers": [
+                {"label": "Orden de estación", "value": "Sí", "response_type": "yes_no"},
+                {"label": "Limpieza general", "value": "No", "response_type": "yes_no"},
+            ],
+        }
+
+        analysis = _fallback_audit_ai_analysis(report)
+
+        self.assertEqual(analysis["score"], 50)
+        self.assertIn("Informe ejecutivo", analysis["executive_summary"])
+
+    def test_fallback_ai_analysis_does_not_penalize_not_applicable_without_percentages(self):
+        report = {
+            "form": {
+                "schema": {
+                    "questions": [
+                        {"label": "Control de químicos", "response_type": "yes_no"},
+                    ]
+                }
+            },
+            "answers": [
+                {"label": "Control de químicos", "value": "No aplica", "response_type": "yes_no"},
+            ],
+        }
+
+        analysis = _fallback_audit_ai_analysis(report)
+
+        self.assertEqual(analysis["score"], 100)
