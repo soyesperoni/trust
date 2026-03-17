@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'home_screen.dart';
@@ -91,10 +91,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _openSupplyMaxUrl() async {
-    await _openExternalUrl('https://supplymax.net/', 'No se pudo abrir SupplyMax.');
-  }
-
   Future<void> _openPrivacyPolicyUrl() async {
     await _openExternalUrl(
       'https://trust.supplymax.net/politica-privacidad',
@@ -133,38 +129,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          'trust',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
-                            color: AppColors.yellow,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 58,
-                            letterSpacing: -1,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
                         Center(
-                          child: GestureDetector(
-                            onTap: _openSupplyMaxUrl,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'by',
-                                  style: TextStyle(
-                                    color: mutedTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Image.asset('assets/icon/supply.png', height: 58),
-                              ],
-                            ),
-                          ),
+                          child: SvgPicture.asset('assets/icon/trust_logo.svg', height: 64),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 14),
                         Text(
                           'Accede a tu cuenta',
                           textAlign: TextAlign.center,
@@ -342,21 +310,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Center(
-                          child: GestureDetector(
-                            onTap: _openSupplyMaxUrl,
-                            child: Text(
-                              'SupplyMax de Panama · supplymax.net',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: mutedTextColor,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-
                       ],
                     ),
                   ),
