@@ -128,6 +128,9 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
   const scoreLabel = score == null ? "Sin score" : score >= 80 ? "Salud operativa alta" : score >= 60 ? "Atención prioritaria" : "Riesgo crítico";
   const confidenceLevel = score == null ? "N/D" : score >= 80 ? "Alta" : score >= 60 ? "Media" : "Baja";
   const nextSteps = ai?.next_steps?.length ? ai.next_steps : (ai?.recommendations ?? []).slice(0, 3);
+  const strengths = (ai?.strengths ?? []).filter((item) => item.trim());
+  const risks = (ai?.risks ?? []).filter((item) => item.trim());
+  const recommendations = (ai?.recommendations ?? []).filter((item) => item.trim());
 
   const mapUrl = useMemo(() => {
     const lat = audit?.end_latitude ?? audit?.start_latitude;
@@ -232,7 +235,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-2">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Análisis Trust AI</h2>
             <p className="mt-2 text-sm text-slate-500">Este análisis y puntuación son generados por Trust AI para interpretar el contexto de preguntas, respuestas e impacto en el negocio.</p>
             <div className="mt-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 dark:border-slate-700 dark:from-[#0b1220] dark:to-[#111827]">
@@ -255,17 +258,23 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
               </div>
             </div>
             <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
-              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Resumen ejecutivo en texto</p>
-              <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{ai?.executive_summary ?? "Sin resumen ejecutivo."}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Informe ejecutivo</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{ai?.executive_summary ?? "Sin informe ejecutivo."}</p>
+            </div>
+            <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/70 p-4 dark:border-violet-900/40 dark:bg-violet-950/20">
+              <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">Bloque de informe ejecutivo IA</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+                {ai?.executive_summary ?? "La IA generará un informe ejecutivo completo al finalizar la auditoría."}
+              </p>
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
                 <p className="font-semibold">Fortalezas detectadas</p>
-                <ul className="mt-2 space-y-1">{(ai?.strengths ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul>
+                <ul className="mt-2 space-y-1">{strengths.length > 0 ? strengths.map((item, index) => <li key={index}>• {item}</li>) : <li>• Sin fortalezas específicas detectadas.</li>}</ul>
               </div>
               <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
                 <p className="font-semibold">Riesgos / brechas</p>
-                <ul className="mt-2 space-y-1">{(ai?.risks ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul>
+                <ul className="mt-2 space-y-1">{risks.length > 0 ? risks.map((item, index) => <li key={index}>• {item}</li>) : <li>• Sin riesgos específicos detectados.</li>}</ul>
               </div>
             </div>
             <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700 dark:bg-[#0f172a] dark:text-slate-300"><span className="font-semibold">Impacto al negocio:</span> {ai?.business_impact ?? "Sin evaluación de impacto."}</p>
@@ -274,7 +283,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-[#0f172a]">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Recomendaciones</p>
                 <ul className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-300">
-                  {(ai?.recommendations ?? []).map((item, index) => <li key={index} className="rounded-lg bg-white p-3 dark:bg-slate-900/60">• {item}</li>)}
+                  {recommendations.length > 0 ? recommendations.map((item, index) => <li key={index} className="rounded-lg bg-white p-3 dark:bg-slate-900/60">• {item}</li>) : <li className="rounded-lg bg-white p-3 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">Sin recomendaciones específicas.</li>}
                 </ul>
               </div>
               <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20">
@@ -288,7 +297,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
                       </li>
                     ))
                   ) : (
-                    <li className="rounded-lg bg-white p-3 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">Sin próximos pasos sugeridos.</li>
+                    <li className="rounded-lg bg-white p-3 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">Sin siguientes pasos específicos.</li>
                   )}
                 </ol>
               </div>
