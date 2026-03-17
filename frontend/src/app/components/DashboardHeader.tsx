@@ -157,6 +157,14 @@ export default function DashboardHeader({
               </span>
             ) : null}
           </Link>
+          <button
+            aria-label="Cerrar sesión"
+            className="h-10 w-10 inline-flex items-center justify-center relative text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+            onClick={handleLogout}
+            type="button"
+          >
+            <span className="material-symbols-outlined">logout</span>
+          </button>
         </div>
       </header>
     </>
