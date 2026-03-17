@@ -146,16 +146,16 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
       .map((line) => line.trim())
       .filter(Boolean);
 
-    const sectionRegex = /^(?<icon>[^\p{L}\p{N}\s-]{1,3})\s+(?<title>[\p{L}\p{N}][\p{L}\p{N}\s]+)$/u;
+    const sectionRegex = /^([^\p{L}\p{N}\s-]{1,3})\s+([\p{L}\p{N}][\p{L}\p{N}\s]+)$/u;
     const sections: ExecutiveSection[] = [];
     let currentSection: ExecutiveSection | null = null;
 
     for (const line of lines) {
       const parsedSection = line.match(sectionRegex);
-      if (parsedSection?.groups?.title && parsedSection.groups.icon) {
+      if (parsedSection?.[1] && parsedSection[2]) {
         currentSection = {
-          title: parsedSection.groups.title.trim(),
-          icon: parsedSection.groups.icon,
+          title: parsedSection[2].trim(),
+          icon: parsedSection[1],
           content: [],
         };
         sections.push(currentSection);
