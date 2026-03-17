@@ -146,9 +146,6 @@ export default function AuditoriasPage() {
     const average = scores.length ? Math.round(scores.reduce((acc, score) => acc + score, 0) / scores.length) : 0;
 
     return {
-      total: audits.length,
-      completed: completed.length,
-      pending: audits.length - completed.length,
       average,
     };
   }, [audits]);
@@ -300,12 +297,8 @@ export default function AuditoriasPage() {
 
       <PageTransition className="hidden flex-1 flex-col overflow-y-auto md:flex">
         <div className="hidden shrink-0 px-4 pb-2 pt-6 md:block md:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <StatCard label="Total" value={String(stats.total)} />
-            <StatCard label="Finalizadas" value={String(stats.completed)} valueClassName="text-green-600" />
-            <StatCard label="Programadas" value={String(stats.pending)} valueClassName="text-amber-500" />
-            <StatCard label="Puntaje promedio" value={`${stats.average}%`} />
-            <div className="md:col-span-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
+          <div className="mb-6">
+            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Score general de auditorías (Trust AI)</p>
                 <span className="text-xs text-slate-500">Basado en auditorías que puedes visualizar por permisos</span>
@@ -445,16 +438,6 @@ export default function AuditoriasPage() {
     </>
   );
 }
-
-function StatCard({ label, value, valueClassName = "" }: { label: string; value: string; valueClassName?: string }) {
-  return (
-    <div className="bg-white dark:bg-[#161e27] p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-      <p className={`text-2xl font-black text-slate-900 dark:text-white ${valueClassName}`}>{value}</p>
-    </div>
-  );
-}
-
 
 function ScoreGauge({ score, compact = false }: { score: number | null; compact?: boolean }) {
   const normalized = typeof score === "number" ? Math.max(0, Math.min(100, score)) : null;
