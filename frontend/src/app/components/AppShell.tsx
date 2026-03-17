@@ -124,9 +124,6 @@ export default function AppShell({ children }: AppShellProps) {
       <div className={isMobileIncidentCreation || isMobileVisitFlow ? "hidden md:block" : "block"}>
         <MobileBottomNav activePath={activePath} />
       </div>
-      <p className="pointer-events-none fixed bottom-2 left-1/2 z-40 -translate-x-1/2 px-3 text-center text-[10px] text-slate-500 dark:text-slate-400 md:bottom-3 md:text-xs">
-        trust es una plataforma desarrollada por SupplyMax de Panamá
-      </p>
     </div>
   );
 }
