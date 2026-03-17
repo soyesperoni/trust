@@ -420,6 +420,38 @@ def _extract_audit_answers(report: dict) -> list[dict[str, str]]:
     return normalized
 
 
+def _build_audit_prompt_context(audit: Audit, report: dict) -> dict:
+    schema = ((report.get("form") or {}).get("schema") or {}) if isinstance(report.get("form"), dict) else {}
+    if not schema and getattr(audit, "form", None):
+        schema = audit.form.schema if isinstance(getattr(audit.form, "schema", None), dict) else {}
+
+    questions = schema.get("questions") if isinstance(schema.get("questions"), list) else []
+    question_catalog = []
+    for item in questions:
+        if not isinstance(item, dict):
+            continue
+        response_scores = item.get("response_scores") if isinstance(item.get("response_scores"), dict) else {}
+        question_catalog.append({
+            "pregunta": str(item.get("label") or "").strip(),
+            "tipo_respuesta": str(item.get("response_type") or "").strip(),
+            "ponderacion": item.get("question_weight"),
+            "porcentajes_respuesta": {
+                "si": response_scores.get("yes"),
+                "no": response_scores.get("no"),
+                "no_aplica": response_scores.get("not_applicable"),
+            },
+        })
+
+    return {
+        "plantilla_nombre": audit.form_name or getattr(audit.form, "name", ""),
+        "cliente": audit.area.branch.client.name,
+        "sucursal": audit.area.branch.name,
+        "area": audit.area.name,
+        "preguntas": question_catalog,
+        "respuestas": _extract_audit_answers(report),
+    }
+
+
 def _fallback_audit_ai_analysis(report: dict) -> dict:
     answers = _extract_audit_answers(report)
     if not answers:
@@ -474,13 +506,23 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
     )
 
     question_insights = []
+    identified_strengths = []
+    identified_risks = []
+    identified_recommendations = []
+    identified_next_steps = []
     for item in answers:
         response = item["respuesta"]
         response_lower = response.lower()
         if any(token in response_lower for token in positive):
             contextual_response = "La respuesta indica cumplimiento del control y refleja una práctica operativa estable."
+            if item['pregunta']:
+                identified_strengths.append(f"Cumplimiento en: {item['pregunta']}.")
         elif any(token in response_lower for token in negative):
             contextual_response = "La respuesta refleja una brecha en el control evaluado que requiere corrección prioritaria."
+            if item['pregunta']:
+                identified_risks.append(f"Brecha detectada en: {item['pregunta']}.")
+                identified_recommendations.append(f"Corregir el control asociado a '{item['pregunta']}' y registrar evidencia de cierre.")
+                identified_next_steps.append(f"Asignar responsable y fecha compromiso para resolver '{item['pregunta']}'.")
         else:
             contextual_response = "La respuesta es parcial o ambigua; se necesita mayor precisión para entender el estado real del control."
 
@@ -493,12 +535,10 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
     return {
         "score": score,
         "executive_summary": f"Análisis preliminar automático: se observa {rating} con base en {len(answers)} respuestas registradas.",
-        "recommendations": [
-            "Atender primero las respuestas con incumplimientos o evidencias incompletas.",
-            "Definir un plan de acción con responsables y fechas compromiso por hallazgo.",
-        ],
-        "strengths": ["Se registró información suficiente para estimar el nivel de cumplimiento general."],
-        "risks": ["El análisis de respaldo no reemplaza la evaluación profesional del auditor."],
+        "recommendations": identified_recommendations[:6] or ["Priorizar hallazgos con mayor impacto operativo y de cumplimiento."],
+        "next_steps": identified_next_steps[:6] or ["Definir responsables, fechas y evidencias de cierre para cada hallazgo."],
+        "strengths": identified_strengths[:6] or ["Se registró información suficiente para estimar el nivel de cumplimiento general."],
+        "risks": identified_risks[:6] or ["Existen oportunidades de mejora en controles con respuestas ambiguas o incompletas."],
         "business_impact": business_impact,
         "context_notes": "Puntaje estimado a partir del sentido semántico básico de las respuestas.",
         "question_insights": question_insights,
@@ -522,14 +562,9 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
                 "role": "user",
                 "content": json.dumps(
                     {
-                        "instrucciones": "Devuelve un JSON con claves score(0-100), executive_summary(string), recommendations(array de strings globales), strengths(array de strings), risks(array de strings), business_impact(string global), context_notes(string) y question_insights(array). question_insights debe incluir TODAS las preguntas y para cada una: question, answer y contextual_response (explicación breve enfocada en el contexto de la pregunta). No incluyas recomendación ni impacto por pregunta; esos campos deben ser solo globales.",
-                        "contexto": {
-                            "cliente": audit.area.branch.client.name,
-                            "sucursal": audit.area.branch.name,
-                            "area": audit.area.name,
-                            "formulario": audit.form_name or audit.form.name,
-                        },
-                        "respuestas": _extract_audit_answers(report),
+                        "rol": "Eres un analista senior de auditorías operativas y de cumplimiento.",
+                        "instrucciones": "Devuelve SOLO JSON válido con claves: score(0-100), executive_summary(string), recommendations(array), next_steps(array), strengths(array), risks(array), business_impact(string), context_notes(string) y question_insights(array). El executive_summary debe ser un informe ejecutivo integral, con enfoque profesional, alineado a normas internacionales de auditoría y buenas prácticas de gestión de riesgos. Fortalezas, riesgos, recomendaciones y siguientes pasos deben ser específicos de esta auditoría (no genéricos), accionables y NO repetir el mismo contenido entre listas. question_insights debe incluir TODAS las preguntas y para cada una: question, answer y contextual_response (explicación breve enfocada en el contexto de la pregunta).",
+                        "contexto_auditoria": _build_audit_prompt_context(audit, report),
                         "comentarios": str(report.get("comments") or "").strip(),
                     },
                     ensure_ascii=False,
@@ -565,6 +600,10 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
         if not isinstance(recommendations, list):
             recommendations = []
         recommendations = [str(item).strip() for item in recommendations if str(item).strip()]
+        next_steps = parsed.get("next_steps")
+        if not isinstance(next_steps, list):
+            next_steps = []
+        next_steps = [str(item).strip() for item in next_steps if str(item).strip()]
         strengths = parsed.get("strengths")
         if not isinstance(strengths, list):
             strengths = []
@@ -573,6 +612,9 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
         if not isinstance(risks, list):
             risks = []
         risks = [str(item).strip() for item in risks if str(item).strip()]
+
+        recommendations_lower = {item.lower() for item in recommendations}
+        next_steps = [item for item in next_steps if item.lower() not in recommendations_lower]
         question_insights = parsed.get("question_insights")
         normalized_insights = []
         if isinstance(question_insights, list):
@@ -618,6 +660,7 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
             "score": score,
             "executive_summary": str(parsed.get("executive_summary") or "").strip(),
             "recommendations": recommendations,
+            "next_steps": next_steps,
             "strengths": strengths,
             "risks": risks,
             "business_impact": str(parsed.get("business_impact") or "").strip(),
