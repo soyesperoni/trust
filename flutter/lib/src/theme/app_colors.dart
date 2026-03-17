@@ -11,6 +11,11 @@ class AppColors {
   static const Color secondaryDark = Color(0xFF7F9F33);
   static const Color secondarySoft = Color(0xFFE8F2D6);
 
+  // Backward-compatible aliases used throughout existing screens.
+  static const Color yellow = secondary;
+  static const Color yellowDark = secondaryDark;
+  static const Color yellowSoft = secondarySoft;
+
   static const Color black = Color(0xFF111111);
   static const Color charcoal = Color(0xFF2A2A2A);
 
