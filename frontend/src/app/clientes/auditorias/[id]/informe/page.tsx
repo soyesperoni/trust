@@ -8,8 +8,6 @@ import { getSessionUserEmail } from "../../../../lib/session";
 
 type AuditMedia = { id: number; type: string; file: string | null };
 type MediaModal = { type: "image" | "video"; url: string } | null;
-type AuditAnswer = { id?: number; label?: string; value?: string; response_type?: string };
-
 type Audit = {
   id: number;
   client: string;
@@ -27,7 +25,6 @@ type Audit = {
     comments?: string;
     responsible_name?: string;
     responsible_signature?: string;
-    answers?: AuditAnswer[];
     ai_analysis?: {
       score?: number;
       executive_summary?: string;
@@ -40,10 +37,7 @@ type Audit = {
       question_insights?: Array<{
         question?: string;
         answer?: string;
-        meaning?: string;
-        business_area?: string;
-        business_impact?: string;
-        recommendation?: string;
+        contextual_response?: string;
       }>;
       provider?: string;
       model?: string;
@@ -127,7 +121,6 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
   const photos = (audit?.media ?? []).filter((m) => m.type === "photo");
   const videos = (audit?.media ?? []).filter((m) => m.type === "video");
   const ai = audit?.audit_report?.ai_analysis;
-  const answers = audit?.audit_report?.answers ?? [];
   const signature = toUrl(audit?.audit_report?.responsible_signature);
 
   const score = typeof ai?.score === "number" ? Math.max(0, Math.min(100, ai.score)) : null;
@@ -301,36 +294,20 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
               </div>
             </div>
             <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-[#0f172a]">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Interpretación por pregunta (contexto e impacto)</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Respuestas por pregunta (con contexto)</p>
               <div className="mt-3 space-y-3 text-sm text-slate-700 dark:text-slate-300">
                 {(ai?.question_insights ?? []).length > 0 ? (
                   (ai?.question_insights ?? []).map((item, index) => (
                     <article key={`${item.question ?? 'q'}-${index}`} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900/60">
                       <p className="font-semibold text-slate-900 dark:text-white">{item.question ?? `Pregunta ${index + 1}`}</p>
                       <p className="mt-1"><span className="font-semibold">Respuesta:</span> {item.answer ?? "Sin respuesta"}</p>
-                      <p className="mt-1"><span className="font-semibold">¿Qué significa?:</span> {item.meaning ?? "Sin interpretación"}</p>
-                      <p className="mt-1"><span className="font-semibold">Área afectada:</span> {item.business_area ?? "Área auditada"}</p>
-                      <p className="mt-1"><span className="font-semibold">Impacto en negocio:</span> {item.business_impact ?? "Sin impacto definido"}</p>
-                      <p className="mt-1"><span className="font-semibold">Recomendación específica:</span> {item.recommendation ?? "Sin recomendación"}</p>
+                      <p className="mt-1"><span className="font-semibold">Contexto de la respuesta:</span> {item.contextual_response ?? "Sin análisis contextual"}</p>
                     </article>
                   ))
                 ) : (
                   <p className="rounded-lg bg-white p-3 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">No hay interpretación detallada por pregunta en esta auditoría.</p>
                 )}
               </div>
-            </div>
-          </article>
-
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27]">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Respuestas</h2>
-            <p className="mt-1 text-sm text-slate-500">Total de respuestas: {answers.length}</p>
-            <div className="mt-4 max-h-96 space-y-2 overflow-y-auto pr-1 text-sm">
-              {answers.map((ans, idx) => (
-                <div key={`${ans.id ?? idx}`} className="rounded-lg bg-slate-50 p-3 dark:bg-[#0f172a]">
-                  <p className="font-semibold text-slate-900 dark:text-white">{ans.label ?? `Pregunta ${idx + 1}`}</p>
-                  <p className="mt-1 text-slate-700 dark:text-slate-300">{ans.value ?? "Sin respuesta"}</p>
-                </div>
-              ))}
             </div>
           </article>
 

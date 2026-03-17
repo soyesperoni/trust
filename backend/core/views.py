@@ -457,25 +457,16 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
         response = item["respuesta"]
         response_lower = response.lower()
         if any(token in response_lower for token in positive):
-            meaning = "La respuesta indica cumplimiento del control auditado."
-            impact = "Contribuye a la continuidad operativa y reduce riesgo de incidencias."
-            recommendation = "Mantener el control y documentar evidencia periódicamente."
+            contextual_response = "La respuesta indica cumplimiento del control y refleja una práctica operativa estable."
         elif any(token in response_lower for token in negative):
-            meaning = "La respuesta refleja un incumplimiento o brecha operativa."
-            impact = "Puede generar reprocesos, costos adicionales y deterioro de la experiencia del cliente."
-            recommendation = "Corregir el hallazgo con responsable, plazo y seguimiento semanal."
+            contextual_response = "La respuesta refleja una brecha en el control evaluado que requiere corrección prioritaria."
         else:
-            meaning = "La respuesta es parcial o ambigua y requiere validación adicional."
-            impact = "Existe riesgo de interpretación incorrecta y decisiones tardías."
-            recommendation = "Solicitar evidencia complementaria y precisar el estado real del control."
+            contextual_response = "La respuesta es parcial o ambigua; se necesita mayor precisión para entender el estado real del control."
 
         question_insights.append({
             "question": item["pregunta"] or "Pregunta sin descripción",
             "answer": response or "Sin respuesta",
-            "meaning": meaning,
-            "business_area": "Operación del área auditada",
-            "business_impact": impact,
-            "recommendation": recommendation,
+            "contextual_response": contextual_response,
         })
 
     return {
@@ -510,7 +501,7 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
                 "role": "user",
                 "content": json.dumps(
                     {
-                        "instrucciones": "Devuelve un JSON con claves score(0-100), executive_summary(string), recommendations(array de strings), strengths(array de strings), risks(array de strings), business_impact(string), context_notes(string) y question_insights(array). question_insights debe incluir por cada pregunta: question, answer, meaning, business_area, business_impact y recommendation. No entregues solo métricas: explica qué significa cada respuesta y su impacto específico para el negocio/área.",
+                        "instrucciones": "Devuelve un JSON con claves score(0-100), executive_summary(string), recommendations(array de strings globales), strengths(array de strings), risks(array de strings), business_impact(string global), context_notes(string) y question_insights(array). question_insights debe incluir TODAS las preguntas y para cada una: question, answer y contextual_response (explicación breve enfocada en el contexto de la pregunta). No incluyas recomendación ni impacto por pregunta; esos campos deben ser solo globales.",
                         "contexto": {
                             "cliente": audit.area.branch.client.name,
                             "sucursal": audit.area.branch.name,
@@ -570,16 +561,37 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
                 normalized_insights.append({
                     "question": str(item.get("question") or "").strip(),
                     "answer": str(item.get("answer") or "").strip(),
-                    "meaning": str(item.get("meaning") or "").strip(),
-                    "business_area": str(item.get("business_area") or "").strip(),
-                    "business_impact": str(item.get("business_impact") or "").strip(),
-                    "recommendation": str(item.get("recommendation") or "").strip(),
+                    "contextual_response": str(item.get("contextual_response") or "").strip(),
                 })
             normalized_insights = [
                 item
                 for item in normalized_insights
-                if item["question"] or item["answer"] or item["meaning"] or item["business_impact"] or item["recommendation"]
+                if item["question"] or item["answer"] or item["contextual_response"]
             ]
+
+        source_answers = _extract_audit_answers(report)
+        indexed_insights = {
+            (item.get("question") or "").strip().lower(): item
+            for item in normalized_insights
+            if (item.get("question") or "").strip()
+        }
+        completed_insights = []
+        for answer in source_answers:
+            question = (answer.get("pregunta") or "").strip() or "Pregunta sin descripción"
+            response = (answer.get("respuesta") or "").strip() or "Sin respuesta"
+            existing = indexed_insights.get(question.lower())
+            completed_insights.append({
+                "question": question,
+                "answer": existing.get("answer") or response if isinstance(existing, dict) else response,
+                "contextual_response": (
+                    existing.get("contextual_response")
+                    if isinstance(existing, dict) and existing.get("contextual_response")
+                    else "Respuesta analizada con contexto de la pregunta auditada."
+                ),
+            })
+
+        if completed_insights:
+            normalized_insights = completed_insights
 
         return {
             "score": score,
