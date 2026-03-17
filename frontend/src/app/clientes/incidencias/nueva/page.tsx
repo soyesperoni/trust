@@ -635,7 +635,7 @@ export default function NuevaIncidenciaPage() {
                     <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" onClick={onRetakeEvidence} type="button">
                       Comenzar de nuevo
                     </button>
-                    <button className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-black" onClick={onUseEvidence} type="button">
+                    <button className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white" onClick={onUseEvidence} type="button">
                       Utilizar evidencia
                     </button>
                   </div>
@@ -662,7 +662,7 @@ export default function NuevaIncidenciaPage() {
             </button>
 
             <button
-              className="rounded-xl bg-primary py-3 font-bold text-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+              className="rounded-xl bg-primary py-3 font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
               disabled={!canGoNext}
               onClick={onNextStep}
               type="button"
