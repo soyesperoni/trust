@@ -63,8 +63,8 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
 
   return (
     <aside className="w-64 bg-white dark:bg-[#161e27] border-r border-slate-200 dark:border-slate-800 flex flex-col hidden md:flex shrink-0">
-      <div className="h-20 flex items-center justify-center px-6 border-b border-slate-100 dark:border-slate-800">
-        <BrandLogo size="lg" className="w-full justify-center scale-[1.3]" />
+      <div className="h-20 flex items-center justify-start px-6 border-b border-slate-100 dark:border-slate-800">
+        <BrandLogo size="lg" className="justify-start scale-[1.3]" />
       </div>
       <nav className="flex-1 overflow-y-auto py-6 flex flex-col gap-1">
         {visibleNavItems.map((item) => {
