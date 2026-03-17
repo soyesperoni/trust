@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'src/screens/login_screen.dart';
@@ -209,22 +210,130 @@ class _TrustAppState extends State<TrustApp> {
   }
 }
 
-class TrustSplashScreen extends StatelessWidget {
+class TrustSplashScreen extends StatefulWidget {
   const TrustSplashScreen({super.key});
 
   @override
+  State<TrustSplashScreen> createState() => _TrustSplashScreenState();
+}
+
+class _TrustSplashScreenState extends State<TrustSplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.black,
-      body: Center(
-        child: Text(
-          'trust',
-          style: GoogleFonts.poppins(
-            color: AppColors.primary,
-            fontSize: 54,
-            fontWeight: FontWeight.bold,
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final progress = _controller.value;
+        final pulse = 1 + (0.08 * (0.5 - (progress - 0.5).abs()) * 2);
+
+        return Scaffold(
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF0B0F1A), Color(0xFF151D2E), Color(0xFF1F2B46)],
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -60 + (30 * progress),
+                  right: -30,
+                  child: _glowBubble(180, AppColors.yellow.withValues(alpha: 0.12)),
+                ),
+                Positioned(
+                  bottom: -80 + (25 * (1 - progress)),
+                  left: -40,
+                  child: _glowBubble(220, const Color(0xFF60A5FA).withValues(alpha: 0.13)),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Transform.scale(
+                        scale: pulse,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Transform.rotate(
+                              angle: progress * 6.28,
+                              child: Container(
+                                width: 118,
+                                height: 118,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: AppColors.yellow.withValues(alpha: 0.35),
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SvgPicture.asset(
+                              'assets/icon/trust_logo.svg',
+                              height: 64,
+                              colorFilter: const ColorFilter.mode(
+                                Colors.white,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Bienvenido a Trust',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Preparando tu experiencia...',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _glowBubble(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
       ),
     );
   }
