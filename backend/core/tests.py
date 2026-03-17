@@ -581,7 +581,7 @@ class AuditApiTests(TestCase):
             data=json.dumps(
                 {
                     "name": "Checklist Cocina",
-                    "schema": {"questions": [{"id": 1, "label": "Orden"}]},
+                    "schema": {"questions": [{"id": 1, "label": "Orden", "response_type": "yes_no"}]},
                 }
             ),
             content_type="application/json",
@@ -610,9 +610,57 @@ class AuditApiTests(TestCase):
         payload = audit_response.json()
         self.assertEqual(payload["form_id"], form_id)
         self.assertEqual(payload["form_name"], "Checklist Cocina")
-        self.assertEqual(payload["form_schema"], {"questions": [{"id": 1, "label": "Orden"}]})
+        self.assertEqual(payload["form_schema"]["questions"][0]["label"], "Orden")
+        self.assertEqual(payload["form_schema"]["questions"][0]["response_type"], "yes_no")
+        self.assertEqual(payload["form_schema"]["questions"][0]["question_weight"], 100)
         self.assertEqual(payload["area_id"], self.area.id)
         self.assertEqual(payload["inspector_id"], self.inspector.id)
+
+    def test_audit_form_defaults_question_weight_and_yes_no_scores(self):
+        response = self.client.post(
+            "/api/audits/forms/",
+            data=json.dumps(
+                {
+                    "name": "Checklist ponderado",
+                    "schema": {
+                        "questions": [
+                            {"label": "Orden", "response_type": "yes_no"},
+                            {"label": "Limpieza", "response_type": "yes_no"},
+                        ]
+                    },
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        questions = payload["schema"]["questions"]
+        self.assertEqual(questions[0]["question_weight"], 50)
+        self.assertEqual(questions[1]["question_weight"], 50)
+        self.assertEqual(questions[0]["response_scores"], {"yes": 100, "no": 0, "not_applicable": 0})
+
+    def test_audit_form_rejects_question_weight_sum_over_100(self):
+        response = self.client.post(
+            "/api/audits/forms/",
+            data=json.dumps(
+                {
+                    "name": "Checklist inválido",
+                    "schema": {
+                        "questions": [
+                            {"label": "Orden", "response_type": "yes_no", "question_weight": 70},
+                            {"label": "Limpieza", "response_type": "yes_no", "question_weight": 40},
+                        ]
+                    },
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("no puede superar el 100%", response.json()["error"])
 
     def test_audit_keeps_form_snapshot_after_template_changes(self):
         form = AuditForm.objects.create(

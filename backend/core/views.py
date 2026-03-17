@@ -414,6 +414,8 @@ def _extract_audit_answers(report: dict) -> list[dict[str, str]]:
             "pregunta": str(answer.get("label") or "").strip(),
             "respuesta": str(answer.get("value") or "").strip(),
             "tipo": str(answer.get("response_type") or "").strip(),
+            "question_weight": answer.get("question_weight"),
+            "response_scores": answer.get("response_scores"),
         })
     return normalized
 
@@ -430,17 +432,36 @@ def _fallback_audit_ai_analysis(report: dict) -> dict:
 
     positive = {"si", "sí", "ok", "cumple", "conforme", "aprobado"}
     negative = {"no", "incumple", "falla", "no cumple", "no conforme", "rechazado"}
-    score_pool = 0
+    schema_questions = ((report.get("form") or {}).get("schema") or {}).get("questions") or []
+    question_map = {
+        str(item.get("label") or "").strip().lower(): item
+        for item in schema_questions
+        if isinstance(item, dict)
+    }
+
+    score_pool = 0.0
     for item in answers:
         value = item["respuesta"].lower()
-        if any(token in value for token in positive):
-            score_pool += 1
-        elif any(token in value for token in negative):
-            score_pool += 0
-        else:
-            score_pool += 0.5
+        question = question_map.get(item["pregunta"].lower(), {})
 
-    score = round((score_pool / max(len(answers), 1)) * 100)
+        try:
+            question_weight = float(question.get("question_weight", 0))
+        except (TypeError, ValueError):
+            question_weight = 0
+
+        response_scores = question.get("response_scores") if isinstance(question.get("response_scores"), dict) else {}
+        if any(token in value for token in positive):
+            ratio = float(response_scores.get("yes", 100)) / 100
+        elif value in {"no aplica", "n/a", "na"}:
+            ratio = float(response_scores.get("not_applicable", 0)) / 100
+        elif any(token in value for token in negative):
+            ratio = float(response_scores.get("no", 0)) / 100
+        else:
+            ratio = 0.5
+
+        score_pool += question_weight * ratio
+
+    score = round(max(0, min(100, score_pool)))
     if score >= 80:
         rating = "alto cumplimiento"
     elif score >= 60:
@@ -1050,6 +1071,10 @@ def _validate_template_schema(schema: Any) -> tuple[dict[str, Any] | None, str |
         return None, "Las preguntas de la plantilla deben enviarse como una lista."
 
     allowed_types = {"yes_no", "number", "text"}
+    total_questions = len(questions)
+    default_question_weight = (100 / total_questions) if total_questions > 0 else 0
+    total_weight = 0.0
+
     for index, question in enumerate(questions, start=1):
         if not isinstance(question, dict):
             return None, f"La pregunta #{index} no tiene formato válido."
@@ -1062,15 +1087,52 @@ def _validate_template_schema(schema: Any) -> tuple[dict[str, Any] | None, str |
         if response_type not in allowed_types:
             return None, f"La pregunta #{index} tiene un tipo de respuesta inválido."
 
+        raw_question_weight = question.get("question_weight")
+        if raw_question_weight in (None, ""):
+            question_weight = default_question_weight
+        else:
+            try:
+                question_weight = float(raw_question_weight)
+            except (TypeError, ValueError):
+                return None, f"La pregunta #{index} debe incluir un porcentaje ponderado válido."
+
+        if question_weight < 0 or question_weight > 100:
+            return None, f"La pregunta #{index} debe tener un porcentaje ponderado entre 0 y 100."
+
+        question["question_weight"] = round(question_weight, 2)
+        total_weight += question_weight
+
         if response_type == "yes_no":
             options = question.get("options")
             if options is None:
-                question["options"] = ["Sí", "No"]
+                question["options"] = ["Sí", "No", "No aplica"]
             elif not isinstance(options, list) or len(options) < 2:
                 return None, f"La pregunta #{index} debe incluir al menos 2 respuestas posibles."
 
+            response_scores = question.get("response_scores")
+            if response_scores is None:
+                response_scores = {"yes": 100, "no": 0, "not_applicable": 0}
+            elif not isinstance(response_scores, dict):
+                return None, f"La pregunta #{index} debe incluir porcentajes válidos para Sí/No/No aplica."
+
+            normalized_scores: dict[str, float] = {}
+            for key in ("yes", "no", "not_applicable"):
+                raw_score = response_scores.get(key, 0)
+                try:
+                    parsed_score = float(raw_score)
+                except (TypeError, ValueError):
+                    return None, f"La pregunta #{index} tiene un valor inválido para '{key}'."
+                if parsed_score < 0 or parsed_score > 100:
+                    return None, f"La pregunta #{index} tiene un porcentaje fuera de rango para '{key}'."
+                normalized_scores[key] = round(parsed_score, 2)
+
+            question["response_scores"] = normalized_scores
+
         question["requires_image_evidence"] = _is_truthy(question.get("requires_image_evidence"))
         question["required"] = _is_truthy(question.get("required", True))
+
+    if total_weight > 100.0001:
+        return None, "La suma de porcentajes ponderados de la plantilla no puede superar el 100%."
 
     schema["questions"] = questions
     return schema, None
