@@ -131,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Center(
                           child: Image.asset(
                             'assets/icon/trust_logo_s.png',
-                            height: 64,
+                            height: 83.2,
                           ),
                         ),
                         const SizedBox(height: 14),
