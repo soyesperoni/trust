@@ -7,7 +7,6 @@ import '../../models/user_role.dart';
 import '../../models/visit.dart';
 import '../../models/audit.dart';
 import '../../services/trust_repository.dart';
-import '../../widgets/visit_summary_card.dart';
 import '../../theme/app_colors.dart';
 import '../audits/start_audit_screen.dart';
 
@@ -15,13 +14,11 @@ class DashboardTab extends StatefulWidget {
   const DashboardTab({
     required this.email,
     required this.role,
-    required this.onViewMoreTodayVisits,
     super.key,
   });
 
   final String email;
   final UserRole role;
-  final VoidCallback onViewMoreTodayVisits;
 
   @override
   State<DashboardTab> createState() => _DashboardTabState();
@@ -65,106 +62,68 @@ class _DashboardTabState extends State<DashboardTab> {
     }
 
     final payload = _payload!;
+    final chartValues = _buildChartValues(payload);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: ListView(
         children: [
+          Text(
+            'Rendimiento de Auditorías',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _AuditScoreCard(payload: payload),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: _MetricCard(
                   label: 'Visitas Pendientes',
                   value: payload.stats.pendingVisits,
-                  cardColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFFFEDD5),
+                  cardColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : AppColors.primarySoft,
                 ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: _MetricCard(
-                  label: 'Incidencias',
-                  value: payload.stats.incidents,
-                  cardColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFFEE2E2),
+                  label: 'Auditorías Pendientes',
+                  value: payload.pendingAudits,
+                  cardColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : AppColors.secondarySoft,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _MetricCard(
-                  label: 'Auditorías Pendientes',
-                  value: payload.pendingAudits,
-                  cardColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFECFEFF),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: SizedBox(
-                  height: 120,
-                  child: FilledButton.icon(
-                    onPressed: widget.role.isInspector ? _openStartAuditFlow : null,
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('Auditar'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.yellow,
-                      foregroundColor: Colors.black,
-                      disabledBackgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFE5E7EB),
-                      disabledForegroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
-                      textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          _MetricCard(
+            label: 'Incidencias Activas',
+            value: payload.stats.incidents,
+            cardColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFE9F7E2),
           ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Visitas de Hoy',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+          const SizedBox(height: 20),
+          _MiniBarChart(values: chartValues),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 120,
+            child: FilledButton.icon(
+              onPressed: widget.role.isInspector ? _openStartAuditFlow : null,
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('Iniciar Auditoría'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFE5E7EB),
+                disabledForegroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
+                textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
               ),
-              TextButton(
-                onPressed: widget.onViewMoreTodayVisits,
-                style: TextButton.styleFrom(
-                  backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0x1FFACC15) : const Color(0xFFFFFDE7),
-                  foregroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFDE68A) : const Color(0xFFB45309),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-                child: const Text('Ver más'),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: payload.todayVisits.isEmpty
-                ? const _EmptyVisits()
-                : ListView.builder(
-                    itemCount: payload.todayVisits.length,
-                    itemBuilder: (context, index) {
-                      final visit = payload.todayVisits[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _VisitCard(
-                          visit: visit,
-                          role: widget.role,
-                          email: widget.email,
-                          onVisitCompleted: () => _refreshData(),
-                        ),
-                      );
-                    },
-                  ),
-          ),
+          const SizedBox(height: 4),
         ],
       ),
     );
@@ -228,6 +187,32 @@ class _DashboardTabState extends State<DashboardTab> {
 
   int _countPendingAudits(List<Audit> audits) {
     return audits.where((audit) => audit.status.toLowerCase() == 'scheduled').length;
+  }
+
+  List<double> _buildChartValues(_DashboardPayload payload) {
+    final completedAudits = (payload.stats.totalAudits - payload.pendingAudits).clamp(0, 9999);
+    final completedVisits = (payload.stats.totalVisits - payload.stats.pendingVisits).clamp(0, 9999);
+    final todayVisits = payload.todayVisits.length;
+    final incidents = payload.stats.incidents;
+    final maxValue = [
+      completedAudits.toDouble(),
+      completedVisits.toDouble(),
+      todayVisits.toDouble(),
+      incidents.toDouble(),
+      payload.pendingAudits.toDouble(),
+    ].reduce((a, b) => a > b ? a : b);
+
+    if (maxValue <= 0) {
+      return const [0.35, 0.48, 0.4, 0.3, 0.45];
+    }
+
+    return [
+      (completedAudits / maxValue).toDouble(),
+      (completedVisits / maxValue).toDouble(),
+      (todayVisits / maxValue).toDouble(),
+      (incidents / maxValue).toDouble(),
+      (payload.pendingAudits / maxValue).toDouble(),
+    ];
   }
 
   List<Visit> _pickVisits(List<Visit> visits) {
@@ -330,51 +315,234 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _VisitCard extends StatelessWidget {
-  const _VisitCard({
-    required this.visit,
-    required this.role,
-    required this.email,
-    required this.onVisitCompleted,
-  });
+class _AuditScoreCard extends StatelessWidget {
+  const _AuditScoreCard({required this.payload});
 
-  final Visit visit;
-  final UserRole role;
-  final String email;
-  final VoidCallback onVisitCompleted;
+  final _DashboardPayload payload;
 
   @override
   Widget build(BuildContext context) {
-    return VisitSummaryCard(
-      visit: visit,
-      role: role,
-      email: email,
-      onVisitCompleted: onVisitCompleted,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final completedAudits = (payload.stats.totalAudits - payload.pendingAudits).clamp(0, 9999);
+    final score = payload.stats.totalAudits == 0
+        ? 0
+        : ((completedAudits / payload.stats.totalAudits) * 100).round();
+    final secondaryValue = payload.stats.totalAudits == 0 ? 0 : (100 - score).clamp(0, 100);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? AppColors.darkCardBorder : const Color(0xFFE8EBFF),
+        ),
+        boxShadow: isDark ? null : const [BoxShadow(color: Color(0x12000000), blurRadius: 20, offset: Offset(0, 8))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Score General',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.darkMuted : const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$score%',
+                style: TextStyle(
+                  fontSize: 42,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                  color: isDark ? Colors.white : AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'cumplimiento',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: isDark ? AppColors.darkMuted : const Color(0xFF64748B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 12,
+              value: score / 100,
+              backgroundColor: isDark ? const Color(0xFF22303E) : const Color(0xFFDDE6FF),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _ScoreChip(
+                  label: 'Auditorías cerradas',
+                  value: completedAudits,
+                  chipColor: isDark ? const Color(0xFF1C2B44) : const Color(0xFFE8EEFF),
+                  valueColor: isDark ? Colors.white : AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ScoreChip(
+                  label: 'Pendientes',
+                  value: payload.pendingAudits,
+                  chipColor: isDark ? const Color(0xFF2A3A21) : const Color(0xFFE9F7E2),
+                  valueColor: isDark ? const Color(0xFFC9E39A) : AppColors.secondaryDark,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ScoreChip(
+                  label: 'Brecha',
+                  value: secondaryValue,
+                  suffix: '%',
+                  chipColor: isDark ? const Color(0xFF312345) : const Color(0xFFF1E8FF),
+                  valueColor: isDark ? const Color(0xFFDDC6FF) : AppColors.primaryDark,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _EmptyVisits extends StatelessWidget {
-  const _EmptyVisits();
+class _ScoreChip extends StatelessWidget {
+  const _ScoreChip({
+    required this.label,
+    required this.value,
+    required this.chipColor,
+    required this.valueColor,
+    this.suffix = '',
+  });
+
+  final String label;
+  final int value;
+  final Color chipColor;
+  final Color valueColor;
+  final String suffix;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(color: chipColor, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$value$suffix',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: valueColor,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniBarChart extends StatelessWidget {
+  const _MiniBarChart({required this.values});
+
+  final List<double> values;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const labels = ['Cerradas', 'Visitas OK', 'Hoy', 'Incidencias', 'Pend.'];
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(20),
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : Colors.transparent,
+          color: isDark ? AppColors.darkCardBorder : const Color(0xFFE8EBFF),
         ),
       ),
-      child: Text(
-        'No hay visitas para mostrar por ahora.',
-        style: TextStyle(
-          color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
-          fontSize: 14,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Actividad dinámica',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 140,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(values.length, (index) {
+                final value = values[index].clamp(0.08, 1.0);
+                final barColor = index.isEven ? AppColors.primary : AppColors.secondary;
+
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 650),
+                          curve: Curves.easeOutBack,
+                          height: 110 * value,
+                          decoration: BoxDecoration(
+                            color: barColor,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          labels[index],
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.darkMuted : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
       ),
     );
   }
