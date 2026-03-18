@@ -27,6 +27,7 @@ class _VisitsTabState extends State<VisitsTab> {
 
   Timer? _refreshTimer;
   _VisitFilter _selectedFilter = _VisitFilter.all;
+  _HistoryTypeFilter _selectedTypeFilter = _HistoryTypeFilter.all;
   List<Visit> _visits = const [];
   List<Audit> _audits = const [];
   Object? _error;
@@ -68,7 +69,9 @@ class _VisitsTabState extends State<VisitsTab> {
         _HistoryHeader(
           searchController: _searchController,
           selectedFilter: _selectedFilter,
+          selectedTypeFilter: _selectedTypeFilter,
           onFilterChanged: (filter) => setState(() => _selectedFilter = filter),
+          onTypeFilterChanged: (filter) => setState(() => _selectedTypeFilter = filter),
           onSearchChanged: (_) => setState(() {}),
           onResetSearch: () {
             _searchController.clear();
@@ -89,7 +92,7 @@ class _VisitsTabState extends State<VisitsTab> {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                   children: [
-                    if (filteredVisits.isNotEmpty) ...[
+                    if (_selectedTypeFilter != _HistoryTypeFilter.audits && filteredVisits.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.only(bottom: 8),
                         child: Text('Visitas', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -103,7 +106,7 @@ class _VisitsTabState extends State<VisitsTab> {
                             ),
                           )),
                     ],
-                    if (filteredAudits.isNotEmpty) ...[
+                    if (_selectedTypeFilter != _HistoryTypeFilter.visits && filteredAudits.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.only(bottom: 8),
                         child: Text('Auditorías', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -153,6 +156,9 @@ class _VisitsTabState extends State<VisitsTab> {
   }
 
   List<Visit> _applyFilters(List<Visit> visits) {
+    if (_selectedTypeFilter == _HistoryTypeFilter.audits) {
+      return const [];
+    }
     final normalizedQuery = _searchController.text.trim().toLowerCase();
 
     return visits.where((visit) {
@@ -180,8 +186,10 @@ class _VisitsTabState extends State<VisitsTab> {
     }).toList();
   }
 
-
   List<Audit> _applyAuditFilters(List<Audit> audits) {
+    if (_selectedTypeFilter == _HistoryTypeFilter.visits) {
+      return const [];
+    }
     final normalizedQuery = _searchController.text.trim().toLowerCase();
 
     return audits.where((audit) {
@@ -219,14 +227,18 @@ class _HistoryHeader extends StatelessWidget {
   const _HistoryHeader({
     required this.searchController,
     required this.selectedFilter,
+    required this.selectedTypeFilter,
     required this.onFilterChanged,
+    required this.onTypeFilterChanged,
     required this.onSearchChanged,
     required this.onResetSearch,
   });
 
   final TextEditingController searchController;
   final _VisitFilter selectedFilter;
+  final _HistoryTypeFilter selectedTypeFilter;
   final ValueChanged<_VisitFilter> onFilterChanged;
+  final ValueChanged<_HistoryTypeFilter> onTypeFilterChanged;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onResetSearch;
 
@@ -277,6 +289,36 @@ class _HistoryHeader extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Row(
+            children: _HistoryTypeFilter.values
+                .map(
+                  (filter) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(filter.label),
+                      selected: selectedTypeFilter == filter,
+                      showCheckmark: false,
+                      selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.black,
+                      backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
+                      side: BorderSide(
+                        color: selectedTypeFilter == filter
+                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.black)
+                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
+                      ),
+                      labelStyle: TextStyle(
+                        color: selectedTypeFilter == filter
+                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.black : Colors.white)
+                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) => onTypeFilterChanged(filter),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 10),
+          Row(
             children: _VisitFilter.values
                 .map(
                   (filter) => Padding(
@@ -317,5 +359,14 @@ enum _VisitFilter {
   completed('Finalizadas');
 
   const _VisitFilter(this.label);
+  final String label;
+}
+
+enum _HistoryTypeFilter {
+  all('Todo'),
+  visits('Visitas'),
+  audits('Auditorías');
+
+  const _HistoryTypeFilter(this.label);
   final String label;
 }
