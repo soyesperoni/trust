@@ -73,10 +73,6 @@ class _VisitsTabState extends State<VisitsTab> {
           onFilterChanged: (filter) => setState(() => _selectedFilter = filter),
           onTypeFilterChanged: (filter) => setState(() => _selectedTypeFilter = filter),
           onSearchChanged: (_) => setState(() {}),
-          onResetSearch: () {
-            _searchController.clear();
-            setState(() {});
-          },
         ),
         Expanded(
           child: filteredVisits.isEmpty && filteredAudits.isEmpty
@@ -235,7 +231,6 @@ class _HistoryHeader extends StatelessWidget {
     required this.onFilterChanged,
     required this.onTypeFilterChanged,
     required this.onSearchChanged,
-    required this.onResetSearch,
   });
 
   final TextEditingController searchController;
@@ -244,7 +239,6 @@ class _HistoryHeader extends StatelessWidget {
   final ValueChanged<_VisitFilter> onFilterChanged;
   final ValueChanged<_HistoryTypeFilter> onTypeFilterChanged;
   final ValueChanged<String> onSearchChanged;
-  final VoidCallback onResetSearch;
 
   @override
   Widget build(BuildContext context) {
@@ -252,44 +246,28 @@ class _HistoryHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: searchController,
-                  onChanged: onSearchChanged,
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por cliente, sucursal o área...',
-                    hintStyle: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500,
-                      fontSize: 15,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500,
-                    ),
-                    filled: true,
-                    fillColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : AppColors.gray100,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(999),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                  ),
-                ),
+          TextField(
+            controller: searchController,
+            onChanged: onSearchChanged,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Buscar por cliente, sucursal o área...',
+              hintStyle: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500,
+                fontSize: 15,
               ),
-              const SizedBox(width: 10),
-              IconButton.filledTonal(
-                onPressed: onResetSearch,
-                icon: const Icon(Icons.restart_alt_rounded),
-                tooltip: 'Restaurar búsqueda',
-                style: IconButton.styleFrom(
-                  backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : AppColors.gray100,
-                  foregroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700,
-                ),
+              prefixIcon: Icon(
+                Icons.search,
+                color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500,
               ),
-            ],
+              filled: true,
+              fillColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : AppColors.gray100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(999),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            ),
           ),
           const SizedBox(height: 14),
           Row(

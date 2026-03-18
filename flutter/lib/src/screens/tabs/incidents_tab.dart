@@ -63,33 +63,30 @@ class _IncidentsTabState extends State<IncidentsTab> {
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(999),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}),
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Buscar incidencias...',
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500,
+                    fontSize: 15,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500,
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : AppColors.gray100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (_) => setState(() {}),
-                        decoration: InputDecoration(
-                          hintText: 'Buscar incidencias...',
-                          hintStyle: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
-                          ),
-                          border: InputBorder.none,
-                        ),
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFF8FAFC) : const Color(0xFF111827),
-                        ),
-                      ),
-                    ),
-                  ],
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFF8FAFC) : const Color(0xFF111827),
                 ),
               ),
             ),
