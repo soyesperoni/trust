@@ -69,9 +69,9 @@ class _DashboardTabState extends State<DashboardTab> {
         builder: (context, constraints) {
           return Column(
             children: [
-              Expanded(flex: 5, child: _AuditScoreCard(payload: payload)),
+              Expanded(flex: 4, child: _AuditScoreCard(payload: payload)),
               const SizedBox(height: 16),
-              Expanded(flex: 4, child: _MiniBarChart(items: chartItems)),
+              Expanded(flex: 5, child: _MiniBarChart(items: chartItems)),
               const SizedBox(height: 16),
               SizedBox(
                 height: 72,
@@ -212,7 +212,7 @@ class _AuditScoreCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -268,7 +268,7 @@ class _AuditScoreCard extends StatelessWidget {
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -402,7 +402,7 @@ class _MiniBarChart extends StatelessWidget {
               color: isDark ? Colors.white : AppColors.primary,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -419,27 +419,24 @@ class _MiniBarChart extends StatelessWidget {
                         Text(
                           item.count.toString(),
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
                             color: isDark ? Colors.white : AppColors.primaryDark,
+                            height: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 650),
+                          curve: Curves.easeOutBack,
+                          height: 112 * item.normalizedValue,
+                          width: 26,
+                          decoration: BoxDecoration(
+                            color: barColor,
+                            borderRadius: BorderRadius.circular(999),
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.bottomCenter,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 650),
-                              curve: Curves.easeOutBack,
-                              height: 96 * item.normalizedValue,
-                              decoration: BoxDecoration(
-                                color: barColor,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
                         Text(
                           item.label,
                           style: TextStyle(
