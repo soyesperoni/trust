@@ -55,6 +55,8 @@
 	<string>Usamos tu ubicación para funciones de la app (si aplica).</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Necesitamos acceso al micrófono para grabar evidencias en video durante la visita.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Usamos Face ID para permitir un inicio de sesión biométrico seguro.</string>
 
 </dict>
 </plist>

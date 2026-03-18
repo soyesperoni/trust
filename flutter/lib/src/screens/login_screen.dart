@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'home_screen.dart';
@@ -21,18 +24,51 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  static const _biometricEnabledKey = 'biometric_enabled';
+  static const _biometricEmailKey = 'biometric_email';
+  static const _biometricPasswordKey = 'biometric_password';
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _repository = TrustRepository();
+  final _secureStorage = const FlutterSecureStorage();
+  final _localAuth = LocalAuthentication();
 
   bool _isSubmitting = false;
+  bool _isBiometricLoading = true;
+  bool _isBiometricLoginEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricStatus();
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadBiometricStatus() async {
+    final enabled = await _secureStorage.read(key: _biometricEnabledKey);
+    final storedEmail = await _secureStorage.read(key: _biometricEmailKey);
+    final storedPassword = await _secureStorage.read(key: _biometricPasswordKey);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isBiometricLoginEnabled =
+          enabled == 'true' &&
+          (storedEmail?.isNotEmpty ?? false) &&
+          (storedPassword?.isNotEmpty ?? false);
+      _isBiometricLoading = false;
+      if (_isBiometricLoginEnabled && storedEmail != null) {
+        _emailController.text = storedEmail;
+      }
+    });
   }
 
   Future<void> _submit() async {
@@ -56,15 +92,76 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => HomeScreen(
-            email: (resolvedEmail == null || resolvedEmail.isEmpty) ? email : resolvedEmail,
-            role: resolvedRole,
-            isDarkMode: widget.isDarkMode,
-            onToggleThemeMode: widget.onToggleThemeMode,
-          ),
+      final finalEmail = (resolvedEmail == null || resolvedEmail.isEmpty) ? email : resolvedEmail;
+      await _promptEnableBiometricLoginIfNeeded(
+        email: finalEmail,
+        password: _passwordController.text,
+      );
+      if (!mounted) {
+        return;
+      }
+      _goToHome(email: finalEmail, role: resolvedRole);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Future<void> _loginWithBiometrics() async {
+    if (_isSubmitting || !_isBiometricLoginEnabled) {
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    try {
+      final canAuthenticate =
+          await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
+      if (!canAuthenticate) {
+        throw Exception('Este dispositivo no soporta autenticación biométrica.');
+      }
+
+      final didAuthenticate = await _localAuth.authenticate(
+        localizedReason: 'Usa tu Face ID o huella para iniciar sesión',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
         ),
+      );
+
+      if (!didAuthenticate) {
+        return;
+      }
+
+      final storedEmail = await _secureStorage.read(key: _biometricEmailKey);
+      final storedPassword = await _secureStorage.read(key: _biometricPasswordKey);
+      if (storedEmail == null || storedPassword == null) {
+        throw Exception('No hay credenciales biométricas guardadas.');
+      }
+
+      final response = await _repository.login(email: storedEmail, password: storedPassword);
+      final user = response['user'] as Map<String, dynamic>?;
+      final resolvedEmail = (user?['email'] as String?)?.trim();
+      final resolvedRole = UserRoleParsing.fromBackendRole(user?['role'] as String?);
+      final finalEmail =
+          (resolvedEmail == null || resolvedEmail.isEmpty) ? storedEmail : resolvedEmail;
+
+      if (!mounted) {
+        return;
+      }
+      _goToHome(email: finalEmail, role: resolvedRole);
+    } on PlatformException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'No se pudo validar tu biometría.')),
       );
     } catch (error) {
       if (!mounted) {
@@ -78,6 +175,83 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  Future<void> _promptEnableBiometricLoginIfNeeded({
+    required String email,
+    required String password,
+  }) async {
+    if (_isBiometricLoginEnabled) {
+      return;
+    }
+
+    final canAuthenticate =
+        await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
+    if (!canAuthenticate || !mounted) {
+      return;
+    }
+
+    final shouldEnable = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Activar inicio biométrico'),
+        content: const Text(
+          '¿Deseas activar el inicio de sesión con Face ID o huella para próximos accesos?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Ahora no'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Activar'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldEnable != true) {
+      return;
+    }
+
+    final didAuthenticate = await _localAuth.authenticate(
+      localizedReason: 'Confirma tu identidad para activar biometría',
+      options: const AuthenticationOptions(
+        biometricOnly: true,
+        stickyAuth: true,
+      ),
+    );
+
+    if (!didAuthenticate) {
+      return;
+    }
+
+    await _secureStorage.write(key: _biometricEnabledKey, value: 'true');
+    await _secureStorage.write(key: _biometricEmailKey, value: email);
+    await _secureStorage.write(key: _biometricPasswordKey, value: password);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _isBiometricLoginEnabled = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Inicio biométrico activado.')),
+    );
+  }
+
+  void _goToHome({required String email, required UserRole role}) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => HomeScreen(
+          email: email,
+          role: role,
+          isDarkMode: widget.isDarkMode,
+          onToggleThemeMode: widget.onToggleThemeMode,
+        ),
+      ),
+    );
   }
 
 
@@ -261,6 +435,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       )
                                     : const Text('Iniciar sesión'),
+                              ),
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                onPressed: (_isSubmitting ||
+                                        _isBiometricLoading ||
+                                        !_isBiometricLoginEnabled)
+                                    ? null
+                                    : _loginWithBiometrics,
+                                icon: const Icon(Icons.fingerprint_rounded),
+                                label: const Text('Iniciar con datos biométricos'),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(50),
+                                  textStyle: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
