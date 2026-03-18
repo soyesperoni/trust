@@ -3,4 +3,4 @@ gunicorn
 whitenoise
 Pillow
 reportlab
-svglib
+svglib==1.5.1
