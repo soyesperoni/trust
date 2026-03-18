@@ -61,43 +61,38 @@ class _DashboardTabState extends State<DashboardTab> {
     }
 
     final payload = _payload!;
-    final chartValues = _buildChartValues(payload);
+    final chartItems = _buildChartItems(payload);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-      child: ListView(
-        children: [
-          Text(
-            'Dashboard',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 14),
-          _AuditScoreCard(payload: payload),
-          const SizedBox(height: 20),
-          _MiniBarChart(values: chartValues),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 120,
-            child: FilledButton.icon(
-              onPressed: widget.role.isInspector ? _openStartAuditFlow : null,
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: const Text('Iniciar Auditoría'),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFE5E7EB),
-                disabledForegroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
-                textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
+            children: [
+              Expanded(flex: 5, child: _AuditScoreCard(payload: payload)),
+              const SizedBox(height: 16),
+              Expanded(flex: 4, child: _MiniBarChart(items: chartItems)),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 72,
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: widget.role.isInspector ? _openStartAuditFlow : null,
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Iniciar Auditoría'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : const Color(0xFFE5E7EB),
+                    disabledForegroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 4),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -160,27 +155,32 @@ class _DashboardTabState extends State<DashboardTab> {
     return audits.where((audit) => audit.status.toLowerCase() == 'scheduled').length;
   }
 
-  List<double> _buildChartValues(_DashboardPayload payload) {
+  List<_BarChartItem> _buildChartItems(_DashboardPayload payload) {
     final completedAudits = (payload.totalAudits - payload.pendingAudits).clamp(0, 9999);
     final completedVisits = (payload.stats.visits - payload.stats.pendingVisits).clamp(0, 9999);
     final incidents = payload.stats.incidents;
-    final maxValue = [
-      completedAudits.toDouble(),
-      completedVisits.toDouble(),
-      incidents.toDouble(),
-      payload.pendingAudits.toDouble(),
-    ].reduce((a, b) => a > b ? a : b);
+    final pendingAudits = payload.pendingAudits;
+
+    final rawItems = <_BarChartItem>[
+      _BarChartItem(label: 'Cerradas', count: completedAudits),
+      _BarChartItem(label: 'Visitas OK', count: completedVisits),
+      _BarChartItem(label: 'Incidencias', count: incidents),
+      _BarChartItem(label: 'Pend.', count: pendingAudits),
+    ];
+
+    final maxValue = rawItems
+        .map((item) => item.count.toDouble())
+        .reduce((a, b) => a > b ? a : b);
 
     if (maxValue <= 0) {
-      return const [0.35, 0.48, 0.4, 0.3, 0.45];
+      return rawItems
+          .map((item) => item.copyWith(normalizedValue: 0.08))
+          .toList(growable: false);
     }
 
-    return [
-      (completedAudits / maxValue).toDouble(),
-      (completedVisits / maxValue).toDouble(),
-      (incidents / maxValue).toDouble(),
-      (payload.pendingAudits / maxValue).toDouble(),
-    ];
+    return rawItems
+        .map((item) => item.copyWith(normalizedValue: (item.count / maxValue).toDouble().clamp(0.08, 1.0)))
+        .toList(growable: false);
   }
 }
 
@@ -353,18 +353,37 @@ class _ScoreChip extends StatelessWidget {
   }
 }
 
-class _MiniBarChart extends StatelessWidget {
-  const _MiniBarChart({required this.values});
+class _BarChartItem {
+  const _BarChartItem({
+    required this.label,
+    required this.count,
+    this.normalizedValue = 0.08,
+  });
 
-  final List<double> values;
+  final String label;
+  final int count;
+  final double normalizedValue;
+
+  _BarChartItem copyWith({double? normalizedValue}) {
+    return _BarChartItem(
+      label: label,
+      count: count,
+      normalizedValue: normalizedValue ?? this.normalizedValue,
+    );
+  }
+}
+
+class _MiniBarChart extends StatelessWidget {
+  const _MiniBarChart({required this.items});
+
+  final List<_BarChartItem> items;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const labels = ['Cerradas', 'Visitas OK', 'Incidencias', 'Pend.'];
-
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(22),
@@ -383,13 +402,12 @@ class _MiniBarChart extends StatelessWidget {
               color: isDark ? Colors.white : AppColors.primary,
             ),
           ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 140,
+          const SizedBox(height: 10),
+          Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(values.length, (index) {
-                final value = values[index].clamp(0.08, 1.0);
+              children: List.generate(items.length, (index) {
+                final item = items[index];
                 final barColor = index.isEven ? AppColors.primary : AppColors.secondary;
 
                 return Expanded(
@@ -398,18 +416,32 @@ class _MiniBarChart extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 650),
-                          curve: Curves.easeOutBack,
-                          height: 110 * value,
-                          decoration: BoxDecoration(
-                            color: barColor,
-                            borderRadius: BorderRadius.circular(999),
+                        Text(
+                          item.count.toString(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : AppColors.primaryDark,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 650),
+                              curve: Curves.easeOutBack,
+                              height: 96 * item.normalizedValue,
+                              decoration: BoxDecoration(
+                                color: barColor,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          labels[index],
+                          item.label,
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
