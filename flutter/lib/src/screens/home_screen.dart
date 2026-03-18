@@ -47,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
       DashboardTab(
         email: widget.email,
         role: widget.role,
-        onViewMoreTodayVisits: _openVisitsTab,
       ),
       CalendarTab(
         email: widget.email,
@@ -69,8 +68,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _incidentsRefreshTimer?.cancel();
     super.dispose();
   }
-
-  void _openVisitsTab() => setState(() => _currentIndex = 1);
 
   @override
   Widget build(BuildContext context) {
