@@ -181,6 +181,7 @@ class _DashboardTabState extends State<DashboardTab> {
     return _DashboardPayload(
       stats: stats,
       todayVisits: _pickVisits(visits),
+      totalAudits: audits.length,
       pendingAudits: _countPendingAudits(audits),
     );
   }
@@ -190,8 +191,8 @@ class _DashboardTabState extends State<DashboardTab> {
   }
 
   List<double> _buildChartValues(_DashboardPayload payload) {
-    final completedAudits = (payload.stats.totalAudits - payload.pendingAudits).clamp(0, 9999);
-    final completedVisits = (payload.stats.totalVisits - payload.stats.pendingVisits).clamp(0, 9999);
+    final completedAudits = (payload.totalAudits - payload.pendingAudits).clamp(0, 9999);
+    final completedVisits = (payload.stats.visits - payload.stats.pendingVisits).clamp(0, 9999);
     final todayVisits = payload.todayVisits.length;
     final incidents = payload.stats.incidents;
     final maxValue = [
@@ -257,11 +258,13 @@ class _DashboardPayload {
   const _DashboardPayload({
     required this.stats,
     required this.todayVisits,
+    required this.totalAudits,
     required this.pendingAudits,
   });
 
   final DashboardStats stats;
   final List<Visit> todayVisits;
+  final int totalAudits;
   final int pendingAudits;
 }
 
@@ -323,11 +326,11 @@ class _AuditScoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final completedAudits = (payload.stats.totalAudits - payload.pendingAudits).clamp(0, 9999);
-    final score = payload.stats.totalAudits == 0
+    final completedAudits = (payload.totalAudits - payload.pendingAudits).clamp(0, 9999);
+    final score = payload.totalAudits == 0
         ? 0
-        : ((completedAudits / payload.stats.totalAudits) * 100).round();
-    final secondaryValue = payload.stats.totalAudits == 0 ? 0 : (100 - score).clamp(0, 100);
+        : ((completedAudits / payload.totalAudits) * 100).round();
+    final secondaryValue = payload.totalAudits == 0 ? 0 : (100 - score).clamp(0, 100).toInt();
 
     return Container(
       width: double.infinity,
