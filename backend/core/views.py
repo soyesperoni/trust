@@ -50,6 +50,7 @@ REPORT_PAGE_PADDING = 36
 REPORT_CARD_RADIUS = 14
 REPORT_AUDIT_LOGO_URL = "https://trust.supplymax.net/trust_logo_s.svg"
 REPORT_LOGO_PATHS = [
+    Path(__file__).resolve().parents[2] / "frontend/public/trust_logo_s.png",
     Path(__file__).resolve().parents[2] / "frontend/public/trust_logo_s.svg",
     Path(__file__).resolve().parents[2] / "frontend/public/trust_logo.svg",
 ]
@@ -1020,26 +1021,26 @@ def _fetch_static_map(start_lat: float, start_lon: float, end_lat: float, end_lo
         zoom = 16
     if distance > 0.015:
         zoom = 14
+    yandex_width = min(max(int(width), 200), 650)
+    yandex_height = min(max(int(height), 120), 450)
+    primary_url = (
+        "https://static-maps.yandex.ru/1.x/?"
+        f"lang=es_ES&ll={center_lon:.6f},{center_lat:.6f}&size={yandex_width},{yandex_height}&z={zoom}&l=map"
+        f"&pt={start_lon:.6f},{start_lat:.6f},pm2gnm~{end_lon:.6f},{end_lat:.6f},pm2rdm"
+    )
     params = urlencode(
         {
             "center": f"{center_lat:.6f},{center_lon:.6f}",
             "zoom": zoom,
-            "size": f"{width}x{height}",
+            "size": f"{min(width, 1000)}x{min(height, 700)}",
             "markers": f"{start_lat:.6f},{start_lon:.6f},lightgreen1|{end_lat:.6f},{end_lon:.6f},red",
             "maptype": "mapnik",
         }
     )
-    primary_url = f"https://staticmap.openstreetmap.de/staticmap.php?{params}"
+    fallback_osm_url = f"https://staticmap.openstreetmap.de/staticmap.php?{params}"
     requests = [
         Request(primary_url, headers={"User-Agent": "trust-report-generator/1.0"}),
-        Request(
-            (
-                "https://static-maps.yandex.ru/1.x/?"
-                f"lang=es_ES&ll={center_lon:.6f},{center_lat:.6f}&size={width},{height}&z={zoom}&l=map"
-                f"&pt={start_lon:.6f},{start_lat:.6f},pm2gnm~{end_lon:.6f},{end_lat:.6f},pm2rdm"
-            ),
-            headers={"User-Agent": "trust-report-generator/1.0"},
-        ),
+        Request(fallback_osm_url, headers={"User-Agent": "trust-report-generator/1.0"}),
     ]
     for request in requests:
         try:
@@ -2660,26 +2661,36 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     pdf.drawString(56, height - 191, score_label)
 
     inspector_name = audit.inspector.get_full_name() if audit.inspector else "Sin asignar"
-    pdf.setFillColor(colors.HexColor("#334155"))
-    pdf.setFont(REPORT_FONT, 10)
-    pdf.drawString(220, height - 158, f"Cliente: {audit.area.branch.client.name}")
-    pdf.drawString(220, height - 175, f"Sucursal: {audit.area.branch.name}")
-    pdf.drawString(220, height - 192, f"Área: {audit.area.name}")
-    pdf.drawString(220, height - 209, f"Inspector: {inspector_name or (audit.inspector.username if audit.inspector else 'Sin asignar')}")
+    info_rows = [
+        ("Cliente", audit.area.branch.client.name),
+        ("Sucursal", audit.area.branch.name),
+        ("Área", audit.area.name),
+        ("Inspector", inspector_name or (audit.inspector.username if audit.inspector else "Sin asignar")),
+    ]
+    label_x = 220
+    value_x = 280
+    row_y = height - 158
+    for label, value in info_rows:
+        pdf.setFillColor(colors.HexColor("#64748b"))
+        pdf.setFont(REPORT_FONT_BOLD, 9)
+        pdf.drawString(label_x, row_y, f"{label}:")
+        pdf.setFillColor(colors.HexColor("#334155"))
+        pdf.setFont(REPORT_FONT, 10)
+        pdf.drawString(value_x, row_y, str(value)[:42])
+        row_y -= 17
 
     summary = str(ai_analysis.get("executive_summary") or "Sin resumen ejecutivo.")
-    _draw_card(pdf, 40, height - 430, width - 80, 184)
+    _draw_card(pdf, 40, height - 468, width - 80, 222)
     pdf.setFillColor(brand_text)
     pdf.setFont(REPORT_FONT_BOLD, 13)
     pdf.drawString(56, height - 250, "Resumen Ejecutivo")
     pdf.setFillColor(colors.HexColor("#334155"))
     pdf.setFont(REPORT_FONT, 10)
     summary_width = width - 120
-    summary_lines = _split_text_to_lines(pdf, summary[:1800], summary_width)
-    max_summary_lines = 9
+    summary_lines = _split_text_to_lines(pdf, summary, summary_width)
+    max_summary_lines = 13
     if len(summary_lines) > max_summary_lines:
         summary_lines = summary_lines[:max_summary_lines]
-        summary_lines[-1] = f"{summary_lines[-1][:max(0, len(summary_lines[-1]) - 3)].rstrip()}..."
     _draw_justified_lines(pdf, summary_lines, 56, height - 270, summary_width, line_height=12.8)
 
     risk_count = len([item for item in (ai_analysis.get("risks") or []) if str(item).strip()])
@@ -2689,7 +2700,7 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     completion_pct = int((answered_count / total_questions) * 100) if total_questions else 0
     score_value = max(0, min(100, int(round(score)))) if isinstance(score, (int, float)) else 0
 
-    chart_y = 242
+    chart_y = 204
     _draw_card(pdf, 40, chart_y, width - 80, 100)
     pdf.setFont(REPORT_FONT_BOLD, 12)
     pdf.setFillColor(brand_text)
@@ -2728,18 +2739,21 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     recommendations = ai_analysis.get("recommendations") if isinstance(ai_analysis.get("recommendations"), list) else []
     next_steps = ai_analysis.get("next_steps") if isinstance(ai_analysis.get("next_steps"), list) else []
     actions = [f"• {str(item)}" for item in (recommendations[:4] + next_steps[:4]) if str(item).strip()]
-    _draw_card(pdf, 40, 52, width - 80, 176)
+    _draw_card(pdf, 40, 52, width - 80, 138)
     pdf.setFillColor(brand_text)
     pdf.setFont(REPORT_FONT_BOLD, 12)
-    pdf.drawString(56, 202, "Acciones Prioritarias")
+    pdf.drawString(56, 168, "Acciones Prioritarias")
+    pdf.setFillColor(colors.HexColor("#1e3a8a"))
+    pdf.setFont(REPORT_FONT_BOLD, 9)
+    pdf.drawString(56, 152, "ENFOQUE INMEDIATO")
     pdf.setFillColor(colors.HexColor("#334155"))
-    pdf.setFont(REPORT_FONT, 10)
+    pdf.setFont(REPORT_FONT, 9.7)
     actions_text = "\n".join(actions) if actions else "• No se registraron recomendaciones accionables."
-    _draw_wrapped_text(pdf, actions_text, 56, 182, width - 120, line_height=13)
+    _draw_wrapped_text(pdf, actions_text, 56, 136, width - 120, line_height=12.4)
     _draw_report_footer(pdf, generated_at)
     pdf.showPage()
 
-    _header("Evidencia de campo y conformidad", f"Auditoría #{audit.id} · Evidencia geolocalizada y multimedia")
+    _header("Anexos de campo y conformidad", f"Auditoría #{audit.id} · Evidencia geolocalizada y multimedia")
 
     map_y_end = height - 120
     map_h = 240
@@ -2771,26 +2785,37 @@ def _build_audit_pdf(audit: Audit) -> bytes:
 
     photos = [item for item in audit.media.all() if item.media_type == AuditMedia.MediaType.PHOTO][:4]
     photo_section_y = map_y_end - map_h - 18
-    _draw_card(pdf, 40, photo_section_y - 210, 540, 210)
+    _draw_card(pdf, 40, photo_section_y - 316, 540, 316)
     pdf.setFillColor(colors.HexColor("#0f172a"))
     pdf.setFont(REPORT_FONT_BOLD, 12)
     pdf.drawString(56, photo_section_y - 24, "Evidencia multimedia")
     if photos:
         x = 56
         y = photo_section_y - 42
+        photo_w = 140
+        photo_h = 248
         for index, item in enumerate(photos):
             if index and index % 2 == 0:
                 x = 56
-                y -= 84
+                y -= (photo_h + 16)
             pdf.setFillColor(colors.HexColor("#f1f5f9"))
-            pdf.roundRect(x, y - 72, 248, 72, 8, fill=1, stroke=0)
+            pdf.roundRect(x, y - photo_h, photo_w, photo_h, 8, fill=1, stroke=0)
             try:
                 image_data = item.file.read() if hasattr(item.file, "read") else default_storage.open(item.file.name, "rb").read()
                 image = ImageReader(BytesIO(image_data))
-                pdf.drawImage(image, x + 1, y - 71, width=246, height=70, preserveAspectRatio=True, mask="auto")
+                pdf.drawImage(
+                    image,
+                    x + 1,
+                    y - photo_h + 1,
+                    width=photo_w - 2,
+                    height=photo_h - 2,
+                    preserveAspectRatio=True,
+                    mask="auto",
+                    anchor="c",
+                )
             except Exception:
                 pdf.setFillColor(colors.HexColor("#cbd5e1"))
-                pdf.roundRect(x + 1, y - 71, 246, 70, 8, fill=1, stroke=0)
+                pdf.roundRect(x + 1, y - photo_h + 1, photo_w - 2, photo_h - 2, 8, fill=1, stroke=0)
             x += 260
     else:
         pdf.setFillColor(colors.HexColor("#64748b"))
@@ -2798,7 +2823,7 @@ def _build_audit_pdf(audit: Audit) -> bytes:
         pdf.drawString(56, photo_section_y - 48, "No se registraron fotografías de evidencia.")
 
     videos = [item for item in audit.media.all() if item.media_type == AuditMedia.MediaType.VIDEO][:5]
-    base_y = photo_section_y - 154
+    base_y = photo_section_y - 284
     pdf.setFillColor(colors.HexColor("#334155"))
     pdf.setFont(REPORT_FONT_BOLD, 10)
     pdf.drawString(56, base_y, "Evidencia en video:")
@@ -2836,6 +2861,13 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     pdf.showPage()
 
     _header("Anexo técnico de respuestas", f"Auditoría #{audit.id} · Registro completo del formulario")
+    _draw_card(pdf, 40, height - 186, width - 80, 54)
+    pdf.setFillColor(colors.HexColor("#1e3a8a"))
+    pdf.setFont(REPORT_FONT_BOLD, 10)
+    pdf.drawString(56, height - 152, "Trazabilidad técnica")
+    pdf.setFillColor(colors.HexColor("#334155"))
+    pdf.setFont(REPORT_FONT, 9.5)
+    pdf.drawString(56, height - 166, "Bloques de riesgo, fortalezas y respuestas capturadas durante la auditoría.")
     y = height - 132
 
     def write_block(title: str, items: list[str], current_y: float) -> float:
