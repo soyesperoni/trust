@@ -316,6 +316,34 @@ class TrustRepository {
     return response.bodyBytes;
   }
 
+  Future<Map<String, dynamic>> loadAuditReportData({
+    required String email,
+    required int auditId,
+  }) async {
+    final auditsJson = await _apiClient.getJson('/audits/', email: email);
+    final audits = (auditsJson['results'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
+
+    final audit = audits.firstWhere(
+      (entry) => (entry['id'] as int? ?? -1) == auditId,
+      orElse: () => <String, dynamic>{},
+    );
+
+    if (audit.isEmpty) {
+      throw Exception('No se encontró la auditoría.');
+    }
+    return audit;
+  }
+
+  Future<Uint8List> downloadAuditReportPdf({
+    required String email,
+    required int auditId,
+  }) async {
+    final response = await _apiClient.getRaw('/audits/$auditId/report', email: email);
+    return response.bodyBytes;
+  }
+
 
   Future<List<Map<String, dynamic>>> loadNotifications(String email) async {
     final json = await _apiClient.getJson('/notifications/', email: email);
