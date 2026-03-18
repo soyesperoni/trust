@@ -254,6 +254,19 @@ class TrustRepository {
     return results.whereType<Map<String, dynamic>>().map(Visit.fromJson).toList(growable: false);
   }
 
+  Future<List<Audit>> loadAuditsByMonth(String email, DateTime month) async {
+    final normalizedMonth = DateTime(month.year, month.month);
+    final json = await _apiClient.getJson(
+      '/audits/',
+      email: email,
+      queryParameters: {
+        'month': '${normalizedMonth.year}-${normalizedMonth.month.toString().padLeft(2, '0')}',
+      },
+    );
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().map(Audit.fromJson).toList(growable: false);
+  }
+
   Future<VisitReportData> loadVisitReportData({
     required String email,
     required int visitId,

@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../models/audit.dart';
 import '../../models/user_role.dart';
 import '../../models/visit.dart';
 import '../../services/trust_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/audit_summary_card.dart';
 import '../../widgets/visit_summary_card.dart';
 
 class CalendarTab extends StatefulWidget {
@@ -31,6 +33,7 @@ class _CalendarTabState extends State<CalendarTab> {
 
   Timer? _refreshTimer;
   List<Visit> _visits = const <Visit>[];
+  List<Audit> _audits = const <Audit>[];
   Object? _error;
   bool _isLoading = true;
 
@@ -40,8 +43,8 @@ class _CalendarTabState extends State<CalendarTab> {
     final now = DateTime.now();
     _currentMonth = DateTime(now.year, now.month);
     _selectedDate = DateTime(now.year, now.month, now.day);
-    _refreshVisits(showLoader: true);
-    _refreshTimer = Timer.periodic(_refreshInterval, (_) => _refreshVisits());
+    _refreshCalendar(showLoader: true);
+    _refreshTimer = Timer.periodic(_refreshInterval, (_) => _refreshCalendar());
   }
 
 
@@ -59,11 +62,11 @@ class _CalendarTabState extends State<CalendarTab> {
       color: backgroundColor,
       child: Builder(
         builder: (context) {
-          if (_isLoading && _visits.isEmpty) {
+          if (_isLoading && _visits.isEmpty && _audits.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (_error != null && _visits.isEmpty) {
+          if (_error != null && _visits.isEmpty && _audits.isEmpty) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -72,17 +75,16 @@ class _CalendarTabState extends State<CalendarTab> {
             );
           }
 
-          final visits = _visits;
-          final visitsByDay = _groupVisitsByDay(visits);
-          final selectedDate = _resolveSelectedDate(visitsByDay);
-          final dayVisits = visitsByDay[_dateKey(selectedDate)] ?? const <Visit>[];
+          final eventsByDay = _groupEventsByDay(_visits, _audits);
+          final selectedDate = _resolveSelectedDate(eventsByDay);
+          final dayEvents = eventsByDay[_dateKey(selectedDate)] ?? const <_CalendarEvent>[];
 
           return Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildCalendarCard(visitsByDay, selectedDate),
+                _buildCalendarCard(eventsByDay, selectedDate),
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -103,7 +105,7 @@ class _CalendarTabState extends State<CalendarTab> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '${dayVisits.length} Eventos',
+                        '${dayEvents.length} Eventos',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -115,7 +117,7 @@ class _CalendarTabState extends State<CalendarTab> {
                 ),
                 const SizedBox(height: 14),
                 Expanded(
-                  child: dayVisits.isEmpty
+                  child: dayEvents.isEmpty
                       ? Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(18),
@@ -124,21 +126,21 @@ class _CalendarTabState extends State<CalendarTab> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            'No hay visitas programadas para este día.',
+                            'No hay visitas o auditorías programadas para este día.',
                             style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF4B5563)),
                           ),
                         )
                       : ListView.builder(
-                          itemCount: dayVisits.length,
+                          itemCount: dayEvents.length,
                           itemBuilder: (context, index) {
-                            final visit = dayVisits[index];
+                            final event = dayEvents[index];
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 14),
                               child: _ActivityCard(
-                                visit: visit,
+                                event: event,
                                 role: widget.role,
                                 email: widget.email,
-                                onVisitCompleted: () => _refreshVisits(),
+                                onVisitCompleted: () => _refreshCalendar(),
                               ),
                             );
                           },
@@ -152,7 +154,7 @@ class _CalendarTabState extends State<CalendarTab> {
     );
   }
 
-  Widget _buildCalendarCard(Map<String, List<Visit>> visitsByDay, DateTime selectedDate) {
+  Widget _buildCalendarCard(Map<String, List<_CalendarEvent>> eventsByDay, DateTime selectedDate) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const weekDays = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
     final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
@@ -236,7 +238,7 @@ class _CalendarTabState extends State<CalendarTab> {
               final day = index - leadingSlots + 1;
               final date = DateTime(_currentMonth.year, _currentMonth.month, day);
               final key = _dateKey(date);
-              final hasVisits = (visitsByDay[key] ?? const <Visit>[]).isNotEmpty;
+              final hasVisits = (eventsByDay[key] ?? const <_CalendarEvent>[]).isNotEmpty;
               return _dayChip(
                 text: '$day',
                 selected: _isSameDate(date, selectedDate),
@@ -303,18 +305,24 @@ class _CalendarTabState extends State<CalendarTab> {
   }
 
 
-  Future<void> _refreshVisits({bool showLoader = false}) async {
+  Future<void> _refreshCalendar({bool showLoader = false}) async {
     if (showLoader && mounted) {
       setState(() => _isLoading = true);
     }
 
     try {
-      final visits = await _repository.loadVisitsByMonth(widget.email, _currentMonth);
+      final results = await Future.wait<dynamic>([
+        _repository.loadVisitsByMonth(widget.email, _currentMonth),
+        _repository.loadAuditsByMonth(widget.email, _currentMonth),
+      ]);
+      final visits = results[0] as List<Visit>;
+      final audits = results[1] as List<Audit>;
       if (!mounted) {
         return;
       }
       setState(() {
         _visits = visits;
+        _audits = audits;
         _error = null;
         _isLoading = false;
       });
@@ -335,17 +343,17 @@ class _CalendarTabState extends State<CalendarTab> {
       _currentMonth = DateTime(next.year, next.month);
       _selectedDate = DateTime(_currentMonth.year, _currentMonth.month, 1);
     });
-    _refreshVisits();
+    _refreshCalendar();
   }
 
 
-  DateTime _resolveSelectedDate(Map<String, List<Visit>> visitsByDay) {
+  DateTime _resolveSelectedDate(Map<String, List<_CalendarEvent>> eventsByDay) {
     if (_selectedDate != null && _selectedDate!.year == _currentMonth.year && _selectedDate!.month == _currentMonth.month) {
       return _selectedDate!;
     }
 
-    if (visitsByDay.isNotEmpty) {
-      final earliest = visitsByDay.keys.toList()..sort();
+    if (eventsByDay.isNotEmpty) {
+      final earliest = eventsByDay.keys.toList()..sort();
       final day = DateTime.tryParse(earliest.first);
       if (day != null) {
         _selectedDate = day;
@@ -358,8 +366,8 @@ class _CalendarTabState extends State<CalendarTab> {
     return fallback;
   }
 
-  Map<String, List<Visit>> _groupVisitsByDay(List<Visit> visits) {
-    final grouped = <String, List<Visit>>{};
+  Map<String, List<_CalendarEvent>> _groupEventsByDay(List<Visit> visits, List<Audit> audits) {
+    final grouped = <String, List<_CalendarEvent>>{};
     for (final visit in visits) {
       final parsed = DateTime.tryParse(visit.visitedAt);
       if (parsed == null) {
@@ -367,13 +375,31 @@ class _CalendarTabState extends State<CalendarTab> {
       }
       final localDate = parsed.toLocal();
       final key = _dateKey(localDate);
-      grouped.putIfAbsent(key, () => []).add(visit);
+      grouped.putIfAbsent(key, () => []).add(_CalendarEvent.fromVisit(visit, localDate));
+    }
+
+    for (final audit in audits) {
+      if (!_isScheduledAudit(audit)) {
+        continue;
+      }
+      final parsed = DateTime.tryParse(audit.auditedAt);
+      if (parsed == null) {
+        continue;
+      }
+      final localDate = parsed.toLocal();
+      final key = _dateKey(localDate);
+      grouped.putIfAbsent(key, () => []).add(_CalendarEvent.fromAudit(audit, localDate));
     }
 
     for (final entry in grouped.entries) {
-      entry.value.sort((a, b) => a.visitedAt.compareTo(b.visitedAt));
+      entry.value.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
     }
     return grouped;
+  }
+
+  bool _isScheduledAudit(Audit audit) {
+    final status = audit.status.toLowerCase().trim();
+    return status == 'scheduled' || status == 'programada';
   }
 
   bool _isSameDate(DateTime first, DateTime second) {
@@ -407,24 +433,52 @@ class _CalendarTabState extends State<CalendarTab> {
 
 class _ActivityCard extends StatelessWidget {
   const _ActivityCard({
-    required this.visit,
+    required this.event,
     required this.role,
     required this.email,
     required this.onVisitCompleted,
   });
 
-  final Visit visit;
+  final _CalendarEvent event;
   final UserRole role;
   final String email;
   final VoidCallback onVisitCompleted;
 
   @override
   Widget build(BuildContext context) {
-    return VisitSummaryCard(
-      visit: visit,
+    if (event.visit != null) {
+      return VisitSummaryCard(
+        visit: event.visit!,
+        role: role,
+        email: email,
+        onVisitCompleted: onVisitCompleted,
+      );
+    }
+
+    return AuditSummaryCard(
+      audit: event.audit!,
       role: role,
       email: email,
-      onVisitCompleted: onVisitCompleted,
     );
   }
+}
+
+class _CalendarEvent {
+  const _CalendarEvent._({
+    required this.scheduledAt,
+    this.visit,
+    this.audit,
+  });
+
+  factory _CalendarEvent.fromVisit(Visit visit, DateTime scheduledAt) {
+    return _CalendarEvent._(visit: visit, scheduledAt: scheduledAt);
+  }
+
+  factory _CalendarEvent.fromAudit(Audit audit, DateTime scheduledAt) {
+    return _CalendarEvent._(audit: audit, scheduledAt: scheduledAt);
+  }
+
+  final DateTime scheduledAt;
+  final Visit? visit;
+  final Audit? audit;
 }
