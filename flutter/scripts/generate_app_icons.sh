@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FLUTTER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-ICON_PATH="$FLUTTER_DIR/assets/icon/logot.png"
+ICON_PATH="$FLUTTER_DIR/assets/icon/icono_app.png"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "❌ Error: Flutter no está instalado o no está en el PATH."
@@ -21,7 +21,7 @@ cd "$FLUTTER_DIR"
 echo "🔄 Ejecutando flutter pub get..."
 flutter pub get
 
-echo "🎨 Generando íconos de launcher usando assets/icon/logot.png..."
+echo "🎨 Generando íconos de launcher usando assets/icon/icono_app.png..."
 flutter pub run flutter_launcher_icons
 
 echo "✅ Íconos generados correctamente para Android e iOS."

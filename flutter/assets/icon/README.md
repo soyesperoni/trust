@@ -11,7 +11,7 @@ Por compatibilidad del flujo de revisión, **no se versionan cambios binarios** 
    cd flutter
    python tools/generate_app_icon.py
    ```
-2. Generar los iconos de plataforma desde `assets/icon/app_icon.png`:
+2. Generar los iconos de plataforma desde `assets/icon/icono_app.png`:
    ```bash
    flutter pub get
    flutter pub run flutter_launcher_icons
