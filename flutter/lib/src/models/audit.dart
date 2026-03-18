@@ -9,6 +9,7 @@ class Audit {
     required this.status,
     required this.formName,
     required this.formSchema,
+    required this.auditReport,
   });
 
   final int id;
@@ -20,6 +21,7 @@ class Audit {
   final String status;
   final String formName;
   final Map<String, dynamic> formSchema;
+  final Map<String, dynamic> auditReport;
 
   factory Audit.fromJson(Map<String, dynamic> json) {
     return Audit(
@@ -33,6 +35,9 @@ class Audit {
       formName: json['form_name'] as String? ?? (json['form'] as String? ?? 'Sin plantilla'),
       formSchema: json['form_schema'] is Map<String, dynamic>
           ? json['form_schema'] as Map<String, dynamic>
+          : const <String, dynamic>{},
+      auditReport: json['audit_report'] is Map<String, dynamic>
+          ? json['audit_report'] as Map<String, dynamic>
           : const <String, dynamic>{},
     );
   }

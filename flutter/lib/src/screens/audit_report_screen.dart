@@ -107,6 +107,14 @@ class _AuditReportScreenState extends State<AuditReportScreen> {
 
     final audit = _audit!;
     final report = (audit['audit_report'] as Map<String, dynamic>?) ?? const {};
+    final aiAnalysis = (report['ai_analysis'] as Map<String, dynamic>?) ?? const {};
+    final score = _resolveScore(report, aiAnalysis);
+    final scoreLabel = _scoreLabel(score);
+    final scoreColor = _scoreColor(score);
+    final recommendations = (aiAnalysis['recommendations'] as List<dynamic>? ?? const [])
+        .map((item) => '$item'.trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
     final answers = (report['answers'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .toList(growable: false);
@@ -147,6 +155,70 @@ class _AuditReportScreenState extends State<AuditReportScreen> {
                   _chip('Área', '${audit['area'] ?? 'Sin área'}'),
                   _chip('Inspector', '${audit['inspector'] ?? 'Sin inspector'}'),
                   _chip('Estado', (audit['status'] as String? ?? '').contains('completed') ? 'Finalizada' : 'Programada'),
+                  _chip('Score', score == null ? 'Sin score' : '$score%'),
+                ],
+              ),
+            ),
+            _section(
+              title: 'Trust AI',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Análisis automático del desempeño y riesgos de la auditoría.',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _trustAiMetric(
+                          title: 'Score',
+                          value: score == null ? 'Sin score' : '$score%',
+                          valueColor: scoreColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _trustAiMetric(
+                          title: 'Estado operativo',
+                          value: scoreLabel,
+                          valueColor: scoreColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      minHeight: 8,
+                      value: score == null ? 0 : score / 100,
+                      backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                      valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text('${aiAnalysis['executive_summary'] ?? 'Sin informe ejecutivo generado por Trust AI.'}'),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Impacto al negocio: ${aiAnalysis['business_impact'] ?? 'Sin evaluación registrada.'}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (recommendations.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Recomendaciones',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 6),
+                    ...recommendations.take(3).map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text('• $item'),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -225,6 +297,43 @@ class _AuditReportScreenState extends State<AuditReportScreen> {
           height: 120,
           fit: BoxFit.contain,
         ),
+      ),
+    );
+  }
+
+  Widget _trustAiMetric({
+    required String title,
+    required String value,
+    required Color valueColor,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: valueColor,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -388,6 +497,38 @@ class _AuditReportScreenState extends State<AuditReportScreen> {
   bool _isVideoMedia(Map<String, dynamic> entry) {
     final mediaType = (entry['type'] as String? ?? '').toLowerCase();
     return mediaType == 'video';
+  }
+
+  int? _resolveScore(Map<String, dynamic> report, Map<String, dynamic> aiAnalysis) {
+    num? rawScore;
+    if (aiAnalysis['score'] is num) {
+      rawScore = aiAnalysis['score'] as num;
+    } else if (report['score'] is num) {
+      rawScore = report['score'] as num;
+    } else {
+      final summary = report['summary'];
+      if (summary is Map<String, dynamic> && summary['score'] is num) {
+        rawScore = summary['score'] as num;
+      }
+    }
+
+    if (rawScore == null) return null;
+    final normalized = rawScore <= 1 ? rawScore * 100 : rawScore;
+    return normalized.round().clamp(0, 100) as int;
+  }
+
+  String _scoreLabel(int? score) {
+    if (score == null) return 'Sin score';
+    if (score >= 80) return 'Salud operativa alta';
+    if (score >= 60) return 'Atención prioritaria';
+    return 'Riesgo crítico';
+  }
+
+  Color _scoreColor(int? score) {
+    if (score == null) return const Color(0xFF94A3B8);
+    if (score >= 80) return const Color(0xFF22C55E);
+    if (score >= 60) return const Color(0xFFF59E0B);
+    return const Color(0xFFEF4444);
   }
 }
 

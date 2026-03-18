@@ -23,6 +23,9 @@ class AuditSummaryCard extends StatelessWidget {
     final borderColor = isDark ? AppColors.darkCardBorder : const Color(0xFFE5E7EB);
     final titleColor = isDark ? const Color(0xFFF8FAFC) : const Color(0xFF111827);
     final mutedColor = isDark ? AppColors.darkMuted : const Color(0xFF6B7280);
+    final score = _resolveScore(audit.auditReport);
+    final scoreLabel = _scoreLabel(score);
+    final scoreColor = _scoreColor(score, isDark);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -72,6 +75,10 @@ class AuditSummaryCard extends StatelessWidget {
           _infoRow(context, Icons.storefront_outlined, 'Sucursal: ${audit.branch}'),
           const SizedBox(height: 8),
           _infoRow(context, Icons.place_outlined, 'Área: ${audit.area}'),
+          if (score != null) ...[
+            const SizedBox(height: 8),
+            _infoRow(context, Icons.auto_awesome_rounded, 'Score Trust AI: $score%'),
+          ],
           const SizedBox(height: 12),
           Divider(height: 1, color: borderColor),
           const SizedBox(height: 12),
@@ -84,6 +91,17 @@ class AuditSummaryCard extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+            if (score != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Estado Trust AI: $scoreLabel',
+                style: TextStyle(
+                  color: scoreColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             Row(
               children: [
@@ -197,6 +215,47 @@ class AuditSummaryCard extends StatelessWidget {
       foreground: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
       isCompleted: false,
     );
+  }
+
+  int? _resolveScore(Map<String, dynamic> report) {
+    num? rawScore;
+    if (report['score'] is num) {
+      rawScore = report['score'] as num;
+    } else {
+      final aiAnalysis = report['ai_analysis'];
+      if (aiAnalysis is Map<String, dynamic> && aiAnalysis['score'] is num) {
+        rawScore = aiAnalysis['score'] as num;
+      } else {
+        final summary = report['summary'];
+        if (summary is Map<String, dynamic> && summary['score'] is num) {
+          rawScore = summary['score'] as num;
+        }
+      }
+    }
+
+    if (rawScore == null) return null;
+    final normalized = rawScore <= 1 ? rawScore * 100 : rawScore;
+    return normalized.round().clamp(0, 100) as int;
+  }
+
+  String _scoreLabel(int? score) {
+    if (score == null) return 'Sin score';
+    if (score >= 80) return 'Salud operativa alta';
+    if (score >= 60) return 'Atención prioritaria';
+    return 'Riesgo crítico';
+  }
+
+  Color _scoreColor(int? score, bool isDark) {
+    if (score == null) {
+      return isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    }
+    if (score >= 80) {
+      return isDark ? const Color(0xFF86EFAC) : const Color(0xFF15803D);
+    }
+    if (score >= 60) {
+      return isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309);
+    }
+    return isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C);
   }
 }
 
