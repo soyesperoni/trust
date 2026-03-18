@@ -3,3 +3,4 @@ gunicorn
 whitenoise
 Pillow
 reportlab
+svglib

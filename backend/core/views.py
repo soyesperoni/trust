@@ -5,6 +5,7 @@ from functools import lru_cache
 from django.db import IntegrityError
 from datetime import datetime
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 from urllib.error import URLError
@@ -28,8 +29,16 @@ from reportlab.graphics import renderPDF
 from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, Incident, IncidentMedia, Product, User, Visit, VisitMedia
+
+
+try:
+    from svglib.svglib import svg2rlg
+except Exception:  # pragma: no cover - optional dependency
+    svg2rlg = None
 
 
 REPORT_FONT = "Helvetica"
@@ -40,6 +49,32 @@ REPORT_PUBLIC_LINK_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 REPORT_PAGE_PADDING = 36
 REPORT_CARD_RADIUS = 14
 REPORT_AUDIT_LOGO_URL = "https://trust.supplymax.net/trust_logo_s.svg"
+REPORT_LOGO_PATHS = [
+    Path(__file__).resolve().parents[2] / "frontend/public/trust_logo_s.svg",
+    Path(__file__).resolve().parents[2] / "frontend/public/trust_logo.svg",
+]
+
+
+@lru_cache(maxsize=1)
+def _initialize_report_fonts():
+    global REPORT_FONT, REPORT_FONT_BOLD, REPORT_FONT_ITALIC
+    font_candidates = [
+        ("TrustSans", "TrustSans-Bold", "TrustSans-Italic", Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"), Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"), Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf")),
+        ("TrustSans", "TrustSans-Bold", "TrustSans-Italic", Path("/usr/share/fonts/dejavu/DejaVuSans.ttf"), Path("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"), Path("/usr/share/fonts/dejavu/DejaVuSans-Oblique.ttf")),
+    ]
+    for regular_name, bold_name, italic_name, regular_path, bold_path, italic_path in font_candidates:
+        if not (regular_path.exists() and bold_path.exists() and italic_path.exists()):
+            continue
+        try:
+            pdfmetrics.registerFont(TTFont(regular_name, str(regular_path)))
+            pdfmetrics.registerFont(TTFont(bold_name, str(bold_path)))
+            pdfmetrics.registerFont(TTFont(italic_name, str(italic_path)))
+            REPORT_FONT = regular_name
+            REPORT_FONT_BOLD = bold_name
+            REPORT_FONT_ITALIC = italic_name
+            return
+        except Exception:
+            continue
 
 def _serialize_user(user: User) -> dict:
     full_name = user.get_full_name().strip()
@@ -800,9 +835,10 @@ def _draw_report_header(pdf: canvas.Canvas, visit: Visit, generated_at: datetime
     header_x = REPORT_PAGE_PADDING
     header_y = page_height - 110
 
-    pdf.setFillColor(colors.HexColor("#facc15"))
-    pdf.setFont(REPORT_FONT_BOLD, 19)
-    pdf.drawString(header_x, header_y + 48, "trust")
+    if not _draw_report_logo(pdf, header_x, header_y + 34, 120, 34):
+        pdf.setFillColor(colors.HexColor("#facc15"))
+        pdf.setFont(REPORT_FONT_BOLD, 19)
+        pdf.drawString(header_x, header_y + 48, "trust")
 
     pdf.setFillColor(colors.HexColor("#0f172a"))
     pdf.setFont(REPORT_FONT_BOLD, 24)
@@ -864,13 +900,56 @@ def _draw_wrapped_text(pdf: canvas.Canvas, text: str, x: float, y: float, width:
 
 
 @lru_cache(maxsize=1)
-def _get_audit_logo() -> ImageReader | None:
+def _get_audit_logo() -> ImageReader | Drawing | None:
+    for path in REPORT_LOGO_PATHS:
+        if not path.exists():
+            continue
+        try:
+            raw = path.read_bytes()
+            if svg2rlg and b"<svg" in raw[:500].lower():
+                drawing = svg2rlg(BytesIO(raw))
+                if drawing:
+                    return drawing
+            return ImageReader(BytesIO(raw))
+        except Exception:
+            continue
+
     try:
         request = Request(REPORT_AUDIT_LOGO_URL, headers={"User-Agent": "trust-report-generator/1.0"})
         with urlopen(request, timeout=8) as response:
-            return ImageReader(BytesIO(response.read()))
+            raw = response.read()
+            if svg2rlg and b"<svg" in raw[:500].lower():
+                drawing = svg2rlg(BytesIO(raw))
+                if drawing:
+                    return drawing
+            return ImageReader(BytesIO(raw))
     except Exception:
         return None
+
+
+def _draw_report_logo(pdf: canvas.Canvas, x: float, y: float, width: float, height: float) -> bool:
+    logo = _get_audit_logo()
+    if not logo:
+        return False
+
+    try:
+        if isinstance(logo, Drawing):
+            logo_width = max(float(getattr(logo, "width", width)), 1.0)
+            logo_height = max(float(getattr(logo, "height", height)), 1.0)
+            scale = min(width / logo_width, height / logo_height)
+            draw_width = logo_width * scale
+            draw_height = logo_height * scale
+            pdf.saveState()
+            pdf.translate(x + ((width - draw_width) / 2), y + ((height - draw_height) / 2))
+            pdf.scale(scale, scale)
+            renderPDF.draw(logo, pdf, 0, 0)
+            pdf.restoreState()
+            return True
+
+        pdf.drawImage(logo, x, y, width=width, height=height, preserveAspectRatio=True, mask="auto")
+        return True
+    except Exception:
+        return False
 
 
 def _split_text_to_lines(pdf: canvas.Canvas, text: str, width: float) -> list[str]:
@@ -1196,6 +1275,7 @@ def _draw_report_footer(pdf: canvas.Canvas, generated_at: datetime):
 
 
 def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> bytes:
+    _initialize_report_fonts()
     output = BytesIO()
     pdf = canvas.Canvas(output, pagesize=LETTER)
     generated_at = timezone.localtime()
@@ -1209,6 +1289,20 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
 
     _draw_report_footer(pdf, generated_at)
     pdf.showPage()
+
+    _draw_page_background(pdf)
+    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.setFont(REPORT_FONT_BOLD, 18)
+    pdf.drawString(REPORT_PAGE_PADDING, 742, "Anexos de visita")
+    pdf.setFillColor(colors.HexColor("#64748b"))
+    pdf.setFont(REPORT_FONT, 10)
+    pdf.drawString(REPORT_PAGE_PADDING, 726, f"Visita #{visit.id} · Evidencia geolocalizada y fotográfica")
+    y = 700
+    y = _draw_location_map(pdf, visit, y)
+    _draw_report_images(pdf, visit, y)
+    _draw_report_footer(pdf, generated_at)
+    pdf.showPage()
+
     pdf.save()
     output.seek(0)
     return output.getvalue()
@@ -2484,6 +2578,7 @@ def audit_mobile_flow(request, audit_id: int):
 
 
 def _build_audit_pdf(audit: Audit) -> bytes:
+    _initialize_report_fonts()
     output = BytesIO()
     pdf = canvas.Canvas(output, pagesize=LETTER)
     width, height = LETTER
@@ -2501,10 +2596,7 @@ def _build_audit_pdf(audit: Audit) -> bytes:
 
     def _header(title: str, subtitle: str):
         _draw_page_background(pdf)
-        logo = _get_audit_logo()
-        if logo:
-            pdf.drawImage(logo, 40, height - 72, width=112, height=30, preserveAspectRatio=True, mask="auto")
-        else:
+        if not _draw_report_logo(pdf, 40, height - 72, 112, 30):
             pdf.setFillColor(colors.HexColor("#facc15"))
             pdf.circle(54, height - 52, 12, fill=1, stroke=0)
             pdf.setFont(REPORT_FONT_BOLD, 16)
