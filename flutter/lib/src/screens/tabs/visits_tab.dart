@@ -213,13 +213,17 @@ class _VisitsTabState extends State<VisitsTab> {
   }
 
   bool _isScheduled(String status) {
-    final value = status.toLowerCase();
-    return value.contains('program') || value.contains('pend');
+    final value = _normalizeStatus(status);
+    return value.contains('scheduled') || value.contains('programad') || value.contains('pend');
   }
 
   bool _isCompleted(String status) {
-    final value = status.toLowerCase();
-    return value.contains('complet') || value.contains('final');
+    final value = _normalizeStatus(status);
+    return value.contains('completed') || value.contains('complet') || value.contains('finaliz');
+  }
+
+  String _normalizeStatus(String status) {
+    return status.trim().toLowerCase();
   }
 }
 
