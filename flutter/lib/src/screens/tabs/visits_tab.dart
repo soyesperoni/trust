@@ -301,11 +301,11 @@ class _HistoryHeader extends StatelessWidget {
                       label: Text(filter.label),
                       selected: selectedTypeFilter == filter,
                       showCheckmark: false,
-                      selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.black,
+                      selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary,
                       backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
                       side: BorderSide(
                         color: selectedTypeFilter == filter
-                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.black)
+                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary)
                             : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
                       ),
                       labelStyle: TextStyle(
@@ -331,11 +331,11 @@ class _HistoryHeader extends StatelessWidget {
                       label: Text(filter.label),
                       selected: selectedFilter == filter,
                       showCheckmark: false,
-                      selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.black,
+                      selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary,
                       backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
                       side: BorderSide(
                         color: selectedFilter == filter
-                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.black)
+                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary)
                             : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
                       ),
                       labelStyle: TextStyle(
