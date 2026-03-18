@@ -45,7 +45,7 @@ class AuditSummaryCard extends StatelessWidget {
                     Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => AuditExecutionScreen(audit: audit, email: email)));
                   },
                   icon: const Icon(Icons.play_arrow_rounded, size: 16),
-                  label: const Text('Comenzar auditoría'),
+                  label: const Text('Auditar'),
                 ),
             ],
           ),

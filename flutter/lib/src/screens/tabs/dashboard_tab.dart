@@ -107,7 +107,7 @@ class _DashboardTabState extends State<DashboardTab> {
                   child: FilledButton.icon(
                     onPressed: widget.role.isInspector ? _openStartAuditFlow : null,
                     icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('Comenzar auditoría'),
+                    label: const Text('Auditar'),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.yellow,
                       foregroundColor: Colors.black,
