@@ -145,17 +145,18 @@ class _IncidentsTabState extends State<IncidentsTab> {
                               Divider(height: 1, color: borderColor),
                               const SizedBox(height: 10),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   if (widget.role == UserRole.generalAdmin || widget.role == UserRole.inspector)
-                                    OutlinedButton(
+                                    ElevatedButton.icon(
                                       onPressed: () => _openScheduleFromIncident(incident),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppColors.primary,
-                                        side: BorderSide(color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB)),
+                                      style: ElevatedButton.styleFrom(
+                                        elevation: 0,
+                                        backgroundColor: isDark ? const Color(0xFFF8FAFC) : AppColors.primary,
+                                        foregroundColor: isDark ? AppColors.darkBackground : Colors.white,
                                         textStyle: const TextStyle(fontWeight: FontWeight.w700),
                                       ),
-                                      child: const Text('Programar visita'),
+                                      icon: const Icon(Icons.event_available_rounded, size: 18),
+                                      label: const Text('Programar visita'),
                                     ),
                                   if (widget.role == UserRole.generalAdmin || widget.role == UserRole.inspector) const SizedBox(width: 8),
                                   TextButton(
