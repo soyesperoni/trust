@@ -211,7 +211,7 @@ class _StartAuditScreenState extends State<StartAuditScreen> {
                   FilledButton.icon(
                     onPressed: (_areaId == null || _submitting) ? null : _startAudit,
                     icon: const Icon(Icons.play_arrow_rounded),
-                    label: Text(_submitting ? 'Iniciando...' : 'Comenzar auditoría'),
+                    label: Text(_submitting ? 'Iniciando...' : 'Auditar'),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.yellow,
                       foregroundColor: Colors.black,
