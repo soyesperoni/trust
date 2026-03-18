@@ -59,6 +59,22 @@ REPORT_LOGO_PATHS = [
 def _initialize_report_fonts():
     global REPORT_FONT, REPORT_FONT_BOLD, REPORT_FONT_ITALIC
     font_candidates = [
+        (
+            "Poppins",
+            "Poppins-Bold",
+            "Poppins-Italic",
+            Path("/usr/share/fonts/truetype/poppins/Poppins-Regular.ttf"),
+            Path("/usr/share/fonts/truetype/poppins/Poppins-Bold.ttf"),
+            Path("/usr/share/fonts/truetype/poppins/Poppins-Italic.ttf"),
+        ),
+        (
+            "Poppins",
+            "Poppins-Bold",
+            "Poppins-Italic",
+            Path("/usr/share/fonts/poppins/Poppins-Regular.ttf"),
+            Path("/usr/share/fonts/poppins/Poppins-Bold.ttf"),
+            Path("/usr/share/fonts/poppins/Poppins-Italic.ttf"),
+        ),
         ("TrustSans", "TrustSans-Bold", "TrustSans-Italic", Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"), Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"), Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf")),
         ("TrustSans", "TrustSans-Bold", "TrustSans-Italic", Path("/usr/share/fonts/dejavu/DejaVuSans.ttf"), Path("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"), Path("/usr/share/fonts/dejavu/DejaVuSans-Oblique.ttf")),
     ]
@@ -817,13 +833,13 @@ def _serialize_notification(item: dict[str, Any]) -> dict[str, Any]:
 
 def _draw_page_background(pdf: canvas.Canvas):
     page_width, page_height = LETTER
-    pdf.setFillColor(colors.HexColor("#f8fafc"))
+    pdf.setFillColor(colors.HexColor("#f3f6fb"))
     pdf.rect(0, 0, page_width, page_height, fill=1, stroke=0)
 
 
 def _draw_card(pdf: canvas.Canvas, x: float, y: float, width: float, height: float):
     pdf.setFillColor(colors.white)
-    pdf.setStrokeColor(colors.HexColor("#e2e8f0"))
+    pdf.setStrokeColor(colors.HexColor("#d7e2ef"))
     pdf.setLineWidth(1)
     pdf.roundRect(x, y, width, height, REPORT_CARD_RADIUS, fill=1, stroke=1)
 
@@ -1013,12 +1029,27 @@ def _fetch_static_map(start_lat: float, start_lon: float, end_lat: float, end_lo
             "maptype": "mapnik",
         }
     )
-    request = Request(
-        f"https://staticmap.openstreetmap.de/staticmap.php?{params}",
-        headers={"User-Agent": "trust-report-generator/1.0"},
-    )
-    with urlopen(request, timeout=8) as response:
-        return response.read()
+    primary_url = f"https://staticmap.openstreetmap.de/staticmap.php?{params}"
+    requests = [
+        Request(primary_url, headers={"User-Agent": "trust-report-generator/1.0"}),
+        Request(
+            (
+                "https://static-maps.yandex.ru/1.x/?"
+                f"lang=es_ES&ll={center_lon:.6f},{center_lat:.6f}&size={width},{height}&z={zoom}&l=map"
+                f"&pt={start_lon:.6f},{start_lat:.6f},pm2gnm~{end_lon:.6f},{end_lat:.6f},pm2rdm"
+            ),
+            headers={"User-Agent": "trust-report-generator/1.0"},
+        ),
+    ]
+    for request in requests:
+        try:
+            with urlopen(request, timeout=8) as response:
+                payload = response.read()
+                if payload:
+                    return payload
+        except (URLError, TimeoutError):
+            continue
+    raise URLError("No se pudo descargar el mapa estático.")
 
 
 def _build_public_report_token(visit: Visit) -> str:
@@ -2593,21 +2624,24 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     start_lon = _parse_optional_float(start_location.get("longitude")) or audit.start_longitude
     end_lat = _parse_optional_float(end_location.get("latitude")) or audit.end_latitude
     end_lon = _parse_optional_float(end_location.get("longitude")) or audit.end_longitude
+    brand_green = colors.HexColor("#86BC25")
+    brand_blue = colors.HexColor("#2E3192")
+    brand_text = colors.HexColor("#12233D")
 
     def _header(title: str, subtitle: str):
         _draw_page_background(pdf)
-        if not _draw_report_logo(pdf, 40, height - 72, 112, 30):
-            pdf.setFillColor(colors.HexColor("#facc15"))
+        if not _draw_report_logo(pdf, 40, height - 70, 150, 42):
+            pdf.setFillColor(brand_green)
             pdf.circle(54, height - 52, 12, fill=1, stroke=0)
             pdf.setFont(REPORT_FONT_BOLD, 16)
             pdf.drawString(74, height - 58, "trust")
-        pdf.setFillColor(colors.HexColor("#0f172a"))
+        pdf.setFillColor(brand_text)
         pdf.setFont(REPORT_FONT_BOLD, 20)
-        pdf.drawString(40, height - 88, title)
+        pdf.drawString(40, height - 98, title)
         pdf.setFillColor(colors.HexColor("#64748b"))
         pdf.setFont(REPORT_FONT, 10)
-        pdf.drawString(40, height - 103, subtitle)
-        pdf.setFillColor(colors.HexColor("#0f172a"))
+        pdf.drawString(40, height - 113, subtitle)
+        pdf.setFillColor(brand_text)
 
     pdf.setTitle(f"informe-auditoria-{audit.id}")
     _header(
@@ -2615,50 +2649,93 @@ def _build_audit_pdf(audit: Audit) -> bytes:
         f"Auditoría #{audit.id} · Generado: {generated_at.strftime('%d/%m/%Y %H:%M')}",
     )
 
-    _draw_card(pdf, 40, height - 208, width - 80, 88)
+    _draw_card(pdf, 40, height - 218, width - 80, 98)
     score = ai_analysis.get("score")
     score_label = f"{round(score, 1)}%" if isinstance(score, (int, float)) else "No disponible"
     pdf.setFillColor(colors.HexColor("#64748b"))
     pdf.setFont(REPORT_FONT_BOLD, 9)
-    pdf.drawString(56, height - 145, "PUNTAJE GLOBAL")
-    pdf.setFillColor(colors.HexColor("#0f766e"))
-    pdf.setFont(REPORT_FONT_BOLD, 26)
-    pdf.drawString(56, height - 178, score_label)
+    pdf.drawString(56, height - 154, "PUNTAJE GLOBAL")
+    pdf.setFillColor(brand_green)
+    pdf.setFont(REPORT_FONT_BOLD, 28)
+    pdf.drawString(56, height - 191, score_label)
 
     inspector_name = audit.inspector.get_full_name() if audit.inspector else "Sin asignar"
     pdf.setFillColor(colors.HexColor("#334155"))
     pdf.setFont(REPORT_FONT, 10)
-    pdf.drawString(220, height - 150, f"Cliente: {audit.area.branch.client.name}")
-    pdf.drawString(220, height - 166, f"Sucursal: {audit.area.branch.name}")
-    pdf.drawString(220, height - 182, f"Área: {audit.area.name}")
-    pdf.drawString(220, height - 198, f"Inspector: {inspector_name or (audit.inspector.username if audit.inspector else 'Sin asignar')}")
+    pdf.drawString(220, height - 158, f"Cliente: {audit.area.branch.client.name}")
+    pdf.drawString(220, height - 175, f"Sucursal: {audit.area.branch.name}")
+    pdf.drawString(220, height - 192, f"Área: {audit.area.name}")
+    pdf.drawString(220, height - 209, f"Inspector: {inspector_name or (audit.inspector.username if audit.inspector else 'Sin asignar')}")
 
     summary = str(ai_analysis.get("executive_summary") or "Sin resumen ejecutivo.")
-    _draw_card(pdf, 40, height - 430, width - 80, 208)
-    pdf.setFillColor(colors.HexColor("#0f172a"))
+    _draw_card(pdf, 40, height - 430, width - 80, 184)
+    pdf.setFillColor(brand_text)
     pdf.setFont(REPORT_FONT_BOLD, 13)
-    pdf.drawString(56, height - 248, "Resumen Ejecutivo")
+    pdf.drawString(56, height - 250, "Resumen Ejecutivo")
     pdf.setFillColor(colors.HexColor("#334155"))
     pdf.setFont(REPORT_FONT, 10)
     summary_width = width - 120
     summary_lines = _split_text_to_lines(pdf, summary[:1800], summary_width)
-    max_summary_lines = 11
+    max_summary_lines = 9
     if len(summary_lines) > max_summary_lines:
         summary_lines = summary_lines[:max_summary_lines]
         summary_lines[-1] = f"{summary_lines[-1][:max(0, len(summary_lines[-1]) - 3)].rstrip()}..."
-    _draw_justified_lines(pdf, summary_lines, 56, height - 270, summary_width, line_height=13)
+    _draw_justified_lines(pdf, summary_lines, 56, height - 270, summary_width, line_height=12.8)
+
+    risk_count = len([item for item in (ai_analysis.get("risks") or []) if str(item).strip()])
+    strength_count = len([item for item in (ai_analysis.get("strengths") or []) if str(item).strip()])
+    answered_count = len([item for item in answers if isinstance(item, dict)])
+    total_questions = len(((report.get("form") or {}).get("schema") or {}).get("questions") or [])
+    completion_pct = int((answered_count / total_questions) * 100) if total_questions else 0
+    score_value = max(0, min(100, int(round(score)))) if isinstance(score, (int, float)) else 0
+
+    chart_y = 242
+    _draw_card(pdf, 40, chart_y, width - 80, 100)
+    pdf.setFont(REPORT_FONT_BOLD, 12)
+    pdf.setFillColor(brand_text)
+    pdf.drawString(56, chart_y + 78, "Indicadores visuales")
+
+    gauge_x, gauge_y, gauge_w, gauge_h = 56, chart_y + 52, 168, 10
+    pdf.setFillColor(colors.HexColor("#dbe5f0"))
+    pdf.roundRect(gauge_x, gauge_y, gauge_w, gauge_h, 5, fill=1, stroke=0)
+    pdf.setFillColor(brand_blue)
+    pdf.roundRect(gauge_x, gauge_y, (gauge_w * score_value) / 100, gauge_h, 5, fill=1, stroke=0)
+    pdf.setFillColor(colors.HexColor("#334155"))
+    pdf.setFont(REPORT_FONT, 9)
+    pdf.drawString(gauge_x, chart_y + 38, f"Desempeño global: {score_value}%")
+
+    comp_x = 250
+    comp_bar_h = 56
+    comp_bar_w = 14
+    comp_base = chart_y + 24
+    comp_data = [
+        ("Cumplimiento", completion_pct, brand_green),
+        ("Riesgos", min(risk_count * 12, 100), colors.HexColor("#ef4444")),
+        ("Fortalezas", min(strength_count * 12, 100), brand_blue),
+    ]
+    for index, (label, value, color) in enumerate(comp_data):
+        x = comp_x + (index * 82)
+        pdf.setFillColor(colors.HexColor("#e2e8f0"))
+        pdf.roundRect(x, comp_base, comp_bar_w, comp_bar_h, 4, fill=1, stroke=0)
+        filled_h = (comp_bar_h * max(0, min(100, value))) / 100
+        pdf.setFillColor(color)
+        pdf.roundRect(x, comp_base, comp_bar_w, filled_h, 4, fill=1, stroke=0)
+        pdf.setFillColor(colors.HexColor("#334155"))
+        pdf.setFont(REPORT_FONT, 8)
+        pdf.drawString(x + 20, chart_y + 53, f"{int(value)}%")
+        pdf.drawString(x + 20, chart_y + 39, label[:12])
 
     recommendations = ai_analysis.get("recommendations") if isinstance(ai_analysis.get("recommendations"), list) else []
     next_steps = ai_analysis.get("next_steps") if isinstance(ai_analysis.get("next_steps"), list) else []
     actions = [f"• {str(item)}" for item in (recommendations[:4] + next_steps[:4]) if str(item).strip()]
-    _draw_card(pdf, 40, 52, width - 80, 170)
-    pdf.setFillColor(colors.HexColor("#0f172a"))
+    _draw_card(pdf, 40, 52, width - 80, 176)
+    pdf.setFillColor(brand_text)
     pdf.setFont(REPORT_FONT_BOLD, 12)
-    pdf.drawString(56, 196, "Acciones Prioritarias")
+    pdf.drawString(56, 202, "Acciones Prioritarias")
     pdf.setFillColor(colors.HexColor("#334155"))
     pdf.setFont(REPORT_FONT, 10)
     actions_text = "\n".join(actions) if actions else "• No se registraron recomendaciones accionables."
-    _draw_wrapped_text(pdf, actions_text, 56, 176, width - 120, line_height=13)
+    _draw_wrapped_text(pdf, actions_text, 56, 182, width - 120, line_height=13)
     _draw_report_footer(pdf, generated_at)
     pdf.showPage()
 
@@ -2667,7 +2744,7 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     map_y_end = height - 120
     map_h = 240
     _draw_card(pdf, 40, map_y_end - map_h, 540, map_h)
-    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.setFillColor(brand_text)
     pdf.setFont(REPORT_FONT_BOLD, 12)
     pdf.drawString(56, map_y_end - 24, "Mapa de ubicación")
     inner_x, inner_y = 48, map_y_end - map_h + 12
@@ -2678,10 +2755,15 @@ def _build_audit_pdf(audit: Audit) -> bytes:
             image = ImageReader(BytesIO(map_image))
             pdf.drawImage(image, inner_x, inner_y, width=inner_w, height=inner_h, mask="auto")
         except Exception:
-            pdf.setFillColor(colors.HexColor("#cbd5e1"))
+            pdf.setFillColor(colors.HexColor("#eef2ff"))
             pdf.roundRect(inner_x, inner_y, inner_w, inner_h, 8, fill=1, stroke=0)
+            pdf.setFillColor(colors.HexColor("#475569"))
+            pdf.setFont(REPORT_FONT, 10)
+            pdf.drawString(inner_x + 14, inner_y + (inner_h / 2) + 8, "No se pudo cargar la imagen del mapa.")
+            pdf.setFont(REPORT_FONT_ITALIC, 9)
+            pdf.drawString(inner_x + 14, inner_y + (inner_h / 2) - 8, f"Coordenadas: {start_lat:.5f}, {start_lon:.5f} → {end_lat:.5f}, {end_lon:.5f}")
     else:
-        pdf.setFillColor(colors.HexColor("#e2e8f0"))
+        pdf.setFillColor(colors.HexColor("#eef2ff"))
         pdf.roundRect(inner_x, inner_y, inner_w, inner_h, 8, fill=1, stroke=0)
         pdf.setFillColor(colors.HexColor("#64748b"))
         pdf.setFont(REPORT_FONT, 10)
