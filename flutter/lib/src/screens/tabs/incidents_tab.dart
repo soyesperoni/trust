@@ -103,17 +103,22 @@ class _IncidentsTabState extends State<IncidentsTab> {
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final incident = filteredIncidents[index];
+                        final isDark = Theme.of(context).brightness == Brightness.dark;
+                        final cardColor = isDark ? AppColors.darkCard : const Color(0xFFF9FAFB);
+                        final borderColor = isDark ? AppColors.darkCardBorder : const Color(0xFFE5E7EB);
+                        final titleColor = isDark ? const Color(0xFFF8FAFC) : const Color(0xFF111827);
+                        final mutedColor = isDark ? AppColors.darkMuted : const Color(0xFF6B7280);
                         return Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
+                            color: cardColor,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : const Color(0xFFF3F4F6)),
+                            border: Border.all(color: borderColor),
                             boxShadow: [
                               BoxShadow(
-                                color: Theme.of(context).brightness == Brightness.dark ? const Color(0x4D000000) : const Color(0x14000000),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
+                                color: isDark ? const Color(0x55000000) : const Color(0x12000000),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
@@ -124,35 +129,38 @@ class _IncidentsTabState extends State<IncidentsTab> {
                                 'ID #INC-${incident.id.toString().padLeft(4, '0')}',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : const Color(0xFF6B7280),
+                                  color: mutedColor,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: .4,
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              Text(incident.client, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFF8FAFC) : const Color(0xFF111827))),
+                              Text(incident.client, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: titleColor)),
                               const SizedBox(height: 10),
                               _IncidentMetaRow(icon: Icons.store_rounded, text: 'Sucursal: ${incident.branch}'),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 8),
                               _IncidentMetaRow(icon: Icons.map_outlined, text: 'Área: ${incident.area}'),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 8),
                               _IncidentMetaRow(icon: Icons.water_drop_outlined, text: 'Dosificador: ${incident.dispenser}'),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 8),
                               _IncidentMetaRow(icon: Icons.schedule, text: 'Creación: ${_friendlyDate(incident.createdAt)}'),
                               const SizedBox(height: 12),
-                              Divider(height: 1, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : const Color(0xFFF3F4F6)),
+                              Divider(height: 1, color: borderColor),
+                              const SizedBox(height: 10),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   if (widget.role == UserRole.generalAdmin || widget.role == UserRole.inspector)
-                                    TextButton(
+                                    OutlinedButton(
                                       onPressed: () => _openScheduleFromIncident(incident),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: const Color(0xFFF59E0B),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.primary,
+                                        side: BorderSide(color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB)),
                                         textStyle: const TextStyle(fontWeight: FontWeight.w700),
                                       ),
                                       child: const Text('Programar visita'),
                                     ),
+                                  if (widget.role == UserRole.generalAdmin || widget.role == UserRole.inspector) const SizedBox(width: 8),
                                   TextButton(
                                     onPressed: () => Navigator.of(context).push(
                                       MaterialPageRoute<void>(
@@ -162,7 +170,10 @@ class _IncidentsTabState extends State<IncidentsTab> {
                                         ),
                                       ),
                                     ),
-                                    style: TextButton.styleFrom(foregroundColor: const Color(0xFFFBC02D), textStyle: const TextStyle(fontWeight: FontWeight.w700)),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: AppColors.primary,
+                                      textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                                    ),
                                     child: const Text('Ver detalle'),
                                   ),
                                 ],
@@ -181,8 +192,8 @@ class _IncidentsTabState extends State<IncidentsTab> {
             bottom: 20,
             child: FloatingActionButton(
               heroTag: 'incidents-create-fab',
-              backgroundColor: AppColors.yellow,
-              foregroundColor: Colors.black,
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
               onPressed: _openNewIncidentFlow,
               child: const Icon(Icons.add),
             ),

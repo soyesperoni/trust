@@ -135,7 +135,7 @@ class VisitSummaryCard extends StatelessWidget {
                     },
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
-                      backgroundColor: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF111827),
+                      backgroundColor: isDark ? const Color(0xFFF8FAFC) : AppColors.primary,
                       foregroundColor: isDark ? AppColors.darkBackground : Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       textStyle: const TextStyle(fontWeight: FontWeight.w700),
@@ -184,7 +184,7 @@ class VisitSummaryCard extends StatelessWidget {
                     onPressed: () => _openReport(context, openWithDownload: true),
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
-                      backgroundColor: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF111827),
+                      backgroundColor: isDark ? const Color(0xFFF8FAFC) : AppColors.primary,
                       foregroundColor: isDark ? AppColors.darkBackground : Colors.white,
                       minimumSize: const Size.fromHeight(44),
                       textStyle: const TextStyle(fontWeight: FontWeight.w700),
