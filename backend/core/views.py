@@ -2619,12 +2619,6 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     report = audit.audit_report or {}
     ai_analysis = report.get("ai_analysis") if isinstance(report.get("ai_analysis"), dict) else {}
     answers = report.get("answers") if isinstance(report.get("answers"), list) else []
-    start_location = report.get("start_location") if isinstance(report.get("start_location"), dict) else {}
-    end_location = report.get("end_location") if isinstance(report.get("end_location"), dict) else {}
-    start_lat = _parse_optional_float(start_location.get("latitude")) or audit.start_latitude
-    start_lon = _parse_optional_float(start_location.get("longitude")) or audit.start_longitude
-    end_lat = _parse_optional_float(end_location.get("latitude")) or audit.end_latitude
-    end_lon = _parse_optional_float(end_location.get("longitude")) or audit.end_longitude
     brand_green = colors.HexColor("#86BC25")
     brand_blue = colors.HexColor("#2E3192")
     brand_text = colors.HexColor("#12233D")
@@ -2700,25 +2694,26 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     completion_pct = int((answered_count / total_questions) * 100) if total_questions else 0
     score_value = max(0, min(100, int(round(score)))) if isinstance(score, (int, float)) else 0
 
-    chart_y = 190
-    _draw_card(pdf, 40, chart_y, width - 80, 106)
+    chart_y = 92
+    _draw_card(pdf, 40, chart_y, width - 80, 204)
     pdf.setFont(REPORT_FONT_BOLD, 12)
     pdf.setFillColor(brand_text)
-    pdf.drawString(56, chart_y + 82, "Indicadores visuales")
+    pdf.drawString(56, chart_y + 180, "Indicadores visuales")
 
-    gauge_x, gauge_y, gauge_w, gauge_h = 56, chart_y + 56, 188, 10
+    gauge_x, gauge_y, gauge_w, gauge_h = 56, chart_y + 154, 220, 10
     pdf.setFillColor(colors.HexColor("#dbe5f0"))
     pdf.roundRect(gauge_x, gauge_y, gauge_w, gauge_h, 5, fill=1, stroke=0)
     pdf.setFillColor(brand_blue)
     pdf.roundRect(gauge_x, gauge_y, (gauge_w * score_value) / 100, gauge_h, 5, fill=1, stroke=0)
     pdf.setFillColor(colors.HexColor("#334155"))
     pdf.setFont(REPORT_FONT, 9)
-    pdf.drawString(gauge_x, chart_y + 40, f"Desempeño global: {score_value}%")
+    pdf.drawString(gauge_x, chart_y + 138, f"Desempeño global: {score_value}%")
+    pdf.drawString(gauge_x, chart_y + 125, f"Preguntas respondidas: {answered_count}/{total_questions or 0}")
 
-    comp_x = 270
-    comp_bar_h = 56
-    comp_bar_w = 14
-    comp_base = chart_y + 24
+    comp_x = 310
+    comp_bar_h = 84
+    comp_bar_w = 16
+    comp_base = chart_y + 92
     comp_data = [
         ("Cumplimiento", completion_pct, brand_green),
         ("Riesgos", min(risk_count * 12, 100), colors.HexColor("#ef4444")),
@@ -2733,59 +2728,63 @@ def _build_audit_pdf(audit: Audit) -> bytes:
         pdf.roundRect(x, comp_base, comp_bar_w, filled_h, 4, fill=1, stroke=0)
         pdf.setFillColor(colors.HexColor("#334155"))
         pdf.setFont(REPORT_FONT, 8)
-        pdf.drawString(x + 20, chart_y + 58, f"{int(value)}%")
-        pdf.drawString(x + 20, chart_y + 44, label[:14])
+        pdf.drawString(x + 22, chart_y + 158, f"{int(value)}%")
+        pdf.drawString(x + 22, chart_y + 144, label[:14])
 
-    recommendations = ai_analysis.get("recommendations") if isinstance(ai_analysis.get("recommendations"), list) else []
-    next_steps = ai_analysis.get("next_steps") if isinstance(ai_analysis.get("next_steps"), list) else []
-    actions = [f"• {str(item)}" for item in (recommendations[:4] + next_steps[:4]) if str(item).strip()]
-    _draw_card(pdf, 40, 46, width - 80, 134)
-    pdf.setFillColor(brand_text)
-    pdf.setFont(REPORT_FONT_BOLD, 12)
-    pdf.drawString(56, 160, "Acciones Prioritarias")
-    pdf.setFillColor(colors.HexColor("#1e3a8a"))
-    pdf.setFont(REPORT_FONT_BOLD, 9)
-    pdf.drawString(56, 145, "ENFOQUE INMEDIATO")
-    pdf.setFillColor(colors.HexColor("#334155"))
-    pdf.setFont(REPORT_FONT, 9.7)
-    actions_text = "\n".join(actions) if actions else "• No se registraron recomendaciones accionables."
-    _draw_wrapped_text(pdf, actions_text, 56, 129, width - 120, line_height=12.2)
+    metrics_data = [
+        ("Preguntas", str(total_questions or 0), colors.HexColor("#e0ecff"), colors.HexColor("#1d4ed8")),
+        ("Respondidas", str(answered_count), colors.HexColor("#ecfdf5"), colors.HexColor("#047857")),
+        ("Riesgos", str(risk_count), colors.HexColor("#fef2f2"), colors.HexColor("#dc2626")),
+        ("Fortalezas", str(strength_count), colors.HexColor("#eff6ff"), colors.HexColor("#1e40af")),
+        ("Completitud", f"{completion_pct}%", colors.HexColor("#f8fafc"), colors.HexColor("#334155")),
+        ("Score IA", score_label, colors.HexColor("#f0fdf4"), colors.HexColor("#166534")),
+    ]
+    metric_w = 160
+    metric_h = 44
+    start_x = 56
+    start_y = chart_y + 74
+    gap_x = 170
+    gap_y = 54
+    for index, (label, value, bg_color, txt_color) in enumerate(metrics_data):
+        row = index // 3
+        col = index % 3
+        x = start_x + (col * gap_x)
+        y = start_y - (row * gap_y)
+        pdf.setFillColor(bg_color)
+        pdf.roundRect(x, y, metric_w, metric_h, 8, fill=1, stroke=0)
+        pdf.setFillColor(colors.HexColor("#64748b"))
+        pdf.setFont(REPORT_FONT_BOLD, 8)
+        pdf.drawString(x + 10, y + 28, label.upper())
+        pdf.setFillColor(txt_color)
+        pdf.setFont(REPORT_FONT_BOLD, 12)
+        pdf.drawString(x + 10, y + 12, value[:18])
+
     _draw_report_footer(pdf, generated_at)
     pdf.showPage()
 
     _header("Anexos de campo y conformidad", f"Auditoría #{audit.id} · Evidencia geolocalizada y multimedia")
 
-    map_y_end = height - 120
-    map_h = 254
-    _draw_card(pdf, 40, map_y_end - map_h, 540, map_h)
+    recommendations = ai_analysis.get("recommendations") if isinstance(ai_analysis.get("recommendations"), list) else []
+    next_steps = ai_analysis.get("next_steps") if isinstance(ai_analysis.get("next_steps"), list) else []
+    actions = [f"• {str(item)}" for item in (recommendations[:5] + next_steps[:5]) if str(item).strip()]
+
+    actions_top = height - 120
+    actions_h = 140
+    _draw_card(pdf, 40, actions_top - actions_h, 540, actions_h)
     pdf.setFillColor(brand_text)
     pdf.setFont(REPORT_FONT_BOLD, 12)
-    pdf.drawString(56, map_y_end - 24, "Mapa de ubicación")
-    inner_x, inner_y = 48, map_y_end - map_h + 12
-    inner_w, inner_h = 524, map_h - 50
-    if None not in (start_lat, start_lon, end_lat, end_lon):
-        try:
-            map_image = _fetch_static_map(start_lat, start_lon, end_lat, end_lon, 1280, 620)
-            image = ImageReader(BytesIO(map_image))
-            pdf.drawImage(image, inner_x, inner_y, width=inner_w, height=inner_h, mask="auto")
-        except Exception:
-            pdf.setFillColor(colors.HexColor("#eef2ff"))
-            pdf.roundRect(inner_x, inner_y, inner_w, inner_h, 8, fill=1, stroke=0)
-            pdf.setFillColor(colors.HexColor("#475569"))
-            pdf.setFont(REPORT_FONT, 10)
-            pdf.drawString(inner_x + 14, inner_y + (inner_h / 2) + 8, "No se pudo cargar la imagen del mapa.")
-            pdf.setFont(REPORT_FONT_ITALIC, 9)
-            pdf.drawString(inner_x + 14, inner_y + (inner_h / 2) - 8, f"Coordenadas: {start_lat:.5f}, {start_lon:.5f} → {end_lat:.5f}, {end_lon:.5f}")
-    else:
-        pdf.setFillColor(colors.HexColor("#eef2ff"))
-        pdf.roundRect(inner_x, inner_y, inner_w, inner_h, 8, fill=1, stroke=0)
-        pdf.setFillColor(colors.HexColor("#64748b"))
-        pdf.setFont(REPORT_FONT, 10)
-        pdf.drawString(inner_x + 14, inner_y + (inner_h / 2), "No hay coordenadas suficientes para renderizar el mapa.")
+    pdf.drawString(56, actions_top - 24, "Acciones Prioritarias")
+    pdf.setFillColor(colors.HexColor("#1e3a8a"))
+    pdf.setFont(REPORT_FONT_BOLD, 9)
+    pdf.drawString(56, actions_top - 40, "ENFOQUE INMEDIATO")
+    pdf.setFillColor(colors.HexColor("#334155"))
+    pdf.setFont(REPORT_FONT, 9.6)
+    actions_text = "\n".join(actions) if actions else "• No se registraron recomendaciones accionables."
+    _draw_wrapped_text(pdf, actions_text, 56, actions_top - 54, 508, line_height=12.2)
 
     photos = [item for item in audit.media.all() if item.media_type == AuditMedia.MediaType.PHOTO][:4]
-    photo_section_y = map_y_end - map_h - 20
-    _draw_card(pdf, 40, photo_section_y - 292, 540, 292)
+    photo_section_y = actions_top - actions_h - 20
+    _draw_card(pdf, 40, photo_section_y - 320, 540, 320)
     pdf.setFillColor(colors.HexColor("#0f172a"))
     pdf.setFont(REPORT_FONT_BOLD, 12)
     pdf.drawString(56, photo_section_y - 24, "Evidencia multimedia")
