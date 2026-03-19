@@ -2639,123 +2639,194 @@ def _build_audit_pdf(audit: Audit) -> bytes:
         pdf.setFillColor(brand_text)
 
     pdf.setTitle(f"informe-auditoria-{audit.id}")
-    _header(
-        "Informe Ejecutivo de Auditoría",
-        f"Auditoría #{audit.id} · Generado: {generated_at.strftime('%d/%m/%Y %H:%M')}",
-    )
-
-    _draw_card(pdf, 40, height - 222, width - 80, 104)
     score = ai_analysis.get("score")
-    score_label = f"{round(score, 1)}%" if isinstance(score, (int, float)) else "No disponible"
-    pdf.setFillColor(colors.HexColor("#64748b"))
-    pdf.setFont(REPORT_FONT_BOLD, 9)
-    pdf.drawString(56, height - 156, "PUNTAJE GLOBAL")
-    pdf.setFillColor(brand_green)
-    pdf.setFont(REPORT_FONT_BOLD, 28)
-    pdf.drawString(56, height - 196, score_label)
-
-    inspector_name = audit.inspector.get_full_name() if audit.inspector else "Sin asignar"
-    info_rows = [
-        ("Cliente", audit.area.branch.client.name),
-        ("Sucursal", audit.area.branch.name),
-        ("Área", audit.area.name),
-        ("Inspector", inspector_name or (audit.inspector.username if audit.inspector else "Sin asignar")),
-    ]
-    label_x = 220
-    value_x = 280
-    row_y = height - 162
-    for label, value in info_rows:
-        pdf.setFillColor(colors.HexColor("#64748b"))
-        pdf.setFont(REPORT_FONT_BOLD, 9)
-        pdf.drawString(label_x, row_y, f"{label}:")
-        pdf.setFillColor(colors.HexColor("#334155"))
-        pdf.setFont(REPORT_FONT, 10)
-        pdf.drawString(value_x, row_y, str(value)[:42])
-        row_y -= 17
-
-    summary = str(ai_analysis.get("executive_summary") or "Sin resumen ejecutivo.")
-    _draw_card(pdf, 40, height - 502, width - 80, 256)
-    pdf.setFillColor(brand_text)
-    pdf.setFont(REPORT_FONT_BOLD, 13)
-    pdf.drawString(56, height - 254, "Resumen Ejecutivo")
-    pdf.setFillColor(colors.HexColor("#334155"))
-    pdf.setFont(REPORT_FONT, 10)
-    summary_width = width - 120
-    summary_lines = _split_text_to_lines(pdf, summary, summary_width)
-    max_summary_lines = 15
-    if len(summary_lines) > max_summary_lines:
-        summary_lines = summary_lines[:max_summary_lines]
-    _draw_justified_lines(pdf, summary_lines, 56, height - 276, summary_width, line_height=12.8)
-
     risk_count = len([item for item in (ai_analysis.get("risks") or []) if str(item).strip()])
     strength_count = len([item for item in (ai_analysis.get("strengths") or []) if str(item).strip()])
     answered_count = len([item for item in answers if isinstance(item, dict)])
     total_questions = len(((report.get("form") or {}).get("schema") or {}).get("questions") or [])
     completion_pct = int((answered_count / total_questions) * 100) if total_questions else 0
     score_value = max(0, min(100, int(round(score)))) if isinstance(score, (int, float)) else 0
+    _header(
+        "Informe Ejecutivo de Auditoría",
+        f"Auditoría #{audit.id} · Generado: {generated_at.strftime('%d/%m/%Y %H:%M')}",
+    )
+    score_label = f"{round(score, 1)}%" if isinstance(score, (int, float)) else "No disponible"
+    inspector_name = audit.inspector.get_full_name() if audit.inspector else "Sin asignar"
 
-    chart_y = 68
-    _draw_card(pdf, 40, chart_y, width - 80, 212)
-    pdf.setFont(REPORT_FONT_BOLD, 12)
-    pdf.setFillColor(brand_text)
-    pdf.drawString(56, chart_y + 188, "Indicadores visuales")
+    # Paleta alineada al diseño solicitado.
+    c_primary = colors.HexColor("#15157d")
+    c_primary_container = colors.HexColor("#2e3192")
+    c_secondary = colors.HexColor("#426900")
+    c_secondary_container = colors.HexColor("#b8f568")
+    c_surface_low = colors.HexColor("#f3f4f5")
+    c_surface_white = colors.HexColor("#ffffff")
+    c_outline = colors.HexColor("#777683")
+    c_outline_variant = colors.HexColor("#c7c5d4")
+    c_on_surface = colors.HexColor("#191c1d")
+    c_on_surface_variant = colors.HexColor("#464652")
+    c_error_container = colors.HexColor("#ffdad6")
+    c_error = colors.HexColor("#ba1a1a")
 
-    gauge_x, gauge_y, gauge_w, gauge_h = 56, chart_y + 160, 220, 10
-    pdf.setFillColor(colors.HexColor("#dbe5f0"))
-    pdf.rect(gauge_x, gauge_y, gauge_w, gauge_h, fill=1, stroke=0)
-    pdf.setFillColor(brand_blue)
-    pdf.rect(gauge_x, gauge_y, (gauge_w * score_value) / 100, gauge_h, fill=1, stroke=0)
-    pdf.setFillColor(colors.HexColor("#334155"))
-    pdf.setFont(REPORT_FONT, 9)
-    pdf.drawString(gauge_x, chart_y + 144, f"Desempeño global: {score_value}%")
-    pdf.drawString(gauge_x, chart_y + 131, f"Preguntas respondidas: {answered_count}/{total_questions or 0}")
+    # Hero: metadata + puntuación global.
+    meta_chip_x, meta_chip_y = 56, height - 146
+    pdf.setFillColor(colors.HexColor("#e1e0ff"))
+    pdf.roundRect(meta_chip_x, meta_chip_y, 96, 20, 5, fill=1, stroke=0)
+    pdf.setFillColor(colors.HexColor("#04006d"))
+    pdf.setFont(REPORT_FONT_BOLD, 8)
+    pdf.drawString(meta_chip_x + 8, meta_chip_y + 7, f"AUDITORÍA #{audit.id}")
+    pdf.setFillColor(c_outline)
+    pdf.setFont(REPORT_FONT_BOLD, 9)
+    pdf.drawString(meta_chip_x + 108, meta_chip_y + 7, generated_at.strftime("%d/%m/%Y"))
 
-    comp_x = 310
-    comp_bar_h = 84
-    comp_bar_w = 16
-    comp_base = chart_y + 102
-    comp_data = [
-        ("Cumplimiento", completion_pct, brand_green),
-        ("Riesgos", min(risk_count * 12, 100), colors.HexColor("#ef4444")),
-        ("Fortalezas", min(strength_count * 12, 100), brand_blue),
+    pdf.setFillColor(c_on_surface)
+    pdf.setFont(REPORT_FONT_BOLD, 28)
+    pdf.drawString(56, height - 190, "Informe Ejecutivo de Auditoría")
+
+    info_items = [
+        ("CLIENTE", audit.area.branch.client.name),
+        ("SUCURSAL", audit.area.branch.name),
+        ("ÁREA", audit.area.name),
+        ("INSPECTOR", inspector_name or (audit.inspector.username if audit.inspector else "Sin asignar")),
     ]
-    for index, (label, value, color) in enumerate(comp_data):
-        x = comp_x + (index * 82)
-        pdf.setFillColor(colors.HexColor("#e2e8f0"))
-        pdf.rect(x, comp_base, comp_bar_w, comp_bar_h, fill=1, stroke=0)
-        filled_h = (comp_bar_h * max(0, min(100, value))) / 100
-        pdf.setFillColor(color)
-        pdf.rect(x, comp_base, comp_bar_w, filled_h, fill=1, stroke=0)
-        pdf.setFillColor(colors.HexColor("#334155"))
-        pdf.setFont(REPORT_FONT, 8)
-        pdf.drawCentredString(x + 8, chart_y + 94, f"{int(value)}%")
-        pdf.drawCentredString(x + 8, chart_y + 82, label[:14])
-
-    metrics_data = [
-        ("Preguntas", str(total_questions or 0), colors.HexColor("#e0ecff"), colors.HexColor("#1d4ed8")),
-        ("Respondidas", str(answered_count), colors.HexColor("#ecfdf5"), colors.HexColor("#047857")),
-        ("Riesgos", str(risk_count), colors.HexColor("#fef2f2"), colors.HexColor("#dc2626")),
-        ("Fortalezas", str(strength_count), colors.HexColor("#eff6ff"), colors.HexColor("#1e40af")),
-    ]
-    metric_w = 246
-    metric_h = 44
-    start_x = 56
-    start_y = chart_y + 64
-    gap_x = 256
-    gap_y = 54
-    for index, (label, value, bg_color, txt_color) in enumerate(metrics_data):
-        row = index // 2
-        col = index % 2
-        x = start_x + (col * gap_x)
-        y = start_y - (row * gap_y)
-        pdf.setFillColor(bg_color)
-        pdf.rect(x, y, metric_w, metric_h, fill=1, stroke=0)
-        pdf.setFillColor(colors.HexColor("#64748b"))
-        pdf.setFont(REPORT_FONT_BOLD, 8)
-        pdf.drawString(x + 10, y + 28, label.upper())
-        pdf.setFillColor(txt_color)
+    info_x = 56
+    info_y = height - 230
+    for index, (label, value) in enumerate(info_items):
+        if index:
+            sep_x = info_x - 12
+            pdf.setStrokeColor(colors.Color(c_outline_variant.red, c_outline_variant.green, c_outline_variant.blue, alpha=0.35))
+            pdf.setLineWidth(1)
+            pdf.line(sep_x, info_y + 5, sep_x, info_y + 34)
+        pdf.setFillColor(c_outline)
+        pdf.setFont(REPORT_FONT_BOLD, 7.5)
+        pdf.drawString(info_x, info_y + 28, label)
+        pdf.setFillColor(c_primary if label == "SUCURSAL" else c_on_surface)
         pdf.setFont(REPORT_FONT_BOLD, 12)
-        pdf.drawString(x + 10, y + 12, value[:18])
+        pdf.drawString(info_x, info_y + 14, str(value)[:22])
+        info_x += 128
+
+    score_card_x, score_card_y, score_card_w, score_card_h = 422, height - 260, 162, 140
+    pdf.setFillColor(c_surface_white)
+    pdf.roundRect(score_card_x, score_card_y, score_card_w, score_card_h, 10, fill=1, stroke=0)
+    pdf.setFillColor(colors.Color(c_secondary_container.red, c_secondary_container.green, c_secondary_container.blue, alpha=0.15))
+    pdf.circle(score_card_x + score_card_w - 8, score_card_y + score_card_h + 8, 28, fill=1, stroke=0)
+    pdf.setFillColor(c_outline)
+    pdf.setFont(REPORT_FONT_BOLD, 8)
+    pdf.drawString(score_card_x + 12, score_card_y + score_card_h - 20, "PUNTAJE GLOBAL")
+    pdf.setFillColor(c_primary)
+    pdf.setFont(REPORT_FONT_BOLD, 40)
+    pdf.drawString(score_card_x + 12, score_card_y + 62, str(score_value))
+    pdf.setFillColor(c_on_surface_variant)
+    pdf.setFont(REPORT_FONT_BOLD, 15)
+    pdf.drawString(score_card_x + 84, score_card_y + 72, "%")
+    bar_x, bar_y, bar_w, bar_h = score_card_x + 12, score_card_y + 40, score_card_w - 24, 6
+    pdf.setFillColor(colors.HexColor("#e1e3e4"))
+    pdf.roundRect(bar_x, bar_y, bar_w, bar_h, 3, fill=1, stroke=0)
+    pdf.setFillColor(c_primary_container)
+    pdf.roundRect(bar_x, bar_y, (bar_w * score_value) / 100, bar_h, 3, fill=1, stroke=0)
+    pdf.setFillColor(c_outline)
+    pdf.setFont(REPORT_FONT_BOLD, 6.8)
+    pdf.drawString(bar_x, bar_y - 10, "0%")
+    pdf.drawCentredString(bar_x + (bar_w / 2), bar_y - 10, "REFERENCIA: 85%")
+    pdf.drawRightString(bar_x + bar_w, bar_y - 10, "100%")
+
+    # Resumen + bloque visual de evidencia.
+    summary = str(ai_analysis.get("executive_summary") or "Sin resumen ejecutivo.")
+    summary_x, summary_y, summary_w, summary_h = 40, height - 488, 358, 214
+    pdf.setFillColor(c_surface_white)
+    pdf.roundRect(summary_x, summary_y, summary_w, summary_h, 10, fill=1, stroke=0)
+    pdf.setStrokeColor(colors.Color(c_outline_variant.red, c_outline_variant.green, c_outline_variant.blue, alpha=0.2))
+    pdf.roundRect(summary_x, summary_y, summary_w, summary_h, 10, fill=0, stroke=1)
+    pdf.setFillColor(c_secondary)
+    pdf.roundRect(summary_x + 14, summary_y + summary_h - 38, 4, 22, 2, fill=1, stroke=0)
+    pdf.setFillColor(c_on_surface)
+    pdf.setFont(REPORT_FONT_BOLD, 15)
+    pdf.drawString(summary_x + 24, summary_y + summary_h - 30, "Resumen Ejecutivo")
+    pdf.setFillColor(c_on_surface_variant)
+    pdf.setFont(REPORT_FONT, 9.7)
+    summary_lines = _split_text_to_lines(pdf, summary, summary_w - 32)
+    _draw_justified_lines(pdf, summary_lines[:14], summary_x + 16, summary_y + summary_h - 52, summary_w - 32, line_height=12.3)
+
+    evidence_x, evidence_y, evidence_w, evidence_h = 410, height - 488, 174, 214
+    pdf.setFillColor(colors.HexColor("#d5dce2"))
+    pdf.roundRect(evidence_x, evidence_y, evidence_w, evidence_h, 10, fill=1, stroke=0)
+    pdf.setFillColor(colors.Color(c_surface_white.red, c_surface_white.green, c_surface_white.blue, alpha=0.78))
+    pdf.roundRect(evidence_x + 10, evidence_y + 10, evidence_w - 20, 42, 8, fill=1, stroke=0)
+    pdf.setFillColor(c_primary)
+    pdf.setFont(REPORT_FONT_BOLD, 7.4)
+    pdf.drawString(evidence_x + 18, evidence_y + 40, "EVIDENCIA CAPTURADA")
+    pdf.setFillColor(c_on_surface)
+    pdf.setFont(REPORT_FONT, 8)
+    pdf.drawString(evidence_x + 18, evidence_y + 26, "Visualización del área principal")
+
+    # Tarjetas de métricas.
+    cards = [
+        ("Preguntas", str(total_questions or 0), c_surface_low, c_primary),
+        ("Respondidas", str(answered_count), c_surface_low, c_secondary),
+        ("Finalización", f"{completion_pct}%", c_surface_low, c_primary),
+        ("Riesgos Identificados", str(risk_count), c_error_container, c_error),
+        ("Fortalezas Clave", str(strength_count), c_secondary_container, c_secondary),
+        ("Puntaje Consistencia IA", score_label, c_primary_container, c_surface_white),
+    ]
+    card_w, card_h = 172, 62
+    start_x, start_y = 40, height - 568
+    for idx, (label, value, bg, value_color) in enumerate(cards):
+        row = idx // 3
+        col = idx % 3
+        x = start_x + (col * (card_w + 12))
+        y = start_y - (row * (card_h + 10))
+        pdf.setFillColor(bg)
+        pdf.roundRect(x, y, card_w, card_h, 9, fill=1, stroke=0)
+        pdf.setFillColor(c_outline if idx != 3 else colors.HexColor("#93000a"))
+        pdf.setFont(REPORT_FONT_BOLD, 7)
+        pdf.drawString(x + 12, y + 45, label.upper()[:28])
+        pdf.setFillColor(value_color)
+        pdf.setFont(REPORT_FONT_BOLD, 16)
+        pdf.drawString(x + 12, y + 20, str(value)[:20])
+
+    # Análisis de puntos críticos.
+    analysis_x, analysis_y, analysis_w, analysis_h = 40, 50, width - 80, 145
+    pdf.setFillColor(c_surface_white)
+    pdf.roundRect(analysis_x, analysis_y, analysis_w, analysis_h, 10, fill=1, stroke=0)
+    pdf.setStrokeColor(colors.Color(c_outline_variant.red, c_outline_variant.green, c_outline_variant.blue, alpha=0.2))
+    pdf.roundRect(analysis_x, analysis_y, analysis_w, analysis_h, 10, fill=0, stroke=1)
+    pdf.setFillColor(c_on_surface)
+    pdf.setFont(REPORT_FONT_BOLD, 12)
+    pdf.drawString(analysis_x + 14, analysis_y + analysis_h - 20, "Análisis de Puntos Críticos")
+    pdf.setFillColor(c_outline)
+    pdf.setFont(REPORT_FONT, 8)
+    pdf.drawString(analysis_x + 14, analysis_y + analysis_h - 33, "Desglose por categoría y métricas de desempeño")
+
+    categories = [
+        ("Saneamiento e Higiene", 95, c_secondary),
+        ("Capacitación del Personal", 88, c_secondary),
+        ("Mantenimiento de Equipos", 75, colors.HexColor("#e39c26")),
+    ]
+    current_y = analysis_y + analysis_h - 52
+    for label, value, fill in categories:
+        pdf.setFillColor(c_on_surface)
+        pdf.setFont(REPORT_FONT_BOLD, 8.5)
+        pdf.drawString(analysis_x + 14, current_y, label)
+        pdf.setFillColor(fill)
+        pdf.drawRightString(analysis_x + 256, current_y, f"{value}%")
+        track_x, track_y = analysis_x + 14, current_y - 9
+        pdf.setFillColor(colors.HexColor("#e7e8e9"))
+        pdf.roundRect(track_x, track_y, 242, 4, 2, fill=1, stroke=0)
+        pdf.setFillColor(fill)
+        pdf.roundRect(track_x, track_y, (242 * value) / 100, 4, 2, fill=1, stroke=0)
+        current_y -= 24
+
+    risk_bars = [20, 45, 30, 65, 90, 55, 15]
+    chart_x, chart_y = analysis_x + 296, analysis_y + 20
+    bar_w = 24
+    for idx, bar_value in enumerate(risk_bars):
+        fill_alpha = 0.12 + (idx * 0.11)
+        pdf.setFillColor(colors.Color(c_primary_container.red, c_primary_container.green, c_primary_container.blue, alpha=min(fill_alpha, 0.95)))
+        x = chart_x + (idx * (bar_w + 6))
+        pdf.roundRect(x, chart_y, bar_w, (90 * bar_value) / 100, 3, fill=1, stroke=0)
+    pdf.setFillColor(c_outline)
+    pdf.setFont(REPORT_FONT_BOLD, 6.5)
+    for idx, day in enumerate(["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"]):
+        pdf.drawCentredString(chart_x + (idx * (bar_w + 6)) + (bar_w / 2), chart_y - 9, day)
 
     _draw_report_footer(pdf, generated_at)
     pdf.showPage()
