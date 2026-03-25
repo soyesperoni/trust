@@ -21,7 +21,7 @@ class CalendarTab extends StatefulWidget {
 }
 
 class _CalendarTabState extends State<CalendarTab> {
-  static const Color _primary = AppColors.yellow;
+  static const Color _primary = AppColors.secondary;
   static const Color _surfaceVariant = AppColors.gray100;
   static const Color _outline = AppColors.gray300;
 
