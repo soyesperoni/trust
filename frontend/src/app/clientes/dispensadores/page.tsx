@@ -15,7 +15,7 @@ import {
 
 import PageTransition from "../../components/PageTransition";
 
-type DispenserStatus = "Operativo" | "Mantenimiento" | "Inactivo";
+type DispenserStatus = "Activo" | "Inactivo";
 
 type DispenserApi = {
   id: number;
@@ -32,6 +32,7 @@ type DispenserApi = {
     branch: string;
   } | null;
   products: { id: number }[];
+  is_active: boolean;
 };
 
 type DispenserRow = {
@@ -48,15 +49,9 @@ type DispenserRow = {
 };
 
 const statusStyles: Record<DispenserStatus, { badge: string; dot: string }> = {
-  Operativo: {
-    badge:
-      "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
-    dot: "bg-yellow-500",
-  },
-  Mantenimiento: {
-    badge:
-      "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
-    dot: "bg-yellow-500",
+  Activo: {
+    badge: "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+    dot: "bg-green-500",
   },
   Inactivo: {
     badge: "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300",
@@ -96,9 +91,7 @@ export default function DispensadoresPage() {
               .slice(0, 2)
               .map((part) => part[0]?.toUpperCase())
               .join("");
-            const status: DispenserStatus = dispenser.installed_at
-              ? "Operativo"
-              : "Inactivo";
+            const status: DispenserStatus = dispenser.is_active ? "Activo" : "Inactivo";
             return {
               id: dispenser.id,
               code: dispenser.identifier,
