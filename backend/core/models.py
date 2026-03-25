@@ -1,5 +1,4 @@
 from django.contrib.auth.models import AbstractUser
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -70,6 +69,7 @@ class Dispenser(models.Model):
     area = models.ForeignKey(Area, on_delete=models.SET_NULL, related_name="dispensers", blank=True, null=True)
     installed_at = models.DateField(blank=True, null=True)
     photo = models.ImageField(upload_to="dispensers/", blank=True, null=True)
+    products = models.ManyToManyField("Product", related_name="dispensers", blank=True)
 
     class Meta:
         ordering = ["identifier"]
@@ -80,25 +80,15 @@ class Dispenser(models.Model):
 
 
 class Product(models.Model):
-    dispenser = models.ForeignKey(Dispenser, on_delete=models.CASCADE, related_name="products")
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     photo = models.ImageField(upload_to="products/", blank=True, null=True)
 
     class Meta:
         ordering = ["name"]
-        unique_together = ("dispenser", "name")
-
-    def clean(self) -> None:
-        super().clean()
-        if self.dispenser_id is None:
-            return
-        existing = Product.objects.filter(dispenser=self.dispenser).exclude(pk=self.pk).count()
-        if existing >= 4:
-            raise ValidationError(_("Cada dosificador puede tener máximo 4 productos."))
 
     def __str__(self) -> str:
-        return f"{self.name} ({self.dispenser.identifier})"
+        return self.name
 
 
 class Visit(models.Model):

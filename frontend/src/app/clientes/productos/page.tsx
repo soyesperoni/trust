@@ -20,11 +20,11 @@ type ProductApi = {
   name: string;
   description: string;
   photo: string | null;
-  dispenser: {
+  dispensers: {
     id: number;
     identifier: string;
     model: string;
-  };
+  }[];
 };
 
 type ProductStatus = "Asignado" | "Sin asignar";
@@ -77,7 +77,8 @@ export default function ProductosPage() {
         const data = await response.json();
         if (!isMounted) return;
         const rows: ProductRow[] = ((data.results ?? []) as ProductApi[]).map((product) => {
-          const hasDispenser = Boolean(product.dispenser?.id);
+          const firstDispenser = product.dispensers[0];
+          const hasDispenser = Boolean(firstDispenser?.id);
           return {
             id: product.id,
             name: product.name,
@@ -85,12 +86,12 @@ export default function ProductosPage() {
             description: product.description || "Sin descripción registrada.",
             photo: product.photo,
             dispenserCode: hasDispenser
-              ? product.dispenser.identifier
+              ? firstDispenser.identifier
               : "Sin dosificador",
             dispenserModel: hasDispenser
-              ? product.dispenser.model
+              ? firstDispenser.model
               : "Sin modelo",
-            status: hasDispenser ? "Asignado" : "Sin asignar",
+            status: product.dispensers.length > 0 ? "Asignado" : "Sin asignar",
           };
         });
         setProducts(rows);
