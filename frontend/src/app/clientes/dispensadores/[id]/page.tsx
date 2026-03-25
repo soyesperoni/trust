@@ -13,14 +13,15 @@ type DispenserDetailResponse = {
   identifier: string;
   model: { id: number; name: string };
   area: { id: number; name: string; branch: string } | null;
-  products: Array<{ id: number; name: string }>;
+  products: Array<{ id: number; name: string; nozzle?: { id: number; name: string } | null }>;
+  available_nozzles?: Array<{ id: number; name: string }>;
   installed_at: string | null;
   is_active: boolean;
   error?: string;
 };
 
 type CatalogResponse = {
-  results?: Array<{ id: number; name: string; branch?: { name: string } }>;
+  results?: Array<{ id: number; name: string; photo?: string | null; branch?: { name: string } }>;
 };
 
 export default function EditarDosificadorPage() {
@@ -30,7 +31,8 @@ export default function EditarDosificadorPage() {
 
   const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
   const [areas, setAreas] = useState<Array<{ id: number; name: string; branch: { name: string } }>>([]);
-  const [products, setProducts] = useState<Array<{ id: number; name: string }>>([]);
+  const [products, setProducts] = useState<Array<{ id: number; name: string; photo: string | null }>>([]);
+  const [availableNozzles, setAvailableNozzles] = useState<Array<{ id: number; name: string }>>([]);
 
   const [identifier, setIdentifier] = useState("");
   const [selectedModelId, setSelectedModelId] = useState("");
@@ -38,6 +40,7 @@ export default function EditarDosificadorPage() {
   const [installedAt, setInstalledAt] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [productNozzleByProductId, setProductNozzleByProductId] = useState<Record<string, string>>({});
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -71,7 +74,8 @@ export default function EditarDosificadorPage() {
 
         setModels((modelsData.results ?? []) as Array<{ id: number; name: string }>);
         setAreas((areasData.results ?? []) as Array<{ id: number; name: string; branch: { name: string } }>);
-        setProducts((productsData.results ?? []).map((product) => ({ id: product.id, name: product.name })));
+        setProducts((productsData.results ?? []).map((product) => ({ id: product.id, name: product.name, photo: product.photo ?? null })));
+        setAvailableNozzles(dispenserData.available_nozzles ?? []);
 
         setIdentifier(dispenserData.identifier ?? "");
         setSelectedModelId(dispenserData.model?.id ? String(dispenserData.model.id) : "");
@@ -79,6 +83,14 @@ export default function EditarDosificadorPage() {
         setInstalledAt(dispenserData.installed_at ?? "");
         setIsActive(Boolean(dispenserData.is_active));
         setSelectedProductIds((dispenserData.products ?? []).map((product) => String(product.id)));
+        setProductNozzleByProductId(
+          (dispenserData.products ?? []).reduce<Record<string, string>>((accumulator, product) => {
+            if (product.nozzle?.id) {
+              accumulator[String(product.id)] = String(product.nozzle.id);
+            }
+            return accumulator;
+          }, {}),
+        );
       } catch (loadError) {
         if (!isMounted) return;
         setError(loadError instanceof Error ? loadError.message : "No se pudo cargar la información del dosificador.");
@@ -110,7 +122,15 @@ export default function EditarDosificadorPage() {
       body.append("area_id", selectedAreaId);
       body.append("installed_at", installedAt);
       body.append("is_active", isActive ? "true" : "false");
-      selectedProductIds.forEach((productId) => body.append("product_ids", productId));
+      body.append(
+        "product_assignments",
+        JSON.stringify(
+          selectedProductIds.map((productId) => ({
+            product_id: Number(productId),
+            nozzle_id: productNozzleByProductId[productId] ? Number(productNozzleByProductId[productId]) : null,
+          })),
+        ),
+      );
 
       const response = await fetch(`/api/dispensers/${dispenserId}/`, {
         method: "PUT",
@@ -179,25 +199,79 @@ export default function EditarDosificadorPage() {
                 </select>
               </label>
 
-              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="products">
-                Productos asociados
-                <select
-                  className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-32"
-                  id="products"
-                  multiple
-                  value={selectedProductIds}
-                  onChange={(event) => {
-                    const values = Array.from(event.target.selectedOptions, (option) => option.value);
-                    setSelectedProductIds(values);
-                  }}
-                >
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="md:col-span-2 space-y-3">
+                <p className="text-sm text-slate-600 dark:text-slate-300">Productos asociados</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {products.map((product) => {
+                    const productId = String(product.id);
+                    const isSelected = selectedProductIds.includes(productId);
+
+                    return (
+                      <div
+                        key={product.id}
+                        className={`rounded-xl border p-3 transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/5 shadow-sm"
+                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40"
+                        }`}
+                      >
+                        <label className="flex cursor-pointer items-center gap-3">
+                          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                            {product.photo ? (
+                              <img alt={`Foto de ${product.name}`} className="h-full w-full object-cover" src={product.photo} />
+                            ) : (
+                              <span className="material-symbols-outlined text-slate-400">inventory_2</span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{product.name}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Selecciona para asignarlo al dosificador</p>
+                          </div>
+                          <input
+                            checked={isSelected}
+                            className="h-5 w-5 accent-primary"
+                            type="checkbox"
+                            onChange={(event) => {
+                              setSelectedProductIds((current) => {
+                                if (event.target.checked) return [...current, productId];
+                                const updated = current.filter((id) => id !== productId);
+                                setProductNozzleByProductId((currentNozzles) => {
+                                  const next = { ...currentNozzles };
+                                  delete next[productId];
+                                  return next;
+                                });
+                                return updated;
+                              });
+                            }}
+                          />
+                        </label>
+                        {isSelected ? (
+                          <label className="mt-3 flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400">
+                            Boquilla
+                            <select
+                              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none text-sm text-slate-700 dark:text-slate-200"
+                              value={productNozzleByProductId[productId] ?? ""}
+                              onChange={(event) =>
+                                setProductNozzleByProductId((current) => ({
+                                  ...current,
+                                  [productId]: event.target.value,
+                                }))
+                              }
+                            >
+                              <option value="">Sin boquilla</option>
+                              {availableNozzles.map((nozzle) => (
+                                <option key={nozzle.id} value={nozzle.id}>
+                                  {nozzle.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
               {error ? <p className="text-sm text-red-500 md:col-span-2">{error}</p> : null}
             </div>

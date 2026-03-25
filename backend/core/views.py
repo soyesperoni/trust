@@ -338,6 +338,13 @@ def _serialize_dispenser(dispenser: Dispenser) -> dict:
             }
             for product in dispenser.products.all()
         ],
+        "available_nozzles": [
+            {
+                "id": nozzle.id,
+                "name": nozzle.name,
+            }
+            for nozzle in dispenser.available_nozzles.all()
+        ],
         "is_active": dispenser.is_active,
     }
 
