@@ -35,6 +35,20 @@ type DispenserApi = {
   is_active: boolean;
 };
 
+type AreaApi = {
+  id: number;
+  branch: {
+    id: number;
+  };
+};
+
+type BranchApi = {
+  id: number;
+  client: {
+    name: string;
+  };
+};
+
 type DispenserRow = {
   id: number;
   code: string;
@@ -43,6 +57,7 @@ type DispenserRow = {
   modelPhoto: string | null;
   area: string;
   branch: string;
+  client: string;
   branchInitials: string;
   products: number;
   status: DispenserStatus;
@@ -66,6 +81,11 @@ export default function DispensadoresPage() {
   const canDeleteDispensers = !isLoadingUser && user?.role === GENERAL_ADMIN_ROLE;
   const [dispensers, setDispensers] = useState<DispenserRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
+  const [modelFilter, setModelFilter] = useState("");
+  const [areaFilter, setAreaFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | DispenserStatus>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingDispenserId, setDeletingDispenserId] = useState<number | null>(null);
@@ -76,12 +96,36 @@ export default function DispensadoresPage() {
     const loadDispensers = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const dispensersResponse = await fetch("/api/dispensers/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } });
-        if (!dispensersResponse.ok) {
+        const [dispensersResponse, areasResponse, branchesResponse] = await Promise.all([
+          fetch("/api/dispensers/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/areas/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/branches/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+        ]);
+        if (!dispensersResponse.ok || !areasResponse.ok || !branchesResponse.ok) {
           throw new Error("No se pudieron cargar los dosificadores.");
         }
-        const dispensersData = await dispensersResponse.json();
+
+        const [dispensersData, areasData, branchesData] = await Promise.all([
+          dispensersResponse.json(),
+          areasResponse.json(),
+          branchesResponse.json(),
+        ]);
+
         if (!isMounted) return;
+
+        const areas = (areasData.results ?? []) as AreaApi[];
+        const branches = (branchesData.results ?? []) as BranchApi[];
+
+        const areaToBranch = areas.reduce<Record<number, number>>((acc, area) => {
+          acc[area.id] = area.branch.id;
+          return acc;
+        }, {});
+
+        const branchToClient = branches.reduce<Record<number, string>>((acc, branch) => {
+          acc[branch.id] = branch.client.name;
+          return acc;
+        }, {});
+
         const rows = (dispensersData.results ?? []).map(
           (dispenser: DispenserApi) => {
             const branchName = dispenser.area?.branch ?? "Sin sucursal";
@@ -92,6 +136,9 @@ export default function DispensadoresPage() {
               .map((part) => part[0]?.toUpperCase())
               .join("");
             const status: DispenserStatus = dispenser.is_active ? "Activo" : "Inactivo";
+            const branchId = dispenser.area?.id ? areaToBranch[dispenser.area.id] : undefined;
+            const clientName = branchId ? (branchToClient[branchId] ?? "Sin cliente") : "Sin cliente";
+
             return {
               id: dispenser.id,
               code: dispenser.identifier,
@@ -100,6 +147,7 @@ export default function DispensadoresPage() {
               modelPhoto: dispenser.model.photo,
               area: dispenser.area?.name ?? "Sin área",
               branch: branchName,
+              client: clientName,
               branchInitials: branchInitials || "NA",
               products: dispenser.products.length,
               status,
@@ -157,21 +205,49 @@ export default function DispensadoresPage() {
       setDeletingDispenserId(null);
     }
   };
+
+  const uniqueClients = useMemo(
+    () => Array.from(new Set(dispensers.map((dispenser) => dispenser.client))).sort((a, b) => a.localeCompare(b)),
+    [dispensers],
+  );
+  const uniqueModels = useMemo(
+    () => Array.from(new Set(dispensers.map((dispenser) => dispenser.model))).sort((a, b) => a.localeCompare(b)),
+    [dispensers],
+  );
+  const uniqueAreas = useMemo(
+    () => Array.from(new Set(dispensers.map((dispenser) => dispenser.area))).sort((a, b) => a.localeCompare(b)),
+    [dispensers],
+  );
+  const uniqueBranches = useMemo(
+    () => Array.from(new Set(dispensers.map((dispenser) => dispenser.branch))).sort((a, b) => a.localeCompare(b)),
+    [dispensers],
+  );
+
   const filteredDispensers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return dispensers;
 
-    return dispensers.filter((dispenser) =>
-      [
-        dispenser.code,
-        dispenser.serial,
-        dispenser.model,
-        dispenser.area,
-        dispenser.branch,
-        dispenser.status,
-      ].some((value) => value.toLowerCase().includes(query)),
-    );
-  }, [dispensers, searchTerm]);
+    return dispensers.filter((dispenser) => {
+      const matchesQuery =
+        !query ||
+        [
+          dispenser.code,
+          dispenser.serial,
+          dispenser.client,
+          dispenser.model,
+          dispenser.area,
+          dispenser.branch,
+          dispenser.status,
+        ].some((value) => value.toLowerCase().includes(query));
+
+      const matchesClient = !clientFilter || dispenser.client === clientFilter;
+      const matchesModel = !modelFilter || dispenser.model === modelFilter;
+      const matchesArea = !areaFilter || dispenser.area === areaFilter;
+      const matchesBranch = !branchFilter || dispenser.branch === branchFilter;
+      const matchesStatus = !statusFilter || dispenser.status === statusFilter;
+
+      return matchesQuery && matchesClient && matchesModel && matchesArea && matchesBranch && matchesStatus;
+    });
+  }, [areaFilter, branchFilter, clientFilter, dispensers, modelFilter, searchTerm, statusFilter]);
 
   const totalResults = dispensers.length;
   const displayedResults = filteredDispensers.length;
@@ -192,7 +268,7 @@ export default function DispensadoresPage() {
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
             <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
               {canManageDispensers ? (
                 <Link
@@ -216,12 +292,72 @@ export default function DispensadoresPage() {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={clientFilter}
+                onChange={(event) => setClientFilter(event.target.value)}
+              >
+                <option value="">Todos los clientes</option>
+                {uniqueClients.map((client) => (
+                  <option key={client} value={client}>
+                    {client}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={modelFilter}
+                onChange={(event) => setModelFilter(event.target.value)}
+              >
+                <option value="">Todos los modelos</option>
+                {uniqueModels.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={areaFilter}
+                onChange={(event) => setAreaFilter(event.target.value)}
+              >
+                <option value="">Todas las áreas</option>
+                {uniqueAreas.map((area) => (
+                  <option key={area} value={area}>
+                    {area}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={branchFilter}
+                onChange={(event) => setBranchFilter(event.target.value)}
+              >
+                <option value="">Todas las sucursales</option>
+                {uniqueBranches.map((branch) => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as "" | DispenserStatus)}
+              >
+                <option value="">Todos los estados</option>
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
           </div>
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700">
                   <th className="px-6 py-4">Dosificador</th>
+                  <th className="px-6 py-4">Cliente</th>
                   <th className="px-6 py-4">Modelo</th>
                   <th className="px-6 py-4">Área</th>
                   <th className="px-6 py-4">Sucursal</th>
@@ -263,6 +399,9 @@ export default function DispensadoresPage() {
                             </div>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                        {dispenser.client}
                       </td>
                       <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                         {dispenser.model}
@@ -322,7 +461,7 @@ export default function DispensadoresPage() {
                 {filteredDispensers.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="px-6 py-8 text-center text-slate-500"
                     >
                       {emptyMessage}
