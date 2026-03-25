@@ -396,6 +396,18 @@ def _extract_dispenser_product_assignments(data):
             raw_assignments = json.loads(raw_assignments)
         except json.JSONDecodeError:
             return None, "Formato inválido para product_assignments."
+    elif (
+        isinstance(raw_assignments, list)
+        and len(raw_assignments) == 1
+        and isinstance(raw_assignments[0], str)
+    ):
+        serialized_assignments = raw_assignments[0].strip()
+        if not serialized_assignments:
+            return [], None
+        try:
+            raw_assignments = json.loads(serialized_assignments)
+        except json.JSONDecodeError:
+            return None, "Formato inválido para product_assignments."
 
     if not isinstance(raw_assignments, list):
         return None, "product_assignments debe ser una lista."

@@ -8,7 +8,7 @@ from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.utils import timezone
 
 from config import settings_prod
-from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, User, Visit
+from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, DispenserProductAssignment, Product, User, Visit
 from .views import _fallback_audit_ai_analysis
 
 
@@ -230,6 +230,45 @@ class DispenserApiTests(TestCase):
         self.assertEqual(len(payload["results"]), 1)
         self.assertEqual(payload["results"][0]["id"], dispenser.id)
         self.assertEqual(payload["results"][0]["identifier"], dispenser.identifier)
+
+    def test_update_dispenser_accepts_multipart_product_assignments_without_nozzle(self):
+        dispenser = Dispenser.objects.create(model=self.model, identifier="DISP-003", area=self.area)
+        product = Product.objects.create(name="Jabón")
+
+        body = encode_multipart(
+            BOUNDARY,
+            {
+                "identifier": "DISP-003",
+                "model_id": str(self.model.id),
+                "area_id": str(self.area.id),
+                "is_active": "true",
+                "product_assignments": json.dumps(
+                    [
+                        {
+                            "product_id": product.id,
+                            "nozzle_id": None,
+                        }
+                    ]
+                ),
+            },
+        )
+
+        response = self.client.generic(
+            "PUT",
+            f"/api/dispensers/{dispenser.id}/",
+            data=body,
+            content_type=MULTIPART_CONTENT,
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        assignment = DispenserProductAssignment.objects.filter(
+            dispenser=dispenser,
+            product=product,
+        ).first()
+        self.assertIsNotNone(assignment)
+        assert assignment is not None
+        self.assertIsNone(assignment.nozzle_id)
 
 
 class VisitReportRouteTests(TestCase):
