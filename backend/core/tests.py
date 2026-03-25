@@ -217,6 +217,20 @@ class DispenserApiTests(TestCase):
         self.assertEqual(created.model_id, self.model.id)
         self.assertEqual(created.area_id, self.area.id)
 
+    def test_list_dispensers(self):
+        dispenser = Dispenser.objects.create(model=self.model, identifier="DISP-002", area=self.area)
+
+        response = self.client.get(
+            "/api/dispensers/",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["results"]), 1)
+        self.assertEqual(payload["results"][0]["id"], dispenser.id)
+        self.assertEqual(payload["results"][0]["identifier"], dispenser.identifier)
+
 
 class VisitReportRouteTests(TestCase):
     def setUp(self):
