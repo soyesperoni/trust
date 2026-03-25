@@ -1952,7 +1952,7 @@ def dispensers(request):
 
         return JsonResponse(_serialize_dispenser(dispenser), status=201)
 
-    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products__model")
+    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
     queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
     payload = [
         _serialize_dispenser(dispenser)
@@ -1972,7 +1972,7 @@ def dispenser_models(request):
 @require_http_methods(["GET", "PUT", "DELETE"])
 def dispenser_detail(request, dispenser_id: int):
     scope = _get_access_scope(request)
-    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products__model")
+    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
     queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
     dispenser = queryset.filter(pk=dispenser_id).first()
     if dispenser is None:
