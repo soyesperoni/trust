@@ -3,6 +3,7 @@ import json
 import textwrap
 from functools import lru_cache
 from django.db import IntegrityError
+from django.db.models import Q
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -301,6 +302,10 @@ def _serialize_area(area: Area) -> dict:
     }
 
 
+def _get_available_nozzles_for_dispenser(dispenser: Dispenser):
+    return Nozzle.objects.filter(Q(dispensers=dispenser) | Q(dispensers__isnull=True)).distinct()
+
+
 def _serialize_dispenser(dispenser: Dispenser) -> dict:
     assignment_by_product_id = {
         assignment.product_id: assignment
@@ -343,7 +348,7 @@ def _serialize_dispenser(dispenser: Dispenser) -> dict:
                 "id": nozzle.id,
                 "name": nozzle.name,
             }
-            for nozzle in dispenser.available_nozzles.all()
+            for nozzle in _get_available_nozzles_for_dispenser(dispenser)
         ],
         "is_active": dispenser.is_active,
     }
@@ -438,7 +443,7 @@ def _apply_dispenser_product_assignments(dispenser: Dispenser, assignments_data)
     if len(nozzles_by_id) != len(set(nozzle_ids)):
         return JsonResponse({"error": "Una o más boquillas seleccionadas no existen."}, status=404)
 
-    allowed_nozzles = set(dispenser.available_nozzles.values_list("id", flat=True))
+    allowed_nozzles = set(_get_available_nozzles_for_dispenser(dispenser).values_list("id", flat=True))
     for item in assignments_data:
         nozzle_id = item["nozzle_id"]
         if nozzle_id is not None and nozzle_id not in allowed_nozzles:
