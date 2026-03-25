@@ -4,6 +4,26 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def copy_existing_dispenser_products(apps, schema_editor):
+    DispenserProductAssignment = apps.get_model("core", "DispenserProductAssignment")
+
+    old_table = "core_dispenser_products"
+    existing_tables = schema_editor.connection.introspection.table_names()
+    if old_table not in existing_tables:
+        return
+
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute(f"SELECT dispenser_id, product_id FROM {old_table}")
+        rows = cursor.fetchall()
+
+    assignments = [
+        DispenserProductAssignment(dispenser_id=dispenser_id, product_id=product_id)
+        for dispenser_id, product_id in rows
+    ]
+    if assignments:
+        DispenserProductAssignment.objects.bulk_create(assignments, ignore_conflicts=True)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -42,17 +62,24 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["dispenser__identifier", "product__name"],
+                "unique_together": {("dispenser", "product")},
             },
         ),
-        migrations.AlterField(
-            model_name="dispenser",
-            name="products",
-            field=models.ManyToManyField(
-                blank=True,
-                related_name="dispensers",
-                through="core.DispenserProductAssignment",
-                to="core.product",
-            ),
+        migrations.RunPython(copy_existing_dispenser_products, migrations.RunPython.noop),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AlterField(
+                    model_name="dispenser",
+                    name="products",
+                    field=models.ManyToManyField(
+                        blank=True,
+                        related_name="dispensers",
+                        through="core.DispenserProductAssignment",
+                        to="core.product",
+                    ),
+                ),
+            ],
+            database_operations=[],
         ),
         migrations.CreateModel(
             name="Nozzle",
@@ -91,9 +118,5 @@ class Migration(migrations.Migration):
                 related_name="product_assignments",
                 to="core.nozzle",
             ),
-        ),
-        migrations.AlterUniqueTogether(
-            name="dispenserproductassignment",
-            unique_together={("dispenser", "product")},
         ),
     ]
