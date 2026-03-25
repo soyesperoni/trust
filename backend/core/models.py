@@ -70,6 +70,7 @@ class Dispenser(models.Model):
     installed_at = models.DateField(blank=True, null=True)
     photo = models.ImageField(upload_to="dispensers/", blank=True, null=True)
     products = models.ManyToManyField("Product", related_name="dispensers", blank=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["identifier"]

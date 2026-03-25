@@ -328,6 +328,7 @@ def _serialize_dispenser(dispenser: Dispenser) -> dict:
             }
             for product in dispenser.products.all()
         ],
+        "is_active": dispenser.is_active,
     }
 
 
@@ -1938,6 +1939,7 @@ def dispensers(request):
             model=model,
             identifier=identifier,
             area=area,
+            is_active=_is_truthy(data.get("is_active", True)),
         )
         product_ids = _as_id_list(data, "product_ids")
         if product_ids is not None:
@@ -2030,6 +2032,9 @@ def dispenser_detail(request, dispenser_id: int):
         if products.count() != len(set(product_ids)):
             return JsonResponse({"error": "Uno o más productos seleccionados no existen."}, status=404)
         dispenser.products.set(products)
+
+    if "is_active" in data:
+        dispenser.is_active = _is_truthy(data.get("is_active"))
 
     if not dispenser.identifier:
         return JsonResponse({"error": "El identificador no puede estar vacío."}, status=400)

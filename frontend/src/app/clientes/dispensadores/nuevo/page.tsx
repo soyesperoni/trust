@@ -23,6 +23,7 @@ export default function NuevoDosificadorPage() {
   const [selectedAreaId, setSelectedAreaId] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [installedAt, setInstalledAt] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,6 +85,7 @@ export default function NuevoDosificadorPage() {
       body.append("model_id", selectedModelId);
       if (selectedAreaId) body.append("area_id", selectedAreaId);
       if (installedAt) body.append("installed_at", installedAt);
+      body.append("is_active", isActive ? "true" : "false");
       if (photoFile) body.append("photo", photoFile);
       selectedProductIds.forEach((productId) => body.append("product_ids", productId));
 
@@ -144,6 +146,15 @@ export default function NuevoDosificadorPage() {
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="installed_at">
                 Fecha de instalación
                 <input className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="installed_at" type="date" value={installedAt} onChange={(event) => setInstalledAt(event.target.value)} />
+              </label>
+
+
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="is_active">
+                Estado
+                <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="is_active" value={isActive ? "true" : "false"} onChange={(event) => setIsActive(event.target.value === "true")}>
+                  <option value="true">Activo</option>
+                  <option value="false">Inactivo</option>
+                </select>
               </label>
 
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="photo">
