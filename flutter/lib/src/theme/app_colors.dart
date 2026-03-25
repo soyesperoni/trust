@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class AppColors {
   const AppColors._();
 
+  // Colores oficiales de marca.
   static const Color primary = Color(0xFF2E3192);
   static const Color primaryDark = Color(0xFF252876);
   static const Color primarySoft = Color(0xFFDDE1FF);
@@ -11,7 +12,7 @@ class AppColors {
   static const Color secondaryDark = Color(0xFF7F9F33);
   static const Color secondarySoft = Color(0xFFE8F2D6);
 
-  // Backward-compatible aliases used throughout existing screens.
+  // Aliases legacy para no romper pantallas existentes.
   static const Color yellow = secondary;
   static const Color yellowDark = secondaryDark;
   static const Color yellowSoft = secondarySoft;

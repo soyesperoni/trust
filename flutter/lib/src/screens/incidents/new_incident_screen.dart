@@ -40,7 +40,7 @@ class _NewIncidentScreenState extends State<NewIncidentScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final List<File> _evidenceFiles = [];
 
-  static const _primaryColor = Color(0xFFFACC15);
+  static const _primaryColor = AppColors.secondary;
   static const _textSecondary = Color(0xFF64748B);
 
   @override
