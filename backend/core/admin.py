@@ -10,9 +10,11 @@ from .models import (
     Branch,
     Client,
     Dispenser,
+    DispenserProductAssignment,
     DispenserModel,
     Incident,
     IncidentMedia,
+    Nozzle,
     Product,
     User,
     Visit,
@@ -43,6 +45,12 @@ class IncidentMediaInline(admin.TabularInline):
 class AuditMediaInline(admin.TabularInline):
     model = AuditMedia
     extra = 0
+
+
+class DispenserProductAssignmentInline(admin.TabularInline):
+    model = DispenserProductAssignment
+    extra = 0
+    autocomplete_fields = ("product", "nozzle")
 
 
 @admin.register(Client)
@@ -82,7 +90,7 @@ class DispenserAdmin(admin.ModelAdmin):
     list_display = ("identifier", "model", "area", "branch_name", "client_name")
     list_filter = ("model", "area__branch__client")
     search_fields = ("identifier", "model__name", "area__name", "area__branch__name")
-    filter_horizontal = ("products",)
+    inlines = [DispenserProductAssignmentInline]
 
     @admin.display(description="Sucursal")
     def branch_name(self, obj):
@@ -97,6 +105,17 @@ class DispenserAdmin(admin.ModelAdmin):
 class ProductAdmin(admin.ModelAdmin):
     list_display = ("name", "linked_dispensers")
     search_fields = ("name", "dispensers__identifier")
+
+    @admin.display(description="Dosificadores")
+    def linked_dispensers(self, obj):
+        return ", ".join(obj.dispensers.values_list("identifier", flat=True)) or "Sin asignar"
+
+
+@admin.register(Nozzle)
+class NozzleAdmin(admin.ModelAdmin):
+    list_display = ("name", "description", "linked_dispensers")
+    search_fields = ("name", "dispensers__identifier")
+    filter_horizontal = ("dispensers",)
 
     @admin.display(description="Dosificadores")
     def linked_dispensers(self, obj):

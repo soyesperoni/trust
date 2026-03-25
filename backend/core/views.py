@@ -32,7 +32,7 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, Incident, IncidentMedia, Product, User, Visit, VisitMedia
+from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, Incident, IncidentMedia, Nozzle, Product, User, Visit, VisitMedia
 
 
 try:
@@ -302,6 +302,10 @@ def _serialize_area(area: Area) -> dict:
 
 
 def _serialize_dispenser(dispenser: Dispenser) -> dict:
+    assignment_by_product_id = {
+        assignment.product_id: assignment
+        for assignment in dispenser.product_assignments.select_related("nozzle").all()
+    }
     return {
         "id": dispenser.id,
         "identifier": dispenser.identifier,
@@ -325,6 +329,12 @@ def _serialize_dispenser(dispenser: Dispenser) -> dict:
                 "id": product.id,
                 "name": product.name,
                 "photo": product.photo.url if product.photo else None,
+                "nozzle": {
+                    "id": assignment_by_product_id[product.id].nozzle_id,
+                    "name": assignment_by_product_id[product.id].nozzle.name,
+                }
+                if product.id in assignment_by_product_id and assignment_by_product_id[product.id].nozzle
+                else None,
             }
             for product in dispenser.products.all()
         ],
@@ -358,6 +368,85 @@ def _serialize_product(product: Product) -> dict:
         "photo": product.photo.url if product.photo else None,
         "dispensers": dispensers,
     }
+
+
+def _extract_dispenser_product_assignments(data):
+    if hasattr(data, "getlist"):
+        raw_assignments = data.getlist("product_assignments")
+        if not raw_assignments and "product_assignments" in data:
+            raw_assignments = [data.get("product_assignments")]
+    else:
+        raw_assignments = data.get("product_assignments") if isinstance(data, dict) else None
+
+    if raw_assignments is None:
+        return None, None
+
+    if isinstance(raw_assignments, str):
+        raw_assignments = raw_assignments.strip()
+        if not raw_assignments:
+            return [], None
+        try:
+            raw_assignments = json.loads(raw_assignments)
+        except json.JSONDecodeError:
+            return None, "Formato inválido para product_assignments."
+
+    if not isinstance(raw_assignments, list):
+        return None, "product_assignments debe ser una lista."
+
+    parsed = []
+    seen_product_ids = set()
+    for item in raw_assignments:
+        if not isinstance(item, dict):
+            return None, "Cada asignación debe ser un objeto."
+        try:
+            product_id = int(item.get("product_id"))
+        except (TypeError, ValueError):
+            return None, "Cada asignación debe incluir product_id válido."
+        nozzle_id = item.get("nozzle_id")
+        if nozzle_id in ("", None):
+            resolved_nozzle_id = None
+        else:
+            try:
+                resolved_nozzle_id = int(nozzle_id)
+            except (TypeError, ValueError):
+                return None, "Cada asignación debe incluir nozzle_id válido."
+        if product_id in seen_product_ids:
+            return None, "No se puede repetir el producto en asignaciones."
+        seen_product_ids.add(product_id)
+        parsed.append({"product_id": product_id, "nozzle_id": resolved_nozzle_id})
+
+    return parsed, None
+
+
+def _apply_dispenser_product_assignments(dispenser: Dispenser, assignments_data):
+    product_ids = [item["product_id"] for item in assignments_data]
+    products = Product.objects.filter(id__in=product_ids)
+    products_by_id = {product.id: product for product in products}
+    if len(products_by_id) != len(product_ids):
+        return JsonResponse({"error": "Uno o más productos seleccionados no existen."}, status=404)
+
+    nozzle_ids = [item["nozzle_id"] for item in assignments_data if item["nozzle_id"] is not None]
+    nozzles = Nozzle.objects.filter(id__in=nozzle_ids)
+    nozzles_by_id = {nozzle.id: nozzle for nozzle in nozzles}
+    if len(nozzles_by_id) != len(set(nozzle_ids)):
+        return JsonResponse({"error": "Una o más boquillas seleccionadas no existen."}, status=404)
+
+    allowed_nozzles = set(dispenser.available_nozzles.values_list("id", flat=True))
+    for item in assignments_data:
+        nozzle_id = item["nozzle_id"]
+        if nozzle_id is not None and nozzle_id not in allowed_nozzles:
+            return JsonResponse({"error": "La boquilla seleccionada no está asociada al dosificador."}, status=400)
+
+    DispenserProductAssignment.objects.filter(dispenser=dispenser).exclude(
+        product_id__in=product_ids
+    ).delete()
+    for item in assignments_data:
+        DispenserProductAssignment.objects.update_or_create(
+            dispenser=dispenser,
+            product=products_by_id[item["product_id"]],
+            defaults={"nozzle": nozzles_by_id.get(item["nozzle_id"])},
+        )
+    return None
 
 
 def _serialize_visit(visit: Visit) -> dict:
@@ -1941,12 +2030,22 @@ def dispensers(request):
             area=area,
             is_active=_is_truthy(data.get("is_active", True)),
         )
-        product_ids = _as_id_list(data, "product_ids")
-        if product_ids is not None:
-            products = Product.objects.filter(id__in=product_ids)
-            if products.count() != len(set(product_ids)):
-                return JsonResponse({"error": "Uno o más productos seleccionados no existen."}, status=404)
-            dispenser.products.set(products)
+        assignments_data, assignments_error = _extract_dispenser_product_assignments(data)
+        if assignments_error:
+            return JsonResponse({"error": assignments_error}, status=400)
+        if assignments_data is not None:
+            apply_error = _apply_dispenser_product_assignments(dispenser, assignments_data)
+            if apply_error:
+                dispenser.delete()
+                return apply_error
+        else:
+            product_ids = _as_id_list(data, "product_ids")
+            if product_ids is not None:
+                products = Product.objects.filter(id__in=product_ids)
+                if products.count() != len(set(product_ids)):
+                    dispenser.delete()
+                    return JsonResponse({"error": "Uno o más productos seleccionados no existen."}, status=404)
+                dispenser.products.set(products)
 
         if notes:
             # Campo reservado para compatibilidad de payload sin persistencia actual en el modelo.
@@ -1954,7 +2053,10 @@ def dispensers(request):
 
         return JsonResponse(_serialize_dispenser(dispenser), status=201)
 
-    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
+    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related(
+        "products",
+        "product_assignments__nozzle",
+    )
     queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
     payload = [
         _serialize_dispenser(dispenser)
@@ -1974,7 +2076,10 @@ def dispenser_models(request):
 @require_http_methods(["GET", "PUT", "DELETE"])
 def dispenser_detail(request, dispenser_id: int):
     scope = _get_access_scope(request)
-    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
+    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related(
+        "products",
+        "product_assignments__nozzle",
+    )
     queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
     dispenser = queryset.filter(pk=dispenser_id).first()
     if dispenser is None:
@@ -2026,7 +2131,14 @@ def dispenser_detail(request, dispenser_id: int):
                 return JsonResponse({"error": "Área no encontrada."}, status=404)
             dispenser.area = area
 
-    if "product_ids" in data:
+    assignments_data, assignments_error = _extract_dispenser_product_assignments(data)
+    if assignments_error:
+        return JsonResponse({"error": assignments_error}, status=400)
+    if assignments_data is not None:
+        apply_error = _apply_dispenser_product_assignments(dispenser, assignments_data)
+        if apply_error:
+            return apply_error
+    elif "product_ids" in data:
         product_ids = _as_id_list(data, "product_ids") or []
         products = Product.objects.filter(id__in=product_ids)
         if products.count() != len(set(product_ids)):
