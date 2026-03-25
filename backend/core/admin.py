@@ -30,11 +30,6 @@ class AreaInline(admin.TabularInline):
     extra = 0
 
 
-class ProductInline(admin.TabularInline):
-    model = Product
-    extra = 0
-
-
 class VisitMediaInline(admin.TabularInline):
     model = VisitMedia
     extra = 0
@@ -87,7 +82,7 @@ class DispenserAdmin(admin.ModelAdmin):
     list_display = ("identifier", "model", "area", "branch_name", "client_name")
     list_filter = ("model", "area__branch__client")
     search_fields = ("identifier", "model__name", "area__name", "area__branch__name")
-    inlines = [ProductInline]
+    filter_horizontal = ("products",)
 
     @admin.display(description="Sucursal")
     def branch_name(self, obj):
@@ -100,21 +95,12 @@ class DispenserAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "dispenser", "area_name", "branch_name", "client_name")
-    list_filter = ("dispenser__area__branch__client", "dispenser__model")
-    search_fields = ("name", "dispenser__identifier")
+    list_display = ("name", "linked_dispensers")
+    search_fields = ("name", "dispensers__identifier")
 
-    @admin.display(description="Area")
-    def area_name(self, obj):
-        return obj.dispenser.area.name if obj.dispenser.area else ""
-
-    @admin.display(description="Sucursal")
-    def branch_name(self, obj):
-        return obj.dispenser.area.branch.name if obj.dispenser.area else ""
-
-    @admin.display(description="Cliente")
-    def client_name(self, obj):
-        return obj.dispenser.area.branch.client.name if obj.dispenser.area else ""
+    @admin.display(description="Dosificadores")
+    def linked_dispensers(self, obj):
+        return ", ".join(obj.dispensers.values_list("identifier", flat=True)) or "Sin asignar"
 
 
 @admin.register(Visit)

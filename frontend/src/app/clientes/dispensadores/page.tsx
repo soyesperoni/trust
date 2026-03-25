@@ -31,17 +31,7 @@ type DispenserApi = {
     name: string;
     branch: string;
   } | null;
-};
-
-type ProductApi = {
-  id: number;
-  name: string;
-  description: string;
-  dispenser: {
-    id: number;
-    identifier: string;
-    model: string;
-  };
+  products: { id: number }[];
 };
 
 type DispenserRow = {
@@ -91,27 +81,12 @@ export default function DispensadoresPage() {
     const loadDispensers = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const [dispensersResponse, productsResponse] = await Promise.all([
-          fetch("/api/dispensers/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
-          fetch("/api/products/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
-        ]);
-        if (!dispensersResponse.ok || !productsResponse.ok) {
+        const dispensersResponse = await fetch("/api/dispensers/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } });
+        if (!dispensersResponse.ok) {
           throw new Error("No se pudieron cargar los dosificadores.");
         }
-        const [dispensersData, productsData] = await Promise.all([
-          dispensersResponse.json(),
-          productsResponse.json(),
-        ]);
+        const dispensersData = await dispensersResponse.json();
         if (!isMounted) return;
-        const products = (productsData.results ?? []) as ProductApi[];
-        const productCount = products.reduce<Record<number, number>>(
-          (acc, product) => {
-            acc[product.dispenser.id] =
-              (acc[product.dispenser.id] ?? 0) + 1;
-            return acc;
-          },
-          {},
-        );
         const rows = (dispensersData.results ?? []).map(
           (dispenser: DispenserApi) => {
             const branchName = dispenser.area?.branch ?? "Sin sucursal";
@@ -133,7 +108,7 @@ export default function DispensadoresPage() {
               area: dispenser.area?.name ?? "Sin área",
               branch: branchName,
               branchInitials: branchInitials || "NA",
-              products: productCount[dispenser.id] ?? 0,
+              products: dispenser.products.length,
               status,
             };
           },

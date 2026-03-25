@@ -342,16 +342,20 @@ def _serialize_dispenser_model(model: DispenserModel) -> dict:
 
 
 def _serialize_product(product: Product) -> dict:
+    dispensers = [
+        {
+            "id": dispenser.id,
+            "identifier": dispenser.identifier,
+            "model": dispenser.model.name,
+        }
+        for dispenser in product.dispensers.all()
+    ]
     return {
         "id": product.id,
         "name": product.name,
         "description": product.description,
         "photo": product.photo.url if product.photo else None,
-        "dispenser": {
-            "id": product.dispenser_id,
-            "identifier": product.dispenser.identifier,
-            "model": product.dispenser.model.name,
-        },
+        "dispensers": dispensers,
     }
 
 
@@ -1935,6 +1939,12 @@ def dispensers(request):
             identifier=identifier,
             area=area,
         )
+        product_ids = _as_id_list(data, "product_ids")
+        if product_ids is not None:
+            products = Product.objects.filter(id__in=product_ids)
+            if products.count() != len(set(product_ids)):
+                return JsonResponse({"error": "Uno o más productos seleccionados no existen."}, status=404)
+            dispenser.products.set(products)
 
         if notes:
             # Campo reservado para compatibilidad de payload sin persistencia actual en el modelo.
@@ -1942,7 +1952,7 @@ def dispensers(request):
 
         return JsonResponse(_serialize_dispenser(dispenser), status=201)
 
-    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
+    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products__model")
     queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
     payload = [
         _serialize_dispenser(dispenser)
@@ -1962,7 +1972,7 @@ def dispenser_models(request):
 @require_http_methods(["GET", "PUT", "DELETE"])
 def dispenser_detail(request, dispenser_id: int):
     scope = _get_access_scope(request)
-    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products")
+    queryset = Dispenser.objects.select_related("model", "area__branch__client").prefetch_related("products__model")
     queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
     dispenser = queryset.filter(pk=dispenser_id).first()
     if dispenser is None:
@@ -2014,6 +2024,13 @@ def dispenser_detail(request, dispenser_id: int):
                 return JsonResponse({"error": "Área no encontrada."}, status=404)
             dispenser.area = area
 
+    if "product_ids" in data:
+        product_ids = _as_id_list(data, "product_ids") or []
+        products = Product.objects.filter(id__in=product_ids)
+        if products.count() != len(set(product_ids)):
+            return JsonResponse({"error": "Uno o más productos seleccionados no existen."}, status=404)
+        dispenser.products.set(products)
+
     if not dispenser.identifier:
         return JsonResponse({"error": "El identificador no puede estar vacío."}, status=400)
 
@@ -2027,10 +2044,8 @@ def dispenser_detail(request, dispenser_id: int):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def products(request):
-    scope = _get_access_scope(request)
     if request.method == "GET":
-        queryset = Product.objects.select_related("dispenser__model")
-        queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="dispenser__area_id")
+        queryset = Product.objects.prefetch_related("dispensers__model")
         payload = [
             _serialize_product(product)
             for product in queryset.all()
@@ -2048,44 +2063,17 @@ def products(request):
     name = str(data.get("name") or "").strip()
     description = str(data.get("description") or "").strip()
 
-    try:
-        dispenser_id = int(data.get("dispenser_id") or 0)
-    except (TypeError, ValueError):
-        return JsonResponse({"error": "Dosificador inválido."}, status=400)
+    if not name:
+        return JsonResponse({"error": "El nombre es obligatorio."}, status=400)
 
-    if not name or not dispenser_id:
-        return JsonResponse({"error": "Dosificador y nombre son obligatorios."}, status=400)
-
-    dispenser = _filter_queryset_by_scope(
-        Dispenser.objects.select_related("model", "area__branch__client"),
-        scope,
-        area_lookup="area_id",
-    ).filter(pk=dispenser_id).first()
-    if dispenser is None:
-        return JsonResponse({"error": "Dosificador no encontrado."}, status=404)
-
-    if Product.objects.filter(dispenser=dispenser, name=name).exists():
-        return JsonResponse(
-            {"error": "Ya existe un producto con ese nombre para el dosificador seleccionado."},
-            status=400,
-        )
-
-    if Product.objects.filter(dispenser=dispenser).count() >= 4:
-        return JsonResponse(
-            {"error": "Cada dosificador puede tener máximo 4 productos."},
-            status=400,
-        )
-
-    product = Product.objects.create(dispenser=dispenser, name=name, description=description)
+    product = Product.objects.create(name=name, description=description)
     return JsonResponse(_serialize_product(product), status=201)
 
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "DELETE"])
 def product_detail(request, product_id: int):
-    scope = _get_access_scope(request)
-    queryset = Product.objects.select_related("dispenser__model", "dispenser__area__branch__client")
-    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="dispenser__area_id")
+    queryset = Product.objects.prefetch_related("dispensers__model", "dispensers__area__branch__client")
     product = queryset.filter(pk=product_id).first()
     if product is None:
         return JsonResponse({"error": "Producto no encontrado."}, status=404)
@@ -2110,27 +2098,8 @@ def product_detail(request, product_id: int):
     if "description" in data:
         product.description = str(data.get("description") or "").strip()
 
-    if "dispenser_id" in data:
-        try:
-            dispenser_id = int(data.get("dispenser_id") or 0)
-        except (TypeError, ValueError):
-            return JsonResponse({"error": "Dosificador inválido."}, status=400)
-        dispenser = _filter_queryset_by_scope(
-            Dispenser.objects.select_related("model", "area__branch__client"),
-            scope,
-            area_lookup="area_id",
-        ).filter(pk=dispenser_id).first()
-        if dispenser is None:
-            return JsonResponse({"error": "Dosificador no encontrado."}, status=404)
-        if Product.objects.exclude(pk=product.pk).filter(dispenser=dispenser).count() >= 4:
-            return JsonResponse({"error": "Cada dosificador puede tener máximo 4 productos."}, status=400)
-        product.dispenser = dispenser
-
     if not product.name:
         return JsonResponse({"error": "El nombre no puede estar vacío."}, status=400)
-
-    if Product.objects.exclude(pk=product.pk).filter(dispenser=product.dispenser, name=product.name).exists():
-        return JsonResponse({"error": "Ya existe un producto con ese nombre para el dosificador seleccionado."}, status=400)
 
     product.save()
     return JsonResponse(_serialize_product(product))

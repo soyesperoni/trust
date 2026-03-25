@@ -17,6 +17,8 @@ export default function NuevoDosificadorPage() {
   const router = useRouter();
   const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
   const [areas, setAreas] = useState<Array<{ id: number; name: string; branch: { name: string } }>>([]);
+  const [products, setProducts] = useState<Array<{ id: number; name: string }>>([]);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [selectedModelId, setSelectedModelId] = useState("");
   const [selectedAreaId, setSelectedAreaId] = useState("");
   const [identifier, setIdentifier] = useState("");
@@ -32,23 +34,26 @@ export default function NuevoDosificadorPage() {
     const loadOptions = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const [modelsResponse, areasResponse] = await Promise.all([
+        const [modelsResponse, areasResponse, productsResponse] = await Promise.all([
           fetch("/api/dispenser-models/", { cache: "no-store" }),
           fetch("/api/areas/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/products/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
         ]);
 
-        if (!modelsResponse.ok || !areasResponse.ok) {
+        if (!modelsResponse.ok || !areasResponse.ok || !productsResponse.ok) {
           throw new Error("No se pudieron cargar los catálogos del formulario.");
         }
 
-        const [modelsData, areasData] = await Promise.all([
+        const [modelsData, areasData, productsData] = await Promise.all([
           modelsResponse.json(),
           areasResponse.json(),
+          productsResponse.json(),
         ]);
 
         if (!isMounted) return;
         setModels((modelsData.results ?? []) as Array<{ id: number; name: string }>);
         setAreas((areasData.results ?? []) as Array<{ id: number; name: string; branch: { name: string } }>);
+        setProducts((productsData.results ?? []).map((product: { id: number; name: string }) => ({ id: product.id, name: product.name })));
       } catch (loadError) {
         if (!isMounted) return;
         setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los catálogos del formulario.");
@@ -80,6 +85,7 @@ export default function NuevoDosificadorPage() {
       if (selectedAreaId) body.append("area_id", selectedAreaId);
       if (installedAt) body.append("installed_at", installedAt);
       if (photoFile) body.append("photo", photoFile);
+      selectedProductIds.forEach((productId) => body.append("product_ids", productId));
 
       const response = await fetch("/api/dispensers/", {
         method: "POST",
@@ -143,6 +149,26 @@ export default function NuevoDosificadorPage() {
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="photo">
                 Foto del dosificador
                 <input accept="image/*" className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 file:mr-4 file:rounded-md file:border-0 file:bg-professional-green file:px-3 file:py-1.5 file:text-sm file:text-white hover:file:bg-yellow-700 focus:ring-2 focus:ring-primary outline-none" id="photo" name="photo" type="file" onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)} />
+              </label>
+
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300 md:col-span-2" htmlFor="products">
+                Productos asociados
+                <select
+                  className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-32"
+                  id="products"
+                  multiple
+                  value={selectedProductIds}
+                  onChange={(event) => {
+                    const values = Array.from(event.target.selectedOptions, (option) => option.value);
+                    setSelectedProductIds(values);
+                  }}
+                >
+                  {products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </select>
               </label>
               {error ? <p className="text-sm text-red-500 md:col-span-2">{error}</p> : null}
             </div>
