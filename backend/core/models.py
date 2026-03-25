@@ -69,7 +69,12 @@ class Dispenser(models.Model):
     area = models.ForeignKey(Area, on_delete=models.SET_NULL, related_name="dispensers", blank=True, null=True)
     installed_at = models.DateField(blank=True, null=True)
     photo = models.ImageField(upload_to="dispensers/", blank=True, null=True)
-    products = models.ManyToManyField("Product", related_name="dispensers", blank=True)
+    products = models.ManyToManyField(
+        "Product",
+        related_name="dispensers",
+        blank=True,
+        through="DispenserProductAssignment",
+    )
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -90,6 +95,37 @@ class Product(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class Nozzle(models.Model):
+    name = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    dispensers = models.ManyToManyField(Dispenser, related_name="available_nozzles", blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class DispenserProductAssignment(models.Model):
+    dispenser = models.ForeignKey(Dispenser, on_delete=models.CASCADE, related_name="product_assignments")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="dispenser_assignments")
+    nozzle = models.ForeignKey(
+        Nozzle,
+        on_delete=models.SET_NULL,
+        related_name="product_assignments",
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        unique_together = ("dispenser", "product")
+        ordering = ["dispenser__identifier", "product__name"]
+
+    def __str__(self) -> str:
+        return f"{self.dispenser.identifier} - {self.product.name}"
 
 
 class Visit(models.Model):
