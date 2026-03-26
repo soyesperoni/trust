@@ -132,7 +132,7 @@ textarea {
 }
 
 .list-action-btn {
-  @apply p-1.5 rounded-full text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors;
+  @apply inline-flex items-center justify-center text-slate-400 dark:text-slate-500 transition-colors;
 }
 
 @media (prefers-reduced-motion: reduce) {

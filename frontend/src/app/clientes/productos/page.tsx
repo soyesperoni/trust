@@ -274,7 +274,7 @@ export default function ProductosPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {canManageProducts && <Link
-                            className="text-slate-400 hover:text-professional-green transition-colors"
+                            className="list-action-btn hover:text-professional-green"
                             href={`/clientes/productos/${product.id}`}
                           >
                             <span className="material-symbols-outlined">
@@ -284,7 +284,7 @@ export default function ProductosPage() {
                           {canDeleteProducts && (
                             <button
                               type="button"
-                              className="text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                              className="list-action-btn hover:text-red-600 disabled:opacity-50"
                               onClick={() => void handleDeleteProduct(product.id)}
                               disabled={deletingProductId === product.id}
                               title="Eliminar"

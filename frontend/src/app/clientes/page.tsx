@@ -219,7 +219,7 @@ export default function ClientesPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Link
-                          className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                          className="list-action-btn hover:text-professional-green"
                           href={`/usuarios/${user.id}`}
                           title="Editar"
                         >

@@ -191,11 +191,11 @@ export default function PlantillasAuditoriaPage() {
                       {canManage ? (
                         <td className="px-6 py-4 text-right">
                           <Link
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                            className="list-action-btn hover:text-professional-green"
                             href={`/clientes/auditorias/plantillas/${template.id}/editar`}
+                            title="Editar"
                           >
-                            <span className="material-symbols-outlined text-sm">edit</span>
-                            Editar
+                            <span className="material-symbols-outlined text-[20px]">edit</span>
                           </Link>
                         </td>
                       ) : null}

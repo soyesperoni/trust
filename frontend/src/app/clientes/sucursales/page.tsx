@@ -339,7 +339,7 @@ export default function SucursalesPage() {
                         {canManageBranches && (
                           <Link
                             href={`/clientes/sucursales/${branch.id}`}
-                            className="list-action-btn hover:text-professional-green hover:bg-yellow-50"
+                            className="list-action-btn hover:text-professional-green"
                             title="Editar"
                           >
                             <span className="material-symbols-outlined text-[20px]">
@@ -359,7 +359,7 @@ export default function SucursalesPage() {
                         {canDeleteBranches && (
                           <button
                             type="button"
-                            className="list-action-btn hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
+                            className="list-action-btn hover:text-red-600 disabled:opacity-50"
                             onClick={() => void handleDeleteBranch(branch.id)}
                             disabled={deletingBranchId === branch.id}
                             title="Eliminar"

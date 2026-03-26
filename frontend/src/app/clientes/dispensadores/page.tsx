@@ -435,8 +435,9 @@ export default function DispensadoresPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
                         {canManageDispensers && <Link
-                          className="text-slate-400 hover:text-professional-green transition-colors"
+                          className="list-action-btn hover:text-professional-green"
                           href={`/clientes/dispensadores/${dispenser.id}`}
                         >
                           <span className="material-symbols-outlined">
@@ -446,7 +447,7 @@ export default function DispensadoresPage() {
                         {canDeleteDispensers && (
                           <button
                             type="button"
-                            className="text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                            className="list-action-btn hover:text-red-600 disabled:opacity-50"
                             onClick={() => void handleDeleteDispenser(dispenser.id)}
                             disabled={deletingDispenserId === dispenser.id}
                             title="Eliminar"
@@ -454,6 +455,7 @@ export default function DispensadoresPage() {
                             <span className="material-symbols-outlined">delete</span>
                           </button>
                         )}
+                        </div>
                       </td>
                     </tr>
                   );
