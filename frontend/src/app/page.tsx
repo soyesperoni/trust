@@ -78,7 +78,7 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background-light font-display antialiased transition-colors duration-300 dark:bg-background-dark">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,#93c5fd_0%,#86efac_38%,rgba(245,247,251,0)_68%)] dark:bg-[radial-gradient(circle_at_top,#1d4ed8_0%,#166534_42%,rgba(10,15,20,0)_70%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,#2e3192_0%,#92b93b_42%,rgba(245,247,251,0)_72%)] dark:bg-[radial-gradient(circle_at_top,#2e3192_0%,#92b93b_45%,rgba(10,15,20,0)_72%)]" />
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-4">
         <div className="flex w-full max-w-[460px] flex-col items-center gap-8">
           <BrandLogo size="xxl" className="scale-[1.3]" />
@@ -86,7 +86,7 @@ export default function Home() {
             <div className="mb-6 space-y-2">
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Bienvenido de nuevo</h1>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Inicia sesión para gestionar tus operaciones de Trust.
+                Inicia sesión para continuar.
               </p>
             </div>
             <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
