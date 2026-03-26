@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib import messages
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.db import IntegrityError
-from django.db.models.deletion import ProtectedError
+from django.db.models.deletion import ProtectedError, RestrictedError
 
 from .models import (
     Area,
@@ -71,24 +71,31 @@ class SafeDeleteAdminMixin:
             return f"No se pudo eliminar '{obj}' porque está siendo utilizado por otros registros."
         return f"No se pudo eliminar '{obj}' porque está siendo utilizado por: {protected_labels}."
 
+    def _build_integrity_message(self, obj, exc):
+        detail = str(exc).strip()
+        if detail:
+            return f"{self.delete_error_message} Registro: '{obj}'. Detalle técnico: {detail}"
+        return f"{self.delete_error_message} Registro: '{obj}'."
+
     def delete_model(self, request, obj):
         try:
             super().delete_model(request, obj)
-        except ProtectedError as exc:
+        except (ProtectedError, RestrictedError) as exc:
             self.message_user(request, self._build_protected_message(obj, exc), level=messages.ERROR)
-        except IntegrityError:
-            self.message_user(request, self.delete_error_message, level=messages.ERROR)
+        except IntegrityError as exc:
+            self.message_user(request, self._build_integrity_message(obj, exc), level=messages.ERROR)
 
     def delete_queryset(self, request, queryset):
         failed = 0
         for obj in queryset:
             try:
                 obj.delete()
-            except ProtectedError as exc:
+            except (ProtectedError, RestrictedError) as exc:
                 failed += 1
                 self.message_user(request, self._build_protected_message(obj, exc), level=messages.ERROR)
-            except IntegrityError:
+            except IntegrityError as exc:
                 failed += 1
+                self.message_user(request, self._build_integrity_message(obj, exc), level=messages.ERROR)
         if failed:
             self.message_user(
                 request,
