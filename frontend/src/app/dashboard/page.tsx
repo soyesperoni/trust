@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../components/DashboardHeader";
 import { useCurrentUser } from "../hooks/useCurrentUser";
-import { ACCOUNT_ADMIN_ROLE } from "../lib/permissions";
+import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE } from "../lib/permissions";
 import PageTransition from "../components/PageTransition";
 import { getSessionUserEmail } from "../lib/session";
 
@@ -122,6 +122,10 @@ export default function DashboardPage() {
 
       if (user?.role === ACCOUNT_ADMIN_ROLE) {
         return cards;
+      }
+
+      if (user?.role === BRANCH_ADMIN_ROLE) {
+        return cards.filter((card) => card.label !== "Sucursales");
       }
 
       return [
