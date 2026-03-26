@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.core import signing
@@ -474,6 +475,39 @@ class HierarchicalAccessScopeTests(TestCase):
             HTTP_X_CURRENT_USER_EMAIL=user.email,
         )
         self.assertEqual(blocked_response.status_code, 404)
+
+    def test_dashboard_returns_daily_audit_score_history(self):
+        form = AuditForm.objects.create(name="Checklist", schema={"questions": []})
+        base_date = timezone.now()
+        Audit.objects.create(
+            area=self.area_a1,
+            form=form,
+            status=Audit.Status.COMPLETED,
+            completed_at=base_date,
+            audit_report={"score": 80},
+        )
+        Audit.objects.create(
+            area=self.area_a1,
+            form=form,
+            status=Audit.Status.COMPLETED,
+            completed_at=base_date + timedelta(hours=1),
+            audit_report={"score": 60},
+        )
+        Audit.objects.create(
+            area=self.area_a1,
+            form=form,
+            status=Audit.Status.COMPLETED,
+            completed_at=base_date + timedelta(days=1),
+            audit_report={"score": 90},
+        )
+
+        response = self.client.get("/api/dashboard/")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["stats"]["audit_score"], 76.67)
+        self.assertEqual(len(payload["daily_audit_score_history"]), 2)
+        self.assertEqual(payload["daily_audit_score_history"][0]["score"], 70.0)
+        self.assertEqual(payload["daily_audit_score_history"][0]["audits"], 2)
 
 
 class BranchApiTests(TestCase):

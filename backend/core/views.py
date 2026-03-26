@@ -1020,6 +1020,22 @@ def _generate_trust_ai_express_summary(stats: dict[str, int]) -> dict:
         "model": settings.model or "deepseek-chat",
     }
 
+
+def _resolve_audit_score(audit: Audit) -> int | None:
+    report = audit.audit_report if isinstance(audit.audit_report, dict) else {}
+    ai_analysis = report.get("ai_analysis") if isinstance(report.get("ai_analysis"), dict) else {}
+    summary = report.get("audit_summary") if isinstance(report.get("audit_summary"), dict) else {}
+
+    for candidate in (report.get("score"), ai_analysis.get("score"), summary.get("score")):
+        if candidate in (None, ""):
+            continue
+        try:
+            parsed = float(candidate)
+        except (TypeError, ValueError):
+            continue
+        return max(0, min(100, int(round(parsed))))
+    return None
+
 def _serialize_notification(item: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": item["id"],
@@ -1714,6 +1730,36 @@ def dashboard(request):
     incidents = _filter_queryset_by_scope(incidents, scope, area_lookup="area_id")
     audits = _filter_queryset_by_scope(audits, scope, area_lookup="area_id")
 
+    completed_audits = audits.filter(status=Audit.Status.COMPLETED)
+    completed_with_score: list[tuple[Audit, int]] = []
+    for audit in completed_audits:
+        score = _resolve_audit_score(audit)
+        if score is not None:
+            completed_with_score.append((audit, score))
+
+    audit_score_average = 0.0
+    if completed_with_score:
+        audit_score_average = round(
+            sum(score for _, score in completed_with_score) / len(completed_with_score), 2
+        )
+
+    daily_score_bucket: dict[str, list[int]] = {}
+    for audit, score in completed_with_score:
+        reference_date = audit.completed_at or audit.audited_at
+        bucket_key = timezone.localtime(reference_date).date().isoformat()
+        daily_score_bucket.setdefault(bucket_key, []).append(score)
+
+    daily_score_history: list[dict[str, Any]] = []
+    for bucket_key in sorted(daily_score_bucket):
+        bucket_scores = daily_score_bucket[bucket_key]
+        daily_score_history.append(
+            {
+                "date": bucket_key,
+                "score": round(sum(bucket_scores) / len(bucket_scores), 2),
+                "audits": len(bucket_scores),
+            }
+        )
+
     stats = {
         "clients": clients.count(),
         "branches": branches.count(),
@@ -1724,10 +1770,10 @@ def dashboard(request):
         "pending_visits": visits.filter(visited_at__gt=now).count(),
         "incidents": incidents.count(),
         "audits": audits.count(),
-        "completed_audits": audits.filter(status=Audit.Status.COMPLETED).count(),
+        "completed_audits": completed_audits.count(),
         "scheduled_audits": audits.filter(status=Audit.Status.SCHEDULED).count(),
+        "audit_score": audit_score_average,
     }
-    trust_ai_express = _generate_trust_ai_express_summary(stats)
     recent_visits = (
         visits.select_related("area__branch__client", "inspector")
         .order_by("-visited_at")[:6]
@@ -1748,7 +1794,9 @@ def dashboard(request):
                 "visited_at": visit.visited_at.isoformat(),
             }
         )
-    return JsonResponse({"stats": stats, "activity": activity, "trust_ai_express": trust_ai_express})
+    return JsonResponse(
+        {"stats": stats, "activity": activity, "daily_audit_score_history": daily_score_history}
+    )
 
 
 @csrf_exempt
