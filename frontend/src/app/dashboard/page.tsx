@@ -323,7 +323,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-3 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
+              <div className="mt-5 bg-gradient-to-b from-white to-slate-50 p-3 dark:from-slate-900/55 dark:to-slate-900/35">
                 <div className="relative h-72 w-full">
                   <div className="absolute inset-0">
                     {[100, 75, 50, 25, 0].map((tick) => (
