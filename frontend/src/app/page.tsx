@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
+import type { FormEvent, MouseEvent } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,14 @@ import { setSessionUser } from "./lib/session";
 
 export default function Home() {
   const router = useRouter();
+
+  const handleLoginButtonMouseMove = (event: MouseEvent<HTMLButtonElement>) => {
+    const button = event.currentTarget;
+    const bounds = button.getBoundingClientRect();
+
+    button.style.setProperty("--cursor-x", `${event.clientX - bounds.left}px`);
+    button.style.setProperty("--cursor-y", `${event.clientY - bounds.top}px`);
+  };
 
   const loginEndpoints = [
     "/api/login/",
@@ -113,7 +121,8 @@ export default function Home() {
                 />
               </div>
               <button
-                className="mt-2 flex h-12 w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl bg-primary text-sm font-bold leading-normal tracking-wide text-white shadow-lg shadow-primary/20 transition-all duration-200 hover:bg-yellow-500 hover:shadow-primary/30 active:scale-[0.98]"
+                className="login-submit-button mt-2 flex h-12 w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl bg-primary text-sm font-bold leading-normal tracking-wide text-white shadow-lg shadow-primary/20 transition-all duration-200 hover:shadow-primary/30 active:scale-[0.98]"
+                onMouseMove={handleLoginButtonMouseMove}
                 type="submit"
               >
                 Iniciar Sesión
