@@ -80,7 +80,7 @@ export default function Home() {
     <div className="relative min-h-screen overflow-hidden bg-background-light font-display antialiased transition-colors duration-300 dark:bg-background-dark">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.62)_0%,rgba(146,185,59,0.48)_36%,rgba(245,247,251,0)_68%)] dark:bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.5)_0%,rgba(146,185,59,0.32)_38%,rgba(10,15,20,0)_68%)]" />
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-4">
-        <div className="flex w-full max-w-[322px] flex-col items-center gap-8">
+        <div className="flex w-full max-w-[322px] flex-col items-center gap-10">
           <BrandLogo size="xxl" className="scale-[1.3]" />
           <div className="w-full rounded-3xl border border-white/60 bg-white/65 p-6 shadow-[0_25px_80px_-24px_rgba(15,23,42,0.32)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55 dark:shadow-black/35 sm:p-7">
             <div className="mb-6 space-y-2">
@@ -91,33 +91,23 @@ export default function Home() {
             </div>
             <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <label
-                  className="block text-slate-800 dark:text-slate-200 text-sm font-bold"
-                  htmlFor="email"
-                >
-                  Correo electrónico
-                </label>
                 <input
                   className="form-input block h-14 w-full rounded-xl border-slate-200 bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 shadow-input transition-all duration-200 ease-in-out focus:border-professional-green focus:ring-professional-green dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                   id="email"
                   name="email"
-                  placeholder="usuario@empresa.com"
+                  aria-label="Correo electrónico"
+                  placeholder="Correo electrónico"
                   required
                   type="email"
                 />
               </div>
               <div className="space-y-2">
-                <label
-                  className="block text-slate-800 dark:text-slate-200 text-sm font-bold"
-                  htmlFor="password"
-                >
-                  Contraseña
-                </label>
                 <input
                   className="form-input block h-14 w-full rounded-xl border-slate-200 bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 shadow-input transition-all duration-200 ease-in-out focus:border-professional-green focus:ring-professional-green dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                   id="password"
                   name="password"
-                  placeholder="••••••••"
+                  aria-label="Contraseña"
+                  placeholder="Contraseña"
                   required
                   type="password"
                 />
