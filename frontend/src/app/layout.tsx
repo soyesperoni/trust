@@ -11,14 +11,28 @@ export const metadata: Metadata = {
   },
 };
 
+const THEME_BOOTSTRAP_SCRIPT = `(() => {
+  const storedTheme = localStorage.getItem("theme");
+  const theme =
+    storedTheme === "light" || storedTheme === "dark"
+      ? storedTheme
+      : window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+
+  document.documentElement.classList.remove("light", "dark");
+  document.documentElement.classList.add(theme);
+})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="light" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
