@@ -376,8 +376,10 @@ class VisitMobileFlowTests(TestCase):
             start_longitude=-77.04,
         )
 
+    @patch("core.views._build_visit_pdf", return_value=b"%PDF-1.4 test")
+    @patch("core.views._post_json_webhook")
     @patch("core.views.VisitMedia.objects.create")
-    def test_complete_visit_accepts_multipart_patch_payload(self, create_media_mock):
+    def test_complete_visit_accepts_multipart_patch_payload(self, create_media_mock, webhook_mock, _build_pdf_mock):
         evidence = SimpleUploadedFile("evidence.jpg", b"fake-image-bytes", content_type="image/jpeg")
 
         body = encode_multipart(
@@ -415,6 +417,13 @@ class VisitMobileFlowTests(TestCase):
         self.assertEqual(self.visit.end_longitude, -77.040001)
         self.assertEqual(self.visit.visit_report["responsible_name"], "Juan")
         create_media_mock.assert_called_once()
+        webhook_mock.assert_called_once()
+        args = webhook_mock.call_args.args
+        self.assertEqual(args[0], "https://n8n.circlesuite.net/webhook/4fb6a143-135c-4577-81f0-088464808c30")
+        self.assertEqual(args[1]["event"], "visit_completed")
+        self.assertEqual(args[1]["source"], "flutter")
+        self.assertEqual(args[1]["visit"]["id"], self.visit.id)
+        self.assertEqual(args[1]["visit_confirmation_pdf_base64"], "JVBERi0xLjQgdGVzdA==")
 
 
 class DispenserApiTests(TestCase):
@@ -852,7 +861,8 @@ class IncidentPermissionsTests(TestCase):
             role=User.Role.INSPECTOR,
         )
 
-    def test_branch_admin_can_create_incident(self):
+    @patch("core.views._post_json_webhook")
+    def test_branch_admin_can_create_incident(self, webhook_mock):
         response = self.client.post(
             "/api/incidents/",
             data=json.dumps(
@@ -869,6 +879,11 @@ class IncidentPermissionsTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 201)
+        webhook_mock.assert_called_once()
+        args = webhook_mock.call_args.args
+        self.assertEqual(args[0], "https://n8n.circlesuite.net/webhook/8af08811-33a1-45fd-b335-b21e1c42ba16")
+        self.assertEqual(args[1]["event"], "incident_created")
+        self.assertEqual(args[1]["source"], "flutter_or_nextjs")
 
     def test_account_admin_cannot_create_incident(self):
         response = self.client.post(
@@ -1104,7 +1119,8 @@ class AuditApiTests(TestCase):
             {"questions": [{"id": 1, "label": "Limpieza"}]},
         )
 
-    def test_complete_audit_mobile_flow(self):
+    @patch("core.views._post_json_webhook")
+    def test_complete_audit_mobile_flow(self, webhook_mock):
         form = AuditForm.objects.create(name="Checklist", schema={"questions": []})
         self.area.audit_form_template = form
         self.area.save(update_fields=["audit_form_template"])
@@ -1138,6 +1154,11 @@ class AuditApiTests(TestCase):
         self.assertEqual(audit.status, Audit.Status.COMPLETED)
         self.assertIsNotNone(audit.audit_report)
         self.assertEqual(audit.audit_report["form"]["id"], form.id)
+        webhook_mock.assert_called_once()
+        args = webhook_mock.call_args.args
+        self.assertEqual(args[0], "https://n8n.circlesuite.net/webhook/014ddff5-f214-4387-a85c-ab9de445b0f4")
+        self.assertEqual(args[1]["event"], "audit_completed")
+        self.assertEqual(args[1]["source"], "flutter")
 
     def test_fallback_ai_analysis_assigns_score_when_percentages_are_missing(self):
         report = {
