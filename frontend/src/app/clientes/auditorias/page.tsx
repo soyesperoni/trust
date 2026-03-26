@@ -187,15 +187,6 @@ export default function AuditoriasPage() {
       <DashboardHeader
         title="Historial de Auditorías"
         description="Consulta auditorías realizadas y aplica filtros por inspector, estado o texto. El score mostrado es generado por Trust AI con base en las auditorías visibles según tu rol."
-        action={
-          <Link
-            href="/clientes/auditorias/plantillas"
-            className="bg-slate-900 text-white hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2"
-          >
-            <span className="material-symbols-outlined text-[20px]">fact_check</span>
-            Plantillas
-          </Link>
-        }
       />
 
       <div className="md:hidden px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 dark:bg-[#161e27]/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
