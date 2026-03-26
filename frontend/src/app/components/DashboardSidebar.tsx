@@ -35,7 +35,7 @@ const navItems: NavItem[] = [
   { icon: "water_drop", label: "Dosificadores", href: "/clientes/dispensadores", accountAdminOnly: true, branchAdminOnly: true },
   { icon: "inventory_2", label: "Productos", href: "/clientes/productos", accountAdminOnly: true, branchAdminOnly: true },
   { icon: "calendar_month", label: "Calendario", href: "/clientes/calendario", accountAdminOnly: true, branchAdminOnly: true },
-  { icon: "history", label: "Historial de Visitas", href: "/clientes/visitas", accountAdminOnly: true, branchAdminOnly: true },
+  { icon: "history", label: "Visitas", href: "/clientes/visitas", accountAdminOnly: true, branchAdminOnly: true },
   { icon: "report_problem", label: "Incidencias", href: "/clientes/incidencias", accountAdminOnly: true, branchAdminOnly: true },
   { icon: "assignment_turned_in", label: "Auditorías", href: "/clientes/auditorias", accountAdminOnly: true, branchAdminOnly: true },
   { icon: "fact_check", label: "Plantillas", href: "/clientes/auditorias/plantillas", accountAdminOnly: true, branchAdminOnly: true },
@@ -73,7 +73,11 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
 
   return (
     <aside className={`hidden shrink-0 flex-col border-r border-slate-200 bg-white transition-all duration-300 dark:border-slate-800 dark:bg-[#161e27] md:flex ${collapsed ? "w-20" : "w-64"}`}>
-      <div className="relative flex h-20 items-center justify-center border-b border-slate-100 px-3 dark:border-slate-800">
+      <div
+        className={`relative flex h-20 items-center border-b border-slate-100 px-3 dark:border-slate-800 ${
+          collapsed ? "justify-center" : "justify-start"
+        }`}
+      >
         <BrandLogo compact={collapsed} size="lg" className={collapsed ? "" : "scale-[1.15]"} />
         <button
           aria-label={collapsed ? "Expandir menú" : "Minimizar menú"}
