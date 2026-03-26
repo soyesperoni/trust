@@ -218,17 +218,6 @@ export default function DashboardPage() {
     return () => window.clearTimeout(timer);
   }, [scoreBars]);
 
-  const visibleScoreBars = useMemo(() => {
-    if (scoreBars.length <= 1) return scoreBars;
-
-    let lastTrendChangeIndex = scoreBars.length - 1;
-    while (lastTrendChangeIndex > 0 && scoreBars[lastTrendChangeIndex].score === scoreBars[lastTrendChangeIndex - 1].score) {
-      lastTrendChangeIndex -= 1;
-    }
-
-    return scoreBars.slice(0, lastTrendChangeIndex + 1);
-  }, [scoreBars]);
-
   return (
     <>
       <DashboardHeader
@@ -289,8 +278,8 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="relative z-10 flex h-full items-end gap-2 px-6 pb-1">
-                    {visibleScoreBars.map((item, index) => (
-                      <div key={`${item.label}-${index}`} className="flex min-w-0 flex-1 flex-col items-center justify-end">
+                    {scoreBars.map((item, index) => (
+                      <div key={`${item.label}-${index}`} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
                         <span className="mb-1 text-[10px] font-bold text-slate-600 dark:text-slate-200">{item.score}%</span>
                         <div
                           className="w-full rounded-t-md bg-gradient-to-t from-primary to-professional-green shadow-[0_6px_15px_-8px_rgba(22,163,74,0.65)]"
@@ -307,7 +296,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className={`mt-2 grid gap-2 ${scoreRange === "month" || scoreRange === "week" ? "grid-cols-6" : "grid-cols-5 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-[repeat(15,minmax(0,1fr))]"}`}>
-                  {visibleScoreBars.map((item, index) => (
+                  {scoreBars.map((item, index) => (
                     <span key={`${item.label}-${index}`} className="truncate text-center text-[11px] font-semibold text-slate-500 dark:text-slate-300">
                       {item.label}
                     </span>
