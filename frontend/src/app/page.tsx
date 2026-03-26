@@ -78,7 +78,7 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background-light font-display antialiased transition-colors duration-300 dark:bg-background-dark">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom,#2e3192_0%,#92b93b_42%,rgba(245,247,251,0)_72%)] dark:bg-[radial-gradient(circle_at_bottom,#2e3192_0%,#92b93b_45%,rgba(10,15,20,0)_72%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.52)_0%,rgba(146,185,59,0.38)_36%,rgba(245,247,251,0)_68%)] dark:bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.38)_0%,rgba(146,185,59,0.24)_38%,rgba(10,15,20,0)_68%)]" />
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-4">
         <div className="flex w-full max-w-[460px] flex-col items-center gap-8">
           <BrandLogo size="xxl" className="scale-[1.3]" />
@@ -130,14 +130,14 @@ export default function Home() {
               </button>
             </form>
           </div>
-          <div className="space-y-2 text-center text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+          <div className="rounded-xl bg-white/65 px-4 py-2 text-center text-xs text-slate-700 shadow-sm backdrop-blur-sm dark:bg-slate-900/55 dark:text-slate-200 sm:text-sm">
             <p>
               Al continuar, aceptas nuestros{" "}
-              <Link className="font-semibold text-primary hover:underline" href="/terminos-condiciones">
+              <Link className="font-semibold text-primary/95 hover:underline" href="/terminos-condiciones">
                 Términos y Condiciones
               </Link>
               {" "}y la{" "}
-              <Link className="font-semibold text-primary hover:underline" href="/politica-privacidad">
+              <Link className="font-semibold text-primary/95 hover:underline" href="/politica-privacidad">
                 Política de Privacidad
               </Link>
               .
