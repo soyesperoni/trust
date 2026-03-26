@@ -8,6 +8,10 @@ import DashboardHeader from "../../../components/DashboardHeader";
 import PageTransition from "../../../components/PageTransition";
 import { getSessionUserEmail } from "../../../lib/session";
 
+type Client = { id: number; name: string };
+type Branch = { id: number; name: string; client: { id: number; name: string } };
+type Area = { id: number; name: string; branch: { id: number; name: string } };
+
 type CreateDispenserResponse = {
   id?: number;
   error?: string;
@@ -15,11 +19,15 @@ type CreateDispenserResponse = {
 
 export default function NuevoDosificadorPage() {
   const router = useRouter();
+  const [clients, setClients] = useState<Client[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
-  const [areas, setAreas] = useState<Array<{ id: number; name: string; branch: { name: string } }>>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [products, setProducts] = useState<Array<{ id: number; name: string }>>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [selectedModelId, setSelectedModelId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedAreaId, setSelectedAreaId] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [installedAt, setInstalledAt] = useState("");
@@ -35,25 +43,31 @@ export default function NuevoDosificadorPage() {
     const loadOptions = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const [modelsResponse, areasResponse, productsResponse] = await Promise.all([
+        const [clientsResponse, branchesResponse, modelsResponse, areasResponse, productsResponse] = await Promise.all([
+          fetch("/api/clients/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/branches/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
           fetch("/api/dispenser-models/", { cache: "no-store" }),
           fetch("/api/areas/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
           fetch("/api/products/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
         ]);
 
-        if (!modelsResponse.ok || !areasResponse.ok || !productsResponse.ok) {
+        if (!clientsResponse.ok || !branchesResponse.ok || !modelsResponse.ok || !areasResponse.ok || !productsResponse.ok) {
           throw new Error("No se pudieron cargar los catálogos del formulario.");
         }
 
-        const [modelsData, areasData, productsData] = await Promise.all([
+        const [clientsData, branchesData, modelsData, areasData, productsData] = await Promise.all([
+          clientsResponse.json(),
+          branchesResponse.json(),
           modelsResponse.json(),
           areasResponse.json(),
           productsResponse.json(),
         ]);
 
         if (!isMounted) return;
+        setClients((clientsData.results ?? []) as Client[]);
+        setBranches((branchesData.results ?? []) as Branch[]);
         setModels((modelsData.results ?? []) as Array<{ id: number; name: string }>);
-        setAreas((areasData.results ?? []) as Array<{ id: number; name: string; branch: { name: string } }>);
+        setAreas((areasData.results ?? []) as Area[]);
         setProducts((productsData.results ?? []).map((product: { id: number; name: string }) => ({ id: product.id, name: product.name })));
       } catch (loadError) {
         if (!isMounted) return;
@@ -83,7 +97,7 @@ export default function NuevoDosificadorPage() {
       const body = new FormData();
       body.append("identifier", identifier.trim());
       body.append("model_id", selectedModelId);
-      if (selectedAreaId) body.append("area_id", selectedAreaId);
+      body.append("area_id", selectedAreaId);
       if (installedAt) body.append("installed_at", installedAt);
       body.append("is_active", isActive ? "true" : "false");
       if (photoFile) body.append("photo", photoFile);
@@ -106,6 +120,20 @@ export default function NuevoDosificadorPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const filteredBranches = branches.filter((branch) => String(branch.client.id) === selectedClientId);
+  const filteredAreas = areas.filter((area) => String(area.branch.id) === selectedBranchId);
+
+  const handleClientChange = (clientId: string) => {
+    setSelectedClientId(clientId);
+    setSelectedBranchId("");
+    setSelectedAreaId("");
+  };
+
+  const handleBranchChange = (branchId: string) => {
+    setSelectedBranchId(branchId);
+    setSelectedAreaId("");
   };
 
   return (
@@ -133,12 +161,32 @@ export default function NuevoDosificadorPage() {
                 </select>
               </label>
 
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="client">
+                Cliente
+                <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="client" required value={selectedClientId} onChange={(event) => handleClientChange(event.target.value)}>
+                  <option value="">Seleccione un cliente</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>{client.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="branch">
+                Sucursal
+                <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" disabled={!selectedClientId} id="branch" required value={selectedBranchId} onChange={(event) => handleBranchChange(event.target.value)}>
+                  <option value="">Seleccione una sucursal</option>
+                  {filteredBranches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
+                </select>
+              </label>
+
               <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="area">
                 Área
-                <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="area" value={selectedAreaId} onChange={(event) => setSelectedAreaId(event.target.value)}>
-                  <option value="">Sin área asignada</option>
-                  {areas.map((area) => (
-                    <option key={area.id} value={area.id}>{area.name} · {area.branch.name}</option>
+                <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" disabled={!selectedBranchId} id="area" required value={selectedAreaId} onChange={(event) => setSelectedAreaId(event.target.value)}>
+                  <option value="">Seleccione un área</option>
+                  {filteredAreas.map((area) => (
+                    <option key={area.id} value={area.id}>{area.name}</option>
                   ))}
                 </select>
               </label>
