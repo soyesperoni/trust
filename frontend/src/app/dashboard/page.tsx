@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../components/DashboardHeader";
@@ -90,17 +89,6 @@ export default function DashboardPage() {
     ],
     [stats],
   );
-
-  const overviewBars = useMemo(() => {
-    const items = [
-      { label: "Visitas", value: stats?.visits ?? 0, color: "from-primary to-indigo-400" },
-      { label: "Incidencias", value: stats?.incidents ?? 0, color: "from-red-500 to-rose-300" },
-      { label: "Auditorías", value: stats?.audits ?? 0, color: "from-professional-green to-lime-300" },
-      { label: "Auditorías finalizadas", value: stats?.completed_audits ?? 0, color: "from-emerald-500 to-green-300" },
-    ];
-    const maxValue = Math.max(...items.map((item) => item.value), 1);
-    return items.map((item) => ({ ...item, width: Math.max((item.value / maxValue) * 100, item.value > 0 ? 10 : 4) }));
-  }, [stats]);
 
   const auditScore = useMemo(() => Math.round(stats?.audit_score ?? 0), [stats?.audit_score]);
 
@@ -205,19 +193,6 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <div className="mt-6 space-y-3">
-                {overviewBars.map((item) => (
-                  <div key={item.label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-semibold text-indigo-100">
-                      <span>{item.label}</span>
-                      <span>{item.value}</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-white/20">
-                      <div className={`h-full rounded-full bg-gradient-to-r ${item.color} transition-all duration-700`} style={{ width: `${item.width}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
             </article>
 
             <article className="col-span-12 lg:col-span-7 rounded-3xl border border-white/65 bg-white/80 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
@@ -276,19 +251,17 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <>
-                    <div className={`mb-2 inline-flex rounded-lg p-2 ${item.iconStyle}`}>
-                      <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-3xl font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
+                      <div className={`inline-flex rounded-lg p-2 ${item.iconStyle}`}>
+                        <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                      </div>
                     </div>
-                    <p className="text-xl font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
-                    <h3 className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{item.label}</h3>
+                    <h3 className="mt-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400">{item.label}</h3>
                   </>
                 )}
               </article>
             ))}
-          </div>
-
-          <div className="flex justify-end">
-            <Link href="/clientes/calendario" className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-yellow-500/20 dark:text-yellow-200">Ir a calendario</Link>
           </div>
         </section>
       </PageTransition>
