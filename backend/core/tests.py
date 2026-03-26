@@ -9,7 +9,7 @@ from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.utils import timezone
 
 from config import settings_prod
-from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, DispenserProductAssignment, Product, User, Visit
+from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, DispenserProductAssignment, Incident, Product, User, Visit
 from .views import _fallback_audit_ai_analysis
 
 
@@ -270,6 +270,28 @@ class DispenserApiTests(TestCase):
         self.assertIsNotNone(assignment)
         assert assignment is not None
         self.assertIsNone(assignment.nozzle_id)
+
+    def test_delete_dispenser_with_related_incident_returns_conflict(self):
+        dispenser = Dispenser.objects.create(model=self.model, identifier="DISP-004", area=self.area)
+        Incident.objects.create(
+            client=self.client_entity,
+            branch=self.branch,
+            area=self.area,
+            dispenser=dispenser,
+            description="Prueba de incidente",
+        )
+
+        response = self.client.delete(
+            f"/api/dispensers/{dispenser.id}/",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(
+            response.json()["error"],
+            "No se puede eliminar el dosificador porque tiene incidencias u otros registros asociados.",
+        )
+        self.assertTrue(Dispenser.objects.filter(id=dispenser.id).exists())
 
 
 class VisitReportRouteTests(TestCase):

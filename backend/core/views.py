@@ -4,6 +4,7 @@ import re
 import textwrap
 from functools import lru_cache
 from django.db import IntegrityError
+from django.db.models.deletion import ProtectedError
 from django.db.models import Q
 from datetime import datetime
 from io import BytesIO
@@ -2309,7 +2310,15 @@ def dispenser_detail(request, dispenser_id: int):
         return JsonResponse({"error": "Solo el administrador general puede modificar dosificadores."}, status=403)
 
     if request.method == "DELETE":
-        dispenser.delete()
+        try:
+            dispenser.delete()
+        except ProtectedError:
+            return JsonResponse(
+                {
+                    "error": "No se puede eliminar el dosificador porque tiene incidencias u otros registros asociados.",
+                },
+                status=409,
+            )
         return JsonResponse({}, status=204)
 
     data, files = _extract_user_data(request)
