@@ -49,6 +49,9 @@ export default function EditarDosificadorPage() {
   const [isActive, setIsActive] = useState(true);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [productNozzleByProductId, setProductNozzleByProductId] = useState<Record<string, string>>({});
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [pendingProductIds, setPendingProductIds] = useState<string[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -194,6 +197,36 @@ export default function EditarDosificadorPage() {
     setSelectedAreaId("");
   };
 
+  const selectedProducts = products.filter((product) => selectedProductIds.includes(String(product.id)));
+  const filteredProductsForModal = products.filter((product) => product.name.toLowerCase().includes(productSearchTerm.toLowerCase().trim()));
+
+  const openProductModal = () => {
+    setPendingProductIds(selectedProductIds);
+    setProductSearchTerm("");
+    setIsProductModalOpen(true);
+  };
+
+  const closeProductModal = () => {
+    setIsProductModalOpen(false);
+    setProductSearchTerm("");
+    setPendingProductIds([]);
+  };
+
+  const handleAddProducts = () => {
+    const removedIds = selectedProductIds.filter((id) => !pendingProductIds.includes(id));
+    if (removedIds.length) {
+      setProductNozzleByProductId((currentNozzles) => {
+        const next = { ...currentNozzles };
+        removedIds.forEach((removedId) => {
+          delete next[removedId];
+        });
+        return next;
+      });
+    }
+    setSelectedProductIds(pendingProductIds);
+    closeProductModal();
+  };
+
   return (
     <>
       <DashboardHeader
@@ -263,53 +296,53 @@ export default function EditarDosificadorPage() {
               </label>
 
               <div className="md:col-span-2 space-y-3">
-                <p className="text-sm text-slate-600 dark:text-slate-300">Productos asociados</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {products.map((product) => {
-                    const productId = String(product.id);
-                    const isSelected = selectedProductIds.includes(productId);
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-slate-600 dark:text-slate-300">Productos asociados</p>
+                  <button
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    type="button"
+                    onClick={openProductModal}
+                  >
+                    <span className="material-symbols-outlined text-base">add</span>
+                    Agregar producto
+                  </button>
+                </div>
 
-                    return (
-                      <div
-                        key={product.id}
-                        className={`rounded-xl border p-3 transition-all ${
-                          isSelected
-                            ? "border-primary bg-primary/5 shadow-sm"
-                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40"
-                        }`}
-                      >
-                        <label className="flex cursor-pointer items-center gap-3">
-                          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                            {product.photo ? (
-                              <img alt={`Foto de ${product.name}`} className="h-full w-full object-cover" src={product.photo} />
-                            ) : (
-                              <span className="material-symbols-outlined text-slate-400">inventory_2</span>
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{product.name}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Selecciona para asignarlo al dosificador</p>
-                          </div>
-                          <input
-                            checked={isSelected}
-                            className="h-5 w-5 accent-primary"
-                            type="checkbox"
-                            onChange={(event) => {
-                              setSelectedProductIds((current) => {
-                                if (event.target.checked) return [...current, productId];
-                                const updated = current.filter((id) => id !== productId);
+                {selectedProducts.length ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedProducts.map((product) => {
+                      const productId = String(product.id);
+
+                      return (
+                        <div key={product.id} className="rounded-xl border border-primary bg-primary/5 p-3 shadow-sm space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                              {product.photo ? (
+                                <img alt={`Foto de ${product.name}`} className="h-full w-full object-cover" src={product.photo} />
+                              ) : (
+                                <span className="material-symbols-outlined text-slate-400">inventory_2</span>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{product.name}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">Producto agregado al dosificador</p>
+                            </div>
+                            <button
+                              type="button"
+                              className="text-xs text-red-500 hover:text-red-600"
+                              onClick={() => {
+                                setSelectedProductIds((current) => current.filter((id) => id !== productId));
                                 setProductNozzleByProductId((currentNozzles) => {
                                   const next = { ...currentNozzles };
                                   delete next[productId];
                                   return next;
                                 });
-                                return updated;
-                              });
-                            }}
-                          />
-                        </label>
-                        {isSelected ? (
-                          <label className="mt-3 flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400">
+                              }}
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                          <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400">
                             Boquilla
                             <select
                               className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none text-sm text-slate-700 dark:text-slate-200"
@@ -329,11 +362,79 @@ export default function EditarDosificadorPage() {
                               ))}
                             </select>
                           </label>
-                        ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-4 text-sm text-slate-500 dark:text-slate-400">
+                    Aún no hay productos agregados. Usa el botón <strong>Agregar producto</strong>.
+                  </div>
+                )}
+
+                {isProductModalOpen ? (
+                  <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="w-full max-w-2xl rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl">
+                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-5 py-4">
+                        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">Seleccionar productos</h3>
+                        <button type="button" className="text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white" onClick={closeProductModal}>
+                          <span className="material-symbols-outlined">close</span>
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      <div className="p-5 space-y-4">
+                        <label className="block">
+                          <span className="sr-only">Buscar producto</span>
+                          <div className="relative">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                            <input
+                              type="text"
+                              className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none text-sm"
+                              placeholder="Buscar por nombre de producto"
+                              value={productSearchTerm}
+                              onChange={(event) => setProductSearchTerm(event.target.value)}
+                            />
+                          </div>
+                        </label>
+
+                        <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+                          {filteredProductsForModal.map((product) => {
+                            const productId = String(product.id);
+                            const isChecked = pendingProductIds.includes(productId);
+                            return (
+                              <label key={product.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  className="h-5 w-5 accent-primary"
+                                  onChange={(event) =>
+                                    setPendingProductIds((current) =>
+                                      event.target.checked ? [...current, productId] : current.filter((id) => id !== productId),
+                                    )
+                                  }
+                                />
+                                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                  {product.photo ? <img alt={`Foto de ${product.name}`} className="h-full w-full object-cover" src={product.photo} /> : <span className="material-symbols-outlined text-slate-400 text-lg">inventory_2</span>}
+                                </div>
+                                <p className="text-sm text-slate-700 dark:text-slate-200">{product.name}</p>
+                              </label>
+                            );
+                          })}
+                          {!filteredProductsForModal.length ? <p className="text-sm text-slate-500 dark:text-slate-400">No se encontraron productos con ese nombre.</p> : null}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-200 dark:border-slate-700 px-5 py-4 flex items-center justify-end gap-3">
+                        <button type="button" className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800" onClick={closeProductModal}>
+                          Cancelar
+                        </button>
+                        <button type="button" className="px-4 py-2 rounded-lg bg-professional-green text-white hover:bg-yellow-700" onClick={handleAddProducts}>
+                          Agregar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               {error ? <p className="text-sm text-red-500 md:col-span-2">{error}</p> : null}
