@@ -9,8 +9,6 @@ import { useCurrentUser } from "../../../hooks/useCurrentUser";
 import { GENERAL_ADMIN_ROLE, INSPECTOR_ROLE } from "../../../lib/permissions";
 import { getSessionUserEmail } from "../../../lib/session";
 
-type Inspector = { id: number; full_name: string; role: string };
-
 type IncidentDetail = {
   id: number;
   client: string;
@@ -34,8 +32,6 @@ function AgendarVisitaPageContent() {
   const incidentId = searchParams.get("incidentId") ?? "";
 
   const [incident, setIncident] = useState<IncidentDetail | null>(null);
-  const [inspectors, setInspectors] = useState<Inspector[]>([]);
-  const [inspectorId, setInspectorId] = useState("");
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
   const [notes, setNotes] = useState("");
@@ -55,33 +51,20 @@ function AgendarVisitaPageContent() {
 
       try {
         const currentUserEmail = getSessionUserEmail();
-        const [incidentResponse, usersResponse] = await Promise.all([
-          fetch(`/api/incidents/${incidentId}/`, {
-            cache: "no-store",
-            headers: { "x-current-user-email": currentUserEmail },
-          }),
-          fetch("/api/users/", {
-            cache: "no-store",
-            headers: { "x-current-user-email": currentUserEmail },
-          }),
-        ]);
+        const incidentResponse = await fetch(`/api/incidents/${incidentId}/`, {
+          cache: "no-store",
+          headers: { "x-current-user-email": currentUserEmail },
+        });
 
         const incidentPayload = await incidentResponse.json().catch(() => null);
-        const usersPayload = await usersResponse.json().catch(() => null);
 
         if (!incidentResponse.ok) {
           throw new Error(incidentPayload?.error ?? "No se pudo cargar la incidencia.");
-        }
-        if (!usersResponse.ok) {
-          throw new Error(usersPayload?.error ?? "No se pudo cargar la lista de inspectores.");
         }
 
         if (!mounted) return;
 
         setIncident(incidentPayload as IncidentDetail);
-        setInspectors(
-          ((usersPayload?.results ?? []) as Inspector[]).filter((candidate) => candidate.role === "inspector"),
-        );
       } catch (loadError) {
         if (!mounted) return;
         setError(loadError instanceof Error ? loadError.message : "No se pudo cargar el formulario.");
@@ -98,8 +81,7 @@ function AgendarVisitaPageContent() {
     };
   }, [incidentId]);
 
-  const isInspector = user?.role === INSPECTOR_ROLE;
-  const canSubmit = useMemo(() => !!incident && !!date && !!time && !isSubmitting && (isInspector || !!inspectorId), [incident, date, time, isSubmitting, isInspector, inspectorId]);
+  const canSubmit = useMemo(() => !!incident && !!date && !!time && !isSubmitting, [incident, date, time, isSubmitting]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -118,7 +100,6 @@ function AgendarVisitaPageContent() {
           "x-current-user-email": currentUserEmail,
         },
         body: JSON.stringify({
-          ...(isInspector ? {} : { inspector_id: Number(inspectorId) }),
           visited_at: visitedAt,
           notes,
         }),
@@ -142,7 +123,7 @@ function AgendarVisitaPageContent() {
     return (
       <PageTransition className="flex-1 p-6 md:p-8">
         <div className="max-w-3xl mx-auto rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-          Solo el administrador general y el inspector asignado al cliente pueden programar visitas desde incidencias.
+          Solo el administrador general y los inspectores pueden programar visitas desde incidencias.
         </div>
       </PageTransition>
     );
@@ -169,17 +150,6 @@ function AgendarVisitaPageContent() {
                   <input className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800" readOnly value={incident.area} />
                 </label>
               </div>
-
-              {!isInspector ? (
-                <label className="block text-sm text-slate-600 dark:text-slate-300">Inspector
-                  <select className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800" onChange={(e) => setInspectorId(e.target.value)} required value={inspectorId}>
-                    <option value="">Seleccione inspector</option>
-                    {inspectors.map((inspector) => (
-                      <option key={inspector.id} value={inspector.id}>{inspector.full_name}</option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <label className="text-sm text-slate-600 dark:text-slate-300">Fecha

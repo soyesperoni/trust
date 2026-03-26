@@ -12,7 +12,6 @@ import { getSessionUserEmail } from "../../../lib/session";
 type Client = { id: number; name: string };
 type Branch = { id: number; name: string; client: { id: number; name: string } };
 type Area = { id: number; name: string; branch: { id: number; name: string; client: string } };
-type User = { id: number; full_name: string; role: string };
 
 const now = new Date();
 const initialDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -26,12 +25,10 @@ export default function NuevaVisitaPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
-  const [inspectors, setInspectors] = useState<User[]>([]);
 
   const [clientId, setClientId] = useState("");
   const [branchId, setBranchId] = useState("");
   const [areaId, setAreaId] = useState("");
-  const [inspectorId, setInspectorId] = useState("");
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
   const [activityType, setActivityType] = useState<"visit" | "audit">("visit");
@@ -44,29 +41,26 @@ export default function NuevaVisitaPage() {
 
     const loadData = async () => {
       try {
-        const [clientsResponse, branchesResponse, areasResponse, usersResponse] =
+        const [clientsResponse, branchesResponse, areasResponse] =
           await Promise.all([
             fetch("/api/clients/", { cache: "no-store" }),
             fetch("/api/branches/", { cache: "no-store" }),
             fetch("/api/areas/", { cache: "no-store" }),
-            fetch("/api/users/", { cache: "no-store" }),
           ]);
 
         if (
           !clientsResponse.ok ||
           !branchesResponse.ok ||
-          !areasResponse.ok ||
-          !usersResponse.ok
+          !areasResponse.ok
         ) {
           throw new Error("No se pudo cargar la información de plantillas para la auditoría.");
         }
 
-        const [clientsPayload, branchesPayload, areasPayload, usersPayload] =
+        const [clientsPayload, branchesPayload, areasPayload] =
           await Promise.all([
             clientsResponse.json(),
             branchesResponse.json(),
             areasResponse.json(),
-            usersResponse.json(),
           ]);
 
         if (!isMounted) return;
@@ -74,11 +68,6 @@ export default function NuevaVisitaPage() {
         setClients(clientsPayload.results ?? []);
         setBranches(branchesPayload.results ?? []);
         setAreas(areasPayload.results ?? []);
-        setInspectors(
-          (usersPayload.results ?? []).filter(
-            (user: User) => user.role === "inspector",
-          ),
-        );
       } catch (error) {
         if (!isMounted) return;
         setStatusMessage(
@@ -123,13 +112,11 @@ export default function NuevaVisitaPage() {
       const payloadBody = activityType === "audit"
         ? {
             area_id: Number(areaId),
-            inspector_id: inspectorId ? Number(inspectorId) : null,
             audited_at: visitDateTime.toISOString(),
             notes: notes.trim(),
           }
         : {
             area_id: Number(areaId),
-            inspector_id: inspectorId ? Number(inspectorId) : null,
             visited_at: visitDateTime.toISOString(),
             notes: notes.trim(),
           };
@@ -245,18 +232,6 @@ export default function NuevaVisitaPage() {
                 </label>
               </div>
 
-              <div className="md:col-span-2">
-                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="inspector">
-                  Inspector asignado
-                  <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="inspector" onChange={(e) => setInspectorId(e.target.value)} value={inspectorId}>
-                    <option value="">Asignar inspector</option>
-                    {inspectors.map((inspector) => (
-                      <option key={inspector.id} value={inspector.id}>{inspector.full_name}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
               <div>
                 <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="date">
                   Fecha
@@ -274,7 +249,7 @@ export default function NuevaVisitaPage() {
               <div className="md:col-span-2">
                 <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="notes">
                   Notas adicionales
-                  <textarea className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-24" id="notes" onChange={(e) => setNotes(e.target.value)} placeholder="Instrucciones especiales para el inspector..." value={notes} />
+                  <textarea className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-24" id="notes" onChange={(e) => setNotes(e.target.value)} placeholder="Instrucciones especiales para la actividad..." value={notes} />
                 </label>
               </div>
 

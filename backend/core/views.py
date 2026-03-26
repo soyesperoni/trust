@@ -132,21 +132,17 @@ def _is_general_admin_user(user: User | None) -> bool:
 
 
 def _can_create_dashboard_items(user: User | None) -> bool:
-    return _is_general_admin_user(user)
+    return bool(user and user.role in {User.Role.GENERAL_ADMIN, User.Role.INSPECTOR})
 
 
 def _can_create_incidents(user: User | None) -> bool:
     return bool(user and user.role in {User.Role.GENERAL_ADMIN, User.Role.BRANCH_ADMIN})
 
 
-def _can_schedule_visit_from_incident(user: User | None, incident: Incident) -> bool:
+def _can_schedule_visit_from_incident(user: User | None, _incident: Incident) -> bool:
     if not user:
         return False
-    if user.role == User.Role.GENERAL_ADMIN:
-        return True
-    if user.role != User.Role.INSPECTOR:
-        return False
-    return user.clients.filter(pk=incident.client_id).exists()
+    return user.role in {User.Role.GENERAL_ADMIN, User.Role.INSPECTOR}
 
 
 def _build_access_scope(current_user: User | None) -> dict[str, list[int]] | None:
@@ -2529,14 +2525,6 @@ def visits(request):
         except (Dispenser.DoesNotExist, ValueError, TypeError):
             return JsonResponse({"error": "Dosificador no válido."}, status=400)
 
-    inspector = None
-    inspector_id = data.get("inspector_id")
-    if inspector_id:
-        try:
-            inspector = User.objects.get(pk=int(inspector_id))
-        except (User.DoesNotExist, ValueError, TypeError):
-            return JsonResponse({"error": "Inspector no válido."}, status=400)
-
     notes = str(data.get("notes") or "").strip()
 
     visited_at = None
@@ -2553,7 +2541,7 @@ def visits(request):
     create_kwargs = {
         "area": area,
         "dispenser": dispenser,
-        "inspector": inspector,
+        "inspector": None,
         "notes": notes,
         "status": Visit.Status.SCHEDULED,
     }
@@ -2797,14 +2785,6 @@ def audits(request):
             status=400,
         )
 
-    inspector = None
-    inspector_id = data.get("inspector_id")
-    if inspector_id:
-        try:
-            inspector = User.objects.filter(role=User.Role.INSPECTOR).get(pk=int(inspector_id))
-        except (User.DoesNotExist, ValueError, TypeError):
-            return JsonResponse({"error": "Inspector no válido."}, status=400)
-
     notes = str(data.get("notes") or "").strip()
     audited_at = None
     audited_at_input = str(data.get("audited_at") or "").strip()
@@ -2819,7 +2799,7 @@ def audits(request):
         "form": form,
         "form_name": form.name,
         "form_schema": form.schema or {},
-        "inspector": inspector,
+        "inspector": None,
         "notes": notes,
         "status": Audit.Status.SCHEDULED,
     }
@@ -3606,23 +3586,13 @@ def incident_schedule_visit(request, incident_id: int):
 
     if not _can_schedule_visit_from_incident(current_user, incident):
         return JsonResponse(
-            {"error": "Solo el administrador general o el inspector asignado al cliente pueden programar visitas desde incidencias."},
+            {"error": "Solo el administrador general o un inspector pueden programar visitas desde incidencias."},
             status=403,
         )
 
     scope = _build_access_scope(current_user)
     if scope is not None and incident.area_id not in scope["area_ids"]:
         return JsonResponse({"error": "No tienes permiso sobre esta incidencia."}, status=403)
-
-    inspector = None
-    inspector_id = data.get("inspector_id")
-    if current_user.role == User.Role.INSPECTOR:
-        inspector = current_user
-    elif inspector_id:
-        try:
-            inspector = User.objects.get(pk=int(inspector_id), role=User.Role.INSPECTOR)
-        except (User.DoesNotExist, TypeError, ValueError):
-            return JsonResponse({"error": "Inspector no válido."}, status=400)
 
     visited_at_raw = str(data.get("visited_at") or "").strip()
     if not visited_at_raw:
@@ -3638,7 +3608,7 @@ def incident_schedule_visit(request, incident_id: int):
     visit = Visit.objects.create(
         area=incident.area,
         dispenser=None,
-        inspector=inspector,
+        inspector=None,
         visited_at=visited_at,
         notes=f"[INCIDENCIA #{incident.id}] {notes}".strip(),
         status=Visit.Status.SCHEDULED,
