@@ -220,8 +220,9 @@ export default function DashboardPage() {
         description="Mostrando información según los accesos asignados al usuario."
       />
 
-      <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <section className="w-full">
+      <PageTransition className="relative flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.42)_0%,rgba(146,185,59,0.33)_34%,rgba(255,255,255,0)_68%)] dark:bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.36)_0%,rgba(146,185,59,0.2)_38%,rgba(10,15,20,0)_68%)]" />
+        <section className="relative z-10 w-full">
           {error && !isLoading && (
             <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
               {error}
@@ -233,7 +234,7 @@ export default function DashboardPage() {
               {mobileCards.map((item) => (
                 <article
                   key={item.label}
-                  className="flex h-full w-full flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/80"
+                  className="flex h-full w-full flex-col justify-between rounded-2xl border border-white/60 bg-white/70 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55 dark:shadow-black/25"
                 >
                   <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-full ${item.iconStyle}`}>
                     <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
@@ -268,7 +269,7 @@ export default function DashboardPage() {
                   return (
                     <article
                       key={visit.id}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/80"
+                      className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55 dark:shadow-black/25"
                     >
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
@@ -279,7 +280,7 @@ export default function DashboardPage() {
                           <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-300">{visit.branch}</p>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          <span className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          <span className="rounded-lg border border-white/70 bg-white/80 px-2 py-1 text-xs font-bold text-slate-600 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">
                             {date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                           {user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
@@ -300,7 +301,7 @@ export default function DashboardPage() {
                 })}
 
                 {!isLoading && !error && todayScheduledVisits.length === 0 && (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                  <div className="rounded-2xl border border-dashed border-white/70 bg-white/70 p-4 text-sm text-slate-500 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/55 dark:text-slate-300">
                     No hay visitas programadas para hoy.
                   </div>
                 )}
@@ -310,7 +311,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="hidden md:grid grid-cols-12 gap-5">
-            <article className="col-span-12 lg:col-span-5 overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-primary via-[#4146b8] to-[#6970e7] p-6 text-white shadow-[0_24px_60px_-30px_rgba(46,49,146,0.9)] dark:border-indigo-300/20 dark:from-[#22288a] dark:via-[#2e3192] dark:to-[#3f49bf]">
+            <article className="col-span-12 lg:col-span-5 overflow-hidden rounded-3xl border border-white/60 bg-gradient-to-br from-primary/90 via-[#4146b8]/88 to-[#6970e7]/85 p-6 text-white shadow-[0_24px_60px_-30px_rgba(46,49,146,0.78)] backdrop-blur-sm dark:border-indigo-300/30 dark:from-[#22288a]/85 dark:via-[#2e3192]/80 dark:to-[#3f49bf]/75">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100/90">
                 Score General
               </p>
@@ -347,7 +348,7 @@ export default function DashboardPage() {
               {statsCards.map((item) => (
                 <article
                   key={item.label}
-                  className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-slate-800 dark:bg-[#161e27]"
+                  className="group relative overflow-hidden rounded-2xl border border-white/65 bg-white/72 p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_26px_65px_-32px_rgba(15,23,42,0.52)] dark:border-slate-700/70 dark:bg-slate-900/55"
                 >
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/80 via-professional-green to-yellow-500 opacity-70"></div>
                   <div className="mb-6 flex items-center justify-between gap-3">
@@ -358,7 +359,7 @@ export default function DashboardPage() {
                         {item.icon}
                       </span>
                     </div>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <span className="rounded-full border border-white/70 bg-white/75 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
                       Total
                     </span>
                   </div>
