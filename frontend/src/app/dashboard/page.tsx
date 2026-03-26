@@ -221,7 +221,7 @@ export default function DashboardPage() {
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <section className="mx-auto w-full max-w-7xl">
+        <section className="w-full">
           {error && !isLoading && (
             <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
               {error}
