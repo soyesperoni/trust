@@ -109,12 +109,24 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
 
     final visit = _visit!;
     final report = (visit['visit_report'] as Map<String, dynamic>?) ?? const {};
+    final dispenserReports = (visit['dispenser_reports'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
     final checklist = (report['checklist'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .toList(growable: false);
     final media = (visit['media'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>().toList(growable: false);
     final photos = media.where(_isImageMedia).toList(growable: false);
     final videos = media.where(_isVideoMedia).toList(growable: false);
+    final dispenserPhotoUrls = dispenserReports
+        .expand((item) => (item['photos'] as List<dynamic>? ?? const []).whereType<String>())
+        .map(_toAbsoluteMediaUrl)
+        .whereType<String>()
+        .toSet();
+    final generalPhotos = photos.where((item) {
+      final url = _toAbsoluteMediaUrl(item['file'] as String?);
+      return url == null || !dispenserPhotoUrls.contains(url);
+    }).toList(growable: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -159,11 +171,19 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
                 children: [
                   Text('Responsable: ${report['responsible_name'] ?? 'No registrado'}'),
                   const SizedBox(height: 8),
-                  Text('Comentarios: ${report['comments'] ?? 'Sin comentarios'}'),
+                  Text('Comentarios generales: ${report['comments'] ?? 'Sin comentarios'}'),
                   const SizedBox(height: 12),
                   _buildResponsibleSignature(report['responsible_signature'] as String?),
                 ],
               ),
+            ),
+            _section(
+              title: 'Comentarios por dosificador',
+              child: dispenserReports.isEmpty
+                  ? const Text('No hay comentarios por dosificador.')
+                  : Column(
+                      children: dispenserReports.map((entry) => _buildDispenserReportComment(entry)).toList(growable: false),
+                    ),
             ),
             _section(
               title: 'Checklist',
@@ -197,13 +217,21 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
                     ),
             ),
             _section(
-              title: 'Evidencias fotográficas',
-              child: photos.isEmpty
-                  ? const Text('No hay fotos registradas.')
-                  : _buildMediaGallery(photos, isVideo: false),
+              title: 'Imágenes por dosificador',
+              child: dispenserReports.isEmpty
+                  ? const Text('No hay imágenes por dosificador.')
+                  : Column(
+                      children: dispenserReports.map((entry) => _buildDispenserReportPhotos(entry)).toList(growable: false),
+                    ),
             ),
             _section(
-              title: 'Evidencias de video',
+              title: 'Imágenes generales',
+              child: generalPhotos.isEmpty
+                  ? const Text('No hay imágenes generales registradas.')
+                  : _buildMediaGallery(generalPhotos, isVideo: false),
+            ),
+            _section(
+              title: 'Videos generales',
               child: videos.isEmpty
                   ? const Text('No hay videos registrados.')
                   : _buildMediaGallery(videos, isVideo: true),
@@ -220,6 +248,65 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildDispenserReportComment(Map<String, dynamic> reportEntry) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dispenserId = reportEntry['dispenser_id'];
+    final comment = (reportEntry['comment'] as String?)?.trim();
+    final dispenserLabel = _dispenserLabelById(dispenserId);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(dispenserLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          Text(comment == null || comment.isEmpty ? 'Sin comentarios para este dosificador.' : comment),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDispenserReportPhotos(Map<String, dynamic> reportEntry) {
+    final dispenserId = reportEntry['dispenser_id'];
+    final dispenserLabel = _dispenserLabelById(dispenserId);
+    final photos = (reportEntry['photos'] as List<dynamic>? ?? const [])
+        .whereType<String>()
+        .map(_toAbsoluteMediaUrl)
+        .whereType<String>()
+        .map((url) => <String, dynamic>{'file': url, 'type': 'image'})
+        .toList(growable: false);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(dispenserLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          photos.isEmpty ? const Text('Sin imágenes para este dosificador.') : _buildMediaGallery(photos, isVideo: false),
+        ],
+      ),
+    );
+  }
+
+  String _dispenserLabelById(Object? rawId) {
+    if (rawId is num) {
+      for (final item in _dispensers) {
+        if (item['id'] == rawId.toInt()) {
+          return '${item['identifier'] ?? 'Dosificador #${rawId.toInt()}'}';
+        }
+      }
+      return 'Dosificador #${rawId.toInt()}';
+    }
+    return 'Dosificador sin identificar';
   }
 
   Widget _buildResponsibleSignature(String? signatureValue) {
