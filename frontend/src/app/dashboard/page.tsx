@@ -29,10 +29,17 @@ type DailyAuditScore = {
 
 type ScoreRange = "month" | "week" | "fortnight";
 
+const getScoreColor = (score: number) => {
+  if (score >= 85) return { solid: "#22c55e", light: "#86efac", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" };
+  if (score >= 70) return { solid: "#f59e0b", light: "#fcd34d", badge: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300" };
+  return { solid: "#ef4444", light: "#fca5a5", badge: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300" };
+};
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
   const [scoreRange, setScoreRange] = useState<ScoreRange>("month");
+  const [animatedHeights, setAnimatedHeights] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,6 +98,7 @@ export default function DashboardPage() {
   );
 
   const auditScore = useMemo(() => Math.round(stats?.audit_score ?? 0), [stats?.audit_score]);
+  const auditScoreColor = useMemo(() => getScoreColor(auditScore), [auditScore]);
 
   const scoreBars = useMemo(() => {
     const sanitized = dailyAuditScoreHistory
@@ -158,6 +166,15 @@ export default function DashboardPage() {
     }));
   }, [dailyAuditScoreHistory, scoreRange]);
 
+  useEffect(() => {
+    setAnimatedHeights(new Array(scoreBars.length).fill(0));
+    const timer = window.setTimeout(() => {
+      setAnimatedHeights(scoreBars.map((bar) => bar.height));
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [scoreBars]);
+
   return (
     <>
       <DashboardHeader
@@ -175,29 +192,16 @@ export default function DashboardPage() {
           )}
 
           <div className="grid grid-cols-12 gap-4">
-            <article className="col-span-12 lg:col-span-5 overflow-hidden rounded-3xl border border-primary/40 bg-gradient-to-br from-primary via-[#3f4fc9] to-[#6a74ed] p-6 text-white shadow-[0_24px_60px_-30px_rgba(46,49,146,0.78)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100/90">Score de auditorías</p>
-              {isLoading ? (
-                <div className="mt-4 h-20 w-52 animate-pulse rounded-2xl bg-white/20" />
-              ) : (
-                <div className="mt-4 flex items-center gap-4">
-                  <div
-                    className="grid h-28 w-28 place-items-center rounded-full"
-                    style={{ background: `conic-gradient(#9ad643 ${Math.max(0, Math.min(100, auditScore))}%, rgba(255,255,255,0.24) 0)` }}
-                  >
-                    <div className="grid h-[5.2rem] w-[5.2rem] place-items-center rounded-full bg-primary/85 text-2xl font-black">
-                      {auditScore}%
-                    </div>
-                  </div>
-                  <span className="text-sm font-semibold text-indigo-100">Promedio general</span>
-                </div>
-              )}
-
-            </article>
-
-            <article className="col-span-12 lg:col-span-7 rounded-3xl border border-white/65 bg-white/80 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
+            <article className="col-span-12 rounded-3xl border border-white/65 bg-white/80 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Tendencia diaria de score</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Tendencia diaria de score</h3>
+                  {!isLoading && (
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${auditScoreColor.badge}`}>
+                      Score: {auditScore}%
+                    </span>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   {[
                     { value: "month", label: "Mensual" },
@@ -220,12 +224,15 @@ export default function DashboardPage() {
               </div>
 
               <div className={`mt-5 grid h-56 items-end gap-3 ${scoreRange === "month" ? "grid-cols-6" : scoreRange === "week" ? "grid-cols-7" : "grid-cols-5 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-[repeat(15,minmax(0,1fr))]"}`}>
-                {scoreBars.map((item) => (
-                  <div key={item.label} className="flex h-full flex-col justify-end gap-2">
+                {scoreBars.map((item, index) => (
+                  <div key={`${item.label}-${index}`} className="flex h-full flex-col justify-end gap-2">
                     <div className="relative h-full rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
                       <div
-                        className="absolute bottom-1 left-1 right-1 rounded-lg bg-gradient-to-t from-primary to-professional-green transition-all duration-700 ease-out"
-                        style={{ height: `${item.height}%` }}
+                        className="absolute bottom-1 left-1 right-1 rounded-lg transition-[height] duration-700 ease-out"
+                        style={{
+                          height: `${animatedHeights[index] ?? 0}%`,
+                          backgroundImage: `linear-gradient(to top, ${getScoreColor(item.score).solid}, ${getScoreColor(item.score).light})`,
+                        }}
                       />
                       <span className="absolute left-1/2 top-2 -translate-x-1/2 text-[11px] font-bold text-slate-700 dark:text-slate-200">{item.score}%</span>
                     </div>
@@ -240,7 +247,7 @@ export default function DashboardPage() {
             {statsCards.map((item, index) => (
               <article
                 key={item.label}
-                className="apple-card-enter group relative overflow-hidden rounded-xl border border-white/65 bg-white/72 p-3 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55"
+                className="apple-card-enter group relative overflow-hidden rounded-xl border border-white/65 bg-white/72 px-3 py-3.5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55"
                 style={{ animationDelay: `${index * 70}ms` }}
               >
                 {isLoading ? (
@@ -251,13 +258,13 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-3xl font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
-                      <div className={`inline-flex rounded-lg p-2 ${item.iconStyle}`}>
-                        <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-[2rem] font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
+                      <div className={`inline-flex rounded-lg p-2.5 ${item.iconStyle}`}>
+                        <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
                       </div>
                     </div>
-                    <h3 className="mt-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400">{item.label}</h3>
+                    <h3 className="mt-1 text-center text-sm font-semibold text-slate-500 dark:text-slate-400">{item.label}</h3>
                   </>
                 )}
               </article>
