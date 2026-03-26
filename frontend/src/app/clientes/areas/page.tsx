@@ -211,7 +211,7 @@ export default function AreasPage() {
             </div>
             <div className="flex items-center gap-2">
               <div className="relative">
-                <select className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 py-2.5 pl-4 pr-10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer">
+                <select className="list-filter-select">
                   <option value="">Todos los Estados</option>
                   <option value="activo">Activo</option>
                   <option value="mantenimiento">Mantenimiento</option>
@@ -223,7 +223,7 @@ export default function AreasPage() {
                   </span>
                 </div>
               </div>
-              <button className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 transition-colors">
+              <button className="list-filter-button">
                 <span className="material-symbols-outlined text-[20px]">
                   filter_list
                 </span>
@@ -231,9 +231,9 @@ export default function AreasPage() {
             </div>
           </div>
           <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left border-collapse">
+            <table className="list-table">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700 font-logo">
+                <tr className="list-table-head-row font-logo">
                   <th className="px-6 py-4">Área</th>
                   <th className="px-6 py-4">Sucursal</th>
                   <th className="px-6 py-4">Cliente</th>
@@ -246,7 +246,7 @@ export default function AreasPage() {
                 {filteredAreas.map((area) => (
                   <tr
                     key={area.id}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
+                    className="list-table-row group"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -303,7 +303,7 @@ export default function AreasPage() {
                         {canManageAreas && (
                           <>
                             <button
-                              className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
+                              className="list-action-btn hover:text-yellow-600 hover:bg-yellow-50"
                               title="Editar"
                               onClick={() => router.push(`/clientes/areas/${area.id}`)}
                             >
@@ -312,7 +312,7 @@ export default function AreasPage() {
                               </span>
                             </button>
                             <button
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                              className="list-action-btn hover:text-red-600 hover:bg-red-50"
                               title="Eliminar"
                               onClick={() => void handleDeleteArea(area.id)}
                             >

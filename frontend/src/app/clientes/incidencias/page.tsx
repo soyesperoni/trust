@@ -269,7 +269,7 @@ export default function IncidenciasPage() {
         <div className="hidden min-h-0 flex-1 overflow-y-auto px-4 pb-4 md:block md:px-8">
           <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-card dark:border-slate-800 dark:bg-[#161e27]">
             <div className="overflow-x-auto custom-scrollbar flex-1">
-              <table className="w-full text-left border-collapse min-w-[1000px]">
+              <table className="list-table min-w-[1000px]">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
                     <th className="px-6 py-4">Fecha</th>

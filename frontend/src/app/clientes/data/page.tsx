@@ -344,7 +344,7 @@ export default function ClientesListadoPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="relative">
-                    <select className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 py-2.5 pl-4 pr-10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer">
+                    <select className="list-filter-select">
                       <option value="">Todos los Estados</option>
                       <option value="activo">Activo</option>
                       <option value="inactivo">Inactivo</option>
@@ -355,7 +355,7 @@ export default function ClientesListadoPage() {
                       </span>
                     </div>
                   </div>
-                  <button className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 transition-colors">
+                  <button className="list-filter-button">
                     <span className="material-symbols-outlined text-[20px]">
                       filter_list
                     </span>
@@ -363,9 +363,9 @@ export default function ClientesListadoPage() {
                 </div>
               </div>
               <div className="overflow-x-auto flex-1">
-                <table className="w-full text-left border-collapse">
+                <table className="list-table">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700 font-logo">
+                    <tr className="list-table-head-row font-logo">
                       <th className="px-6 py-4 w-1/3">Cliente</th>
                       <th className="px-6 py-4 text-center">Sucursales</th>
                       <th className="px-6 py-4 text-center">Dosificadores</th>
@@ -378,7 +378,7 @@ export default function ClientesListadoPage() {
                     {filteredClients.map((client) => (
                       <tr
                         key={client.id}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
+                        className="list-table-row group"
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
@@ -430,7 +430,7 @@ export default function ClientesListadoPage() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Link
-                              className="p-1.5 text-slate-400 hover:text-professional-green hover:bg-yellow-50 rounded-full transition-colors"
+                              className="list-action-btn hover:text-professional-green hover:bg-yellow-50"
                               href={`/clientes/data/${client.id}`}
                               title="Ver detalles"
                             >
@@ -439,7 +439,7 @@ export default function ClientesListadoPage() {
                               </span>
                             </Link>
                             <Link
-                              className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
+                              className="list-action-btn hover:text-yellow-600 hover:bg-yellow-50"
                               href={`/clientes/data/${client.id}`}
                               title="Editar"
                             >
@@ -448,7 +448,7 @@ export default function ClientesListadoPage() {
                               </span>
                             </Link>
                             <button
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                              className="list-action-btn hover:text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                               disabled={deletingClientId === client.id}
                               onClick={() => void handleDeleteClient(client.id)}
                               title="Eliminar"
