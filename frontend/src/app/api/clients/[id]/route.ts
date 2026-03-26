@@ -4,14 +4,16 @@ import { getBackendBaseUrl } from "../../../lib/backend";
 const backendBaseUrl = getBackendBaseUrl();
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const resolvedParams = await params;
+  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
   const response = await fetch(
     `${backendBaseUrl}/api/clients/${resolvedParams.id}/`,
     {
       cache: "no-store",
+      headers: { "X-Current-User-Email": currentUserEmail },
     },
   );
 
@@ -32,11 +34,16 @@ export async function PUT(
 ) {
   const resolvedParams = await params;
   const body = await request.text();
+  const contentType = request.headers.get("content-type") ?? "application/json";
+  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
   const response = await fetch(
     `${backendBaseUrl}/api/clients/${resolvedParams.id}/`,
     {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": contentType,
+        "X-Current-User-Email": currentUserEmail,
+      },
       body,
     },
   );
@@ -46,14 +53,16 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const resolvedParams = await params;
+  const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
   const response = await fetch(
     `${backendBaseUrl}/api/clients/${resolvedParams.id}/`,
     {
       method: "DELETE",
+      headers: { "X-Current-User-Email": currentUserEmail },
     },
   );
 

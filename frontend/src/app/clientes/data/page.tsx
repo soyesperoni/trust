@@ -82,6 +82,18 @@ const avatarClassPool = [
   "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 border-yellow-100 dark:border-yellow-900/30",
 ];
 
+const getSessionUserEmail = () => {
+  if (typeof window === "undefined") return "";
+  const sessionRaw = window.localStorage.getItem("trust.currentUser");
+  if (!sessionRaw) return "";
+  try {
+    const parsed = JSON.parse(sessionRaw) as { email?: string };
+    return parsed.email?.trim().toLowerCase() ?? "";
+  } catch {
+    return "";
+  }
+};
+
 export default function ClientesListadoPage() {
   const { user, isLoading: isLoadingUser } = useCurrentUser();
   const canCreateClients =
@@ -279,6 +291,7 @@ export default function ClientesListadoPage() {
     try {
       const response = await fetch(`/api/clients/${clientId}/`, {
         method: "DELETE",
+        headers: { "x-current-user-email": getSessionUserEmail() },
       });
 
       if (!response.ok) {
