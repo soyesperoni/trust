@@ -229,7 +229,7 @@ export default function IncidenciasPage() {
         {canCreateIncident ? (
           <Link
             aria-label="Crear incidencia"
-            className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-slate-900 shadow-lg"
+            className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-professional-green text-white shadow-lg transition-colors hover:bg-lime-600"
             href="/clientes/incidencias/nueva"
           >
             <span className="material-symbols-outlined text-[28px]">add</span>
@@ -243,7 +243,7 @@ export default function IncidenciasPage() {
             <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center">
               {canCreateIncidentsFromHeader ? (
                 <Link
-                  className="bg-primary text-slate-900 hover:bg-yellow-300 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2 shadow-sm"
+                  className="bg-professional-green text-white hover:bg-lime-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2 shadow-sm"
                   href="/clientes/incidencias/nueva"
                 >
                   <span className="material-symbols-outlined text-[20px]">add</span>

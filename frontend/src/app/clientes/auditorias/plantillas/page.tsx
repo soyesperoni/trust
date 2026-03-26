@@ -95,7 +95,7 @@ export default function PlantillasAuditoriaPage() {
         action={
           canManage ? (
             <Link
-              className="bg-slate-900 text-white hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2"
+              className="bg-professional-green text-white hover:bg-lime-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2"
               href="/clientes/auditorias/plantillas/nueva"
             >
               <span className="material-symbols-outlined text-[20px]">add</span>
