@@ -188,6 +188,31 @@ export default function DashboardPage() {
     return filtered.sort((a, b) => a.visited_at.localeCompare(b.visited_at));
   }, [todayVisits, user?.full_name, user?.role]);
 
+  const dashboardInsights = useMemo(() => {
+    const totalVisits = stats?.visits ?? 0;
+    const pendingVisits = stats?.pending_visits ?? 0;
+    const completedVisits = Math.max(totalVisits - pendingVisits, 0);
+    const completionRate = totalVisits === 0 ? 0 : Math.round((completedVisits / totalVisits) * 100);
+
+    const rawItems = [
+      { label: "Visitas OK", value: completedVisits, icon: "task_alt" },
+      { label: "Pendientes", value: pendingVisits, icon: "pending_actions" },
+      { label: "Incidencias", value: stats?.incidents ?? 0, icon: "report_problem" },
+      { label: "Clientes", value: stats?.clients ?? 0, icon: "apartment" },
+    ];
+    const maxValue = Math.max(...rawItems.map((item) => item.value), 1);
+    const chartItems = rawItems.map((item) => ({
+      ...item,
+      width: Math.max((item.value / maxValue) * 100, item.value > 0 ? 18 : 8),
+    }));
+
+    return {
+      completionRate,
+      completedVisits,
+      chartItems,
+    };
+  }, [stats]);
+
   return (
     <>
       <DashboardHeader
@@ -284,38 +309,73 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="hidden md:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-            {statsCards.map((item) => (
-              <article
-                key={item.label}
-                className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-slate-800 dark:bg-[#161e27]"
-              >
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/80 via-professional-green to-yellow-500 opacity-70"></div>
-                <div className="mb-6 flex items-center justify-between gap-3">
-                  <div
-                    className={`${item.iconStyle} rounded-xl p-2.5 transition-transform duration-300 group-hover:scale-105`}
-                  >
-                    <span className="material-symbols-outlined text-[22px]">
-                      {item.icon}
+          <div className="hidden md:grid grid-cols-12 gap-5">
+            <article className="col-span-12 lg:col-span-5 overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-primary via-[#4146b8] to-[#6970e7] p-6 text-white shadow-[0_24px_60px_-30px_rgba(46,49,146,0.9)] dark:border-indigo-300/20 dark:from-[#22288a] dark:via-[#2e3192] dark:to-[#3f49bf]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100/90">
+                Score General
+              </p>
+              <div className="mt-3 flex items-end gap-2">
+                <span className="text-6xl font-black leading-none">{dashboardInsights.completionRate}%</span>
+                <span className="pb-2 text-sm font-medium text-indigo-100">cumplimiento</span>
+              </div>
+              <p className="mt-4 text-sm text-indigo-100/90">
+                {dashboardInsights.completedVisits} visitas completadas frente al total operativo actual.
+              </p>
+
+              <div className="mt-6 space-y-3">
+                {dashboardInsights.chartItems.map((item) => (
+                  <div key={item.label} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs font-semibold text-indigo-100">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm">{item.icon}</span>
+                        {item.label}
+                      </span>
+                      <span>{item.value}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-white/20">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-professional-green to-yellow-200 transition-all duration-500"
+                        style={{ width: `${item.width}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <div className="col-span-12 lg:col-span-7 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {statsCards.map((item) => (
+                <article
+                  key={item.label}
+                  className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-slate-800 dark:bg-[#161e27]"
+                >
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/80 via-professional-green to-yellow-500 opacity-70"></div>
+                  <div className="mb-6 flex items-center justify-between gap-3">
+                    <div
+                      className={`${item.iconStyle} rounded-xl p-2.5 transition-transform duration-300 group-hover:scale-105`}
+                    >
+                      <span className="material-symbols-outlined text-[22px]">
+                        {item.icon}
+                      </span>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      Total
                     </span>
                   </div>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                    Total
-                  </span>
-                </div>
-                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                  {item.label}
-                </h3>
-                <p className="mt-1 text-3xl font-bold leading-none text-slate-900 dark:text-white sm:text-4xl">
-                  {item.value}
-                </p>
-                {isLoading && (
-                  <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-                    Actualizando datos...
+                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                    {item.label}
+                  </h3>
+                  <p className="mt-1 text-3xl font-bold leading-none text-slate-900 dark:text-white sm:text-4xl">
+                    {item.value}
                   </p>
-                )}
-              </article>
-            ))}
+                  {isLoading && (
+                    <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                      Actualizando datos...
+                    </p>
+                  )}
+                </article>
+              ))}
+            </div>
           </div>
         </section>
       </PageTransition>
