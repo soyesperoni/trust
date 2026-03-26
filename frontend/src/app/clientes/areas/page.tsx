@@ -303,7 +303,7 @@ export default function AreasPage() {
                         {canManageAreas && (
                           <>
                             <button
-                              className="list-action-btn hover:text-yellow-600 hover:bg-yellow-50"
+                              className="list-action-btn hover:text-professional-green"
                               title="Editar"
                               onClick={() => router.push(`/clientes/areas/${area.id}`)}
                             >
@@ -312,7 +312,7 @@ export default function AreasPage() {
                               </span>
                             </button>
                             <button
-                              className="list-action-btn hover:text-red-600 hover:bg-red-50"
+                              className="list-action-btn hover:text-red-600"
                               title="Eliminar"
                               onClick={() => void handleDeleteArea(area.id)}
                             >

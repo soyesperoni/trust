@@ -430,7 +430,7 @@ export default function ClientesListadoPage() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Link
-                              className="list-action-btn hover:text-professional-green hover:bg-yellow-50"
+                              className="list-action-btn hover:text-slate-600"
                               href={`/clientes/data/${client.id}`}
                               title="Ver detalles"
                             >
@@ -439,7 +439,7 @@ export default function ClientesListadoPage() {
                               </span>
                             </Link>
                             <Link
-                              className="list-action-btn hover:text-yellow-600 hover:bg-yellow-50"
+                              className="list-action-btn hover:text-professional-green"
                               href={`/clientes/data/${client.id}`}
                               title="Editar"
                             >
@@ -448,7 +448,7 @@ export default function ClientesListadoPage() {
                               </span>
                             </Link>
                             <button
-                              className="list-action-btn hover:text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="list-action-btn hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                               disabled={deletingClientId === client.id}
                               onClick={() => void handleDeleteClient(client.id)}
                               title="Eliminar"

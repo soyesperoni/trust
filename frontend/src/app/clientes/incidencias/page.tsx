@@ -318,17 +318,19 @@ export default function IncidenciasPage() {
                           <div className="flex justify-end items-center gap-2">
                             {canScheduleFromIncident && !isAccountAdmin ? (
                               <Link
-                                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                className="list-action-btn hover:text-professional-green"
                                 href={`/clientes/incidencias/agendar?incidentId=${incident.id}`}
+                                title="Agendar visita"
                               >
-                                Agendar visita
+                                <span className="material-symbols-outlined text-[20px]">event</span>
                               </Link>
                             ) : null}
                             <Link
-                              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
+                              className="list-action-btn hover:text-slate-600"
                               href={`/clientes/incidencias/${incident.id}/detalle`}
+                              title="Ver detalle"
                             >
-                              Ver detalle
+                              <span className="material-symbols-outlined text-[20px]">visibility</span>
                             </Link>
                           </div>
                         </td>
