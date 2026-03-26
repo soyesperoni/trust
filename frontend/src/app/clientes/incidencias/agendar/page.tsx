@@ -19,8 +19,6 @@ type IncidentDetail = {
   branch_id: number;
   area: string;
   area_id: number;
-  dispenser: string;
-  dispenser_id: number;
   description: string;
 };
 
@@ -152,7 +150,7 @@ function AgendarVisitaPageContent() {
 
   return (
     <>
-      <DashboardHeader title="Agendar Visita" description="Programa una visita usando los datos reales de la incidencia." />
+      <DashboardHeader title="Agendar Visita" description="Programa una visita por área usando los datos reales de la incidencia." />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-4xl mx-auto rounded-xl border border-slate-100 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27]">
           {isLoading ? <p className="text-slate-500">Cargando incidencia...</p> : null}
@@ -169,9 +167,6 @@ function AgendarVisitaPageContent() {
                 </label>
                 <label className="text-sm text-slate-600 dark:text-slate-300">Área
                   <input className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800" readOnly value={incident.area} />
-                </label>
-                <label className="text-sm text-slate-600 dark:text-slate-300">Dosificador
-                  <input className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800" readOnly value={incident.dispenser} />
                 </label>
               </div>
 

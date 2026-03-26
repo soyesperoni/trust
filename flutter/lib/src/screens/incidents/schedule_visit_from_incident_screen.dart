@@ -151,7 +151,6 @@ class _ScheduleVisitFromIncidentScreenState extends State<ScheduleVisitFromIncid
                   _readonlyField(context, 'Cliente', widget.incident.client),
                   _readonlyField(context, 'Sucursal', widget.incident.branch),
                   _readonlyField(context, 'Área', widget.incident.area),
-                  _readonlyField(context, 'Dosificador', widget.incident.dispenser),
                   const SizedBox(height: 8),
                   if (!_isCurrentUserInspector) ...[
                     DropdownButtonFormField<int>(

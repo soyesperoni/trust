@@ -12,7 +12,6 @@ import { getSessionUserEmail } from "../../../lib/session";
 type Client = { id: number; name: string };
 type Branch = { id: number; name: string; client: { id: number; name: string } };
 type Area = { id: number; name: string; branch: { id: number; name: string; client: string } };
-type Dispenser = { id: number; identifier: string; area: { id: number; name: string; branch: string } | null };
 type User = { id: number; full_name: string; role: string };
 
 const now = new Date();
@@ -27,13 +26,11 @@ export default function NuevaVisitaPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
-  const [dispensers, setDispensers] = useState<Dispenser[]>([]);
   const [inspectors, setInspectors] = useState<User[]>([]);
 
   const [clientId, setClientId] = useState("");
   const [branchId, setBranchId] = useState("");
   const [areaId, setAreaId] = useState("");
-  const [dispenserId, setDispenserId] = useState("");
   const [inspectorId, setInspectorId] = useState("");
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
@@ -47,12 +44,11 @@ export default function NuevaVisitaPage() {
 
     const loadData = async () => {
       try {
-        const [clientsResponse, branchesResponse, areasResponse, dispensersResponse, usersResponse] =
+        const [clientsResponse, branchesResponse, areasResponse, usersResponse] =
           await Promise.all([
             fetch("/api/clients/", { cache: "no-store" }),
             fetch("/api/branches/", { cache: "no-store" }),
             fetch("/api/areas/", { cache: "no-store" }),
-            fetch("/api/dispensers/", { cache: "no-store" }),
             fetch("/api/users/", { cache: "no-store" }),
           ]);
 
@@ -60,18 +56,16 @@ export default function NuevaVisitaPage() {
           !clientsResponse.ok ||
           !branchesResponse.ok ||
           !areasResponse.ok ||
-          !dispensersResponse.ok ||
           !usersResponse.ok
         ) {
           throw new Error("No se pudo cargar la información de plantillas para la auditoría.");
         }
 
-        const [clientsPayload, branchesPayload, areasPayload, dispensersPayload, usersPayload] =
+        const [clientsPayload, branchesPayload, areasPayload, usersPayload] =
           await Promise.all([
             clientsResponse.json(),
             branchesResponse.json(),
             areasResponse.json(),
-            dispensersResponse.json(),
             usersResponse.json(),
           ]);
 
@@ -80,7 +74,6 @@ export default function NuevaVisitaPage() {
         setClients(clientsPayload.results ?? []);
         setBranches(branchesPayload.results ?? []);
         setAreas(areasPayload.results ?? []);
-        setDispensers(dispensersPayload.results ?? []);
         setInspectors(
           (usersPayload.results ?? []).filter(
             (user: User) => user.role === "inspector",
@@ -113,11 +106,6 @@ export default function NuevaVisitaPage() {
     [areas, branchId],
   );
 
-  const filteredDispensers = useMemo(
-    () => dispensers.filter((disp) => (areaId ? String(disp.area?.id) === areaId : true)),
-    [dispensers, areaId],
-  );
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!areaId) {
@@ -141,7 +129,6 @@ export default function NuevaVisitaPage() {
           }
         : {
             area_id: Number(areaId),
-            dispenser_id: dispenserId ? Number(dispenserId) : null,
             inspector_id: inspectorId ? Number(inspectorId) : null,
             visited_at: visitDateTime.toISOString(),
             notes: notes.trim(),
@@ -220,7 +207,6 @@ export default function NuevaVisitaPage() {
                       setClientId(e.target.value);
                       setBranchId("");
                       setAreaId("");
-                      setDispenserId("");
                     }} value={clientId}>
                     <option value="">Seleccione un cliente</option>
                     {clients.map((client) => (
@@ -236,7 +222,6 @@ export default function NuevaVisitaPage() {
                   <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="branch" onChange={(e) => {
                         setBranchId(e.target.value);
                         setAreaId("");
-                        setDispenserId("");
                       }} value={branchId}>
                     <option value="">Seleccione una sucursal</option>
                     {filteredBranches.map((branch) => (
@@ -251,7 +236,6 @@ export default function NuevaVisitaPage() {
                   Área
                   <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="area" onChange={(e) => {
                         setAreaId(e.target.value);
-                        setDispenserId("");
                       }} value={areaId}>
                     <option value="">Seleccione un área</option>
                     {filteredAreas.map((area) => (
@@ -260,20 +244,6 @@ export default function NuevaVisitaPage() {
                   </select>
                 </label>
               </div>
-
-              {activityType === "visit" && (
-              <div className="md:col-span-2">
-                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="doser">
-                  Dosificador
-                  <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="doser" onChange={(e) => setDispenserId(e.target.value)} value={dispenserId}>
-                    <option value="">Seleccione equipo dosificador</option>
-                    {filteredDispensers.map((dispenser) => (
-                      <option key={dispenser.id} value={dispenser.id}>{dispenser.identifier}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              )}
 
               <div className="md:col-span-2">
                 <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="inspector">
