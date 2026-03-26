@@ -92,7 +92,7 @@ export default function Home() {
             <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <input
-                  className="form-input block h-14 w-full rounded-xl border-slate-200 bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 shadow-input transition-all duration-200 ease-in-out focus:border-professional-green focus:ring-professional-green dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  className="form-input block h-11 w-full rounded-xl border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 placeholder:text-sm placeholder:text-slate-400 shadow-input transition-all duration-200 ease-in-out focus:border-professional-green focus:ring-professional-green dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                   id="email"
                   name="email"
                   aria-label="Correo electrónico"
@@ -103,7 +103,7 @@ export default function Home() {
               </div>
               <div className="space-y-2">
                 <input
-                  className="form-input block h-14 w-full rounded-xl border-slate-200 bg-slate-50 px-4 text-slate-900 placeholder:text-slate-400 shadow-input transition-all duration-200 ease-in-out focus:border-professional-green focus:ring-professional-green dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  className="form-input block h-11 w-full rounded-xl border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 placeholder:text-sm placeholder:text-slate-400 shadow-input transition-all duration-200 ease-in-out focus:border-professional-green focus:ring-professional-green dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                   id="password"
                   name="password"
                   aria-label="Contraseña"
