@@ -249,6 +249,31 @@ class TrustRepository {
     );
   }
 
+
+  Future<Map<String, dynamic>> createUser({
+    required String email,
+    required String fullName,
+    required String userEmail,
+    required String password,
+    required String role,
+    List<int> clientIds = const [],
+    List<int> branchIds = const [],
+  }) {
+    return _apiClient.postJson(
+      '/users/',
+      email: email,
+      body: {
+        'full_name': fullName,
+        'email': userEmail,
+        'password': password,
+        'username': userEmail,
+        'role': role,
+        'client_ids': clientIds,
+        'branch_ids': branchIds,
+      },
+    );
+  }
+
   Future<List<Map<String, dynamic>>> loadClients(String email) async {
     final json = await _apiClient.getJson('/clients/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);

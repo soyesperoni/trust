@@ -10,6 +10,7 @@ import 'tabs/incidents_tab.dart';
 import 'tabs/visits_tab.dart';
 import 'notifications_screen.dart';
 import 'dashboard_quick_setup_screen.dart';
+import 'dashboard_quick_user_screen.dart';
 import 'profile_screen.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
@@ -102,14 +103,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           if (widget.role == UserRole.generalAdmin || widget.role == UserRole.inspector)
             _TopBarIconButton(
-              tooltip: 'Alta rápida de cliente',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => DashboardQuickSetupScreen(email: widget.email),
-                  ),
-                );
-              },
+              tooltip: 'Más opciones',
+              onPressed: _openQuickCreateMenu,
               icon: const Icon(Icons.add_rounded),
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -212,6 +207,55 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+
+  Future<void> _openQuickCreateMenu() async {
+    final action = await showModalBottomSheet<_QuickCreateAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.business_rounded),
+                title: const Text('Agregar cliente'),
+                subtitle: const Text('Usa el flujo rápido para crear cliente y estructura.'),
+                onTap: () => Navigator.of(context).pop(_QuickCreateAction.client),
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_add_alt_1_rounded),
+                title: const Text('Agregar usuario'),
+                subtitle: const Text('Crea usuario y asigna cuenta o sucursal según su rol.'),
+                onTap: () => Navigator.of(context).pop(_QuickCreateAction.user),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!mounted || action == null) {
+      return;
+    }
+
+    if (action == _QuickCreateAction.client) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => DashboardQuickSetupScreen(email: widget.email),
+        ),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => DashboardQuickUserScreen(email: widget.email),
+      ),
+    );
+  }
+
   static String _initials(String email) {
     final user = email.split('@').first.trim();
     if (user.isEmpty) {
@@ -240,6 +284,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+
+enum _QuickCreateAction { client, user }
 
 class _TopBarIconButton extends StatelessWidget {
   const _TopBarIconButton({
