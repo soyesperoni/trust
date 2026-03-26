@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
   const [scoreRange, setScoreRange] = useState<ScoreRange>("fortnight");
   const [barAnimationProgress, setBarAnimationProgress] = useState(0);
+  const [animatedAuditScore, setAnimatedAuditScore] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -218,6 +219,33 @@ export default function DashboardPage() {
     return () => window.clearTimeout(timer);
   }, [scoreBars]);
 
+  useEffect(() => {
+    if (isLoading) return;
+
+    let animationFrame = 0;
+    const duration = 1100;
+    const startValue = 0;
+    const targetValue = auditScore;
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      const nextValue = Math.round(startValue + (targetValue - startValue) * easedProgress);
+      setAnimatedAuditScore(nextValue);
+
+      if (progress < 1) {
+        animationFrame = window.requestAnimationFrame(animate);
+      }
+    };
+
+    setAnimatedAuditScore(0);
+    animationFrame = window.requestAnimationFrame(animate);
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [auditScore, isLoading]);
+
   return (
     <>
       <DashboardHeader
@@ -235,7 +263,24 @@ export default function DashboardPage() {
           )}
 
           <div className="grid grid-cols-12 gap-4">
-            <article className="col-span-12 rounded-3xl border border-white/65 bg-white/80 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
+            <article className="col-span-12 lg:col-span-4 rounded-3xl border border-white/65 bg-white/80 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
+              <div className="flex h-full min-h-[22rem] flex-col items-center justify-center rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-6 text-center dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Score actual</p>
+                <div className="mt-4 flex items-end gap-1">
+                  <span className="text-7xl font-black leading-none text-slate-900 dark:text-white">
+                    {isLoading ? "..." : animatedAuditScore}
+                  </span>
+                  <span className="pb-2 text-3xl font-bold text-slate-500 dark:text-slate-300">%</span>
+                </div>
+                {!isLoading && (
+                  <span className={`mt-6 rounded-full px-4 py-1.5 text-sm font-bold ${auditScoreColor.badge}`}>
+                    Objetivo visual: {auditScore}%
+                  </span>
+                )}
+              </div>
+            </article>
+
+            <article className="col-span-12 lg:col-span-8 rounded-3xl border border-white/65 bg-white/80 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">Tendencia diaria de score</h3>
@@ -267,7 +312,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-5 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-3 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
-                <div className="relative h-56 w-full">
+                <div className="relative h-72 w-full">
                   <div className="absolute inset-0">
                     {[100, 75, 50, 25, 0].map((tick) => (
                       <div key={tick} className="absolute inset-x-0" style={{ bottom: `${tick}%` }}>
