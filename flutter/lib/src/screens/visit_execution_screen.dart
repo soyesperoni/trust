@@ -252,6 +252,24 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
                   child: Icon(Icons.check, size: 18, color: item.checked ? AppColors.black : Colors.transparent),
                 ),
               ),
+              IconButton(
+                tooltip: 'Comentarios',
+                onPressed: () => _openDispenserCommentsDialog(item),
+                icon: Badge.count(
+                  count: item.comment.trim().isEmpty ? 0 : 1,
+                  isLabelVisible: item.comment.trim().isNotEmpty,
+                  child: const Icon(Icons.comment_outlined),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Fotos',
+                onPressed: () => _openDispenserPhotosDialog(item),
+                icon: Badge.count(
+                  count: item.photos.length,
+                  isLabelVisible: item.photos.isNotEmpty,
+                  child: const Icon(Icons.add_a_photo_outlined),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -274,6 +292,139 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _openDispenserCommentsDialog(_ChecklistDispenser item) async {
+    final controller = TextEditingController(text: item.comment);
+    final savedComment = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Comentarios - ${item.identifier}'),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'Comentario',
+            hintText: 'Escribe observaciones de este dosificador...',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+    if (savedComment == null || !mounted) return;
+    setState(() => item.comment = savedComment);
+  }
+
+  Future<void> _openDispenserPhotosDialog(_ChecklistDispenser item) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            Future<void> addPhoto() async {
+              final photo = await _captureDispenserPhoto(item);
+              if (photo == null || !mounted) return;
+              setState(() => item.photos.add(photo));
+              if (context.mounted) setModalState(() {});
+            }
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Fotos - ${item.identifier}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                    const SizedBox(height: 6),
+                    Text('Puedes registrar hasta 4 fotos por dosificador (opcional).', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray500)),
+                    const SizedBox(height: 12),
+                    if (item.photos.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text('Aún no hay fotos registradas.'),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: item.photos.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final file = entry.value;
+                          return Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.file(file, width: 90, height: 90, fit: BoxFit.cover),
+                              ),
+                              Positioned(
+                                top: -6,
+                                right: -6,
+                                child: IconButton.filledTonal(
+                                  onPressed: () {
+                                    setState(() => item.photos.removeAt(index));
+                                    setModalState(() {});
+                                  },
+                                  icon: const Icon(Icons.close, size: 16),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(growable: false),
+                      ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: item.photos.length >= 4 ? null : addPhoto,
+                        icon: const Icon(Icons.camera_alt_outlined),
+                        label: Text(item.photos.length >= 4 ? 'Límite alcanzado (4/4)' : 'Tomar foto'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<File?> _captureDispenserPhoto(_ChecklistDispenser item) async {
+    if (item.photos.length >= 4) {
+      setState(() => _error = 'Solo puedes registrar hasta 4 fotos por dosificador.');
+      return null;
+    }
+
+    try {
+      await _ensureCapturePermissions(requireMicrophone: false);
+      if (!mounted) return null;
+
+      final capturedFile = await showDialog<XFile>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const _MiniCameraCaptureDialog(mode: _EvidenceMode.photo),
+      );
+      if (capturedFile == null) return null;
+
+      return _compressPhoto(File(capturedFile.path));
+    } catch (error) {
+      if (!mounted) return null;
+      setState(() => _error = _toError(error));
+      return null;
+    }
   }
 
   Widget _buildReferenceTile({required String title, required String name, String? imageUrl}) {
@@ -688,12 +839,17 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
                 'label': item.identifier,
                 'location': item.location,
                 'checked': item.checked,
+                'comment': item.comment.trim(),
+                'photo_count': item.photos.length,
                 'photo': null,
               })
           .toList(growable: false);
 
       final files = await Future.wait(
-        _evidenceFiles.map((file) async {
+        [
+          ..._evidenceFiles,
+          ..._checklistDispensers.expand((item) => item.photos),
+        ].map((file) async {
           final fileName = file.uri.pathSegments.last;
           final mimeType = lookupMimeType(file.path) ?? lookupMimeType(fileName);
           final mimeParts = mimeType?.split('/');
@@ -854,6 +1010,8 @@ class _ChecklistDispenser {
   final String? modelPhoto;
   final List<_ChecklistProduct> products;
   bool checked = false;
+  String comment = '';
+  final List<File> photos = <File>[];
 }
 
 class _ChecklistProduct {
