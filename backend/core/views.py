@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 import textwrap
 from functools import lru_cache
 from django.db import IntegrityError
@@ -2198,7 +2199,6 @@ def dispensers(request):
         if data is None:
             return JsonResponse({"error": "Formato JSON inválido."}, status=400)
 
-        identifier = str(data.get("identifier") or "").strip()
         notes = str(data.get("notes") or "").strip()
 
         try:
@@ -2221,18 +2221,24 @@ def dispensers(request):
             if area is None:
                 return JsonResponse({"error": "Área no encontrada."}, status=404)
 
-        if not identifier or not model_id:
-            return JsonResponse({"error": "Modelo e identificador son obligatorios."}, status=400)
+        if not model_id:
+            return JsonResponse({"error": "Modelo obligatorio."}, status=400)
 
         model = DispenserModel.objects.filter(pk=model_id).first()
         if model is None:
             return JsonResponse({"error": "Modelo no encontrado."}, status=404)
 
-        if Dispenser.objects.filter(model=model, identifier=identifier).exists():
-            return JsonResponse(
-                {"error": "Ya existe un dosificador con ese identificador para el modelo seleccionado."},
-                status=400,
-            )
+        last_identifier = (
+            Dispenser.objects.filter(identifier__regex=r"^DOS[0-9]+$")
+            .order_by("-id")
+            .values_list("identifier", flat=True)
+            .first()
+        )
+        if not last_identifier:
+            identifier = "DOS001"
+        else:
+            match = re.match(r"^DOS(\d+)$", last_identifier)
+            identifier = f"DOS{int(match.group(1)) + 1:03d}" if match else "DOS001"
 
         dispenser = Dispenser.objects.create(
             model=model,
