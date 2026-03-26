@@ -9,12 +9,6 @@ import { useCurrentUser } from "../hooks/useCurrentUser";
 import { INSPECTOR_ROLE } from "../lib/permissions";
 import { getSessionUserEmail } from "../lib/session";
 
-type TrustAIExpress = {
-  summary: string;
-  provider: string;
-  model: string;
-};
-
 type DashboardStats = {
   clients: number;
   branches: number;
@@ -27,6 +21,7 @@ type DashboardStats = {
   audits: number;
   completed_audits: number;
   scheduled_audits: number;
+  audit_score: number;
 };
 
 type Visit = {
@@ -40,12 +35,20 @@ type Visit = {
   status?: string;
 };
 
+type DailyAuditScore = {
+  date: string;
+  score: number;
+  audits: number;
+};
+
+type ScoreRange = "month" | "week" | "fortnight";
 
 export default function DashboardPage() {
   const { user } = useCurrentUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [todayVisits, setTodayVisits] = useState<Visit[]>([]);
-  const [trustAIExpress, setTrustAIExpress] = useState<TrustAIExpress | null>(null);
+  const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
+  const [scoreRange, setScoreRange] = useState<ScoreRange>("month");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +80,7 @@ export default function DashboardPage() {
         if (!isMounted) return;
 
         setStats(dashboardData.stats);
-        setTrustAIExpress(dashboardData.trust_ai_express ?? null);
+        setDailyAuditScoreHistory(dashboardData.daily_audit_score_history ?? []);
         setTodayVisits(visitsData.results ?? []);
         setError(null);
       } catch (fetchError) {
@@ -113,16 +116,6 @@ export default function DashboardPage() {
     [stats],
   );
 
-  const auditTopics = useMemo(
-    () => [
-      "Cumplimiento de checklist",
-      "Evidencias fotográficas",
-      "Cierre de hallazgos",
-      "Tendencia de score por auditoría",
-    ],
-    [],
-  );
-
   const todayScheduledVisits = useMemo(() => {
     const today = new Date();
     const isSameDate = (value: string) => {
@@ -150,13 +143,48 @@ export default function DashboardPage() {
     return items.map((item) => ({ ...item, width: Math.max((item.value / maxValue) * 100, item.value > 0 ? 10 : 4) }));
   }, [stats]);
 
-  const completionRate = useMemo(() => {
-    const totalVisits = stats?.visits ?? 0;
-    const pendingVisits = stats?.pending_visits ?? 0;
-    const completedVisits = Math.max(totalVisits - pendingVisits, 0);
-    if (!totalVisits) return 0;
-    return Math.round((completedVisits / totalVisits) * 100);
-  }, [stats]);
+  const auditScore = useMemo(() => Math.round(stats?.audit_score ?? 0), [stats?.audit_score]);
+
+  const scoreBars = useMemo(() => {
+    const grouped = new Map<string, { sum: number; count: number }>();
+
+    dailyAuditScoreHistory.forEach((entry) => {
+      const date = new Date(`${entry.date}T00:00:00`);
+      if (Number.isNaN(date.getTime())) return;
+      let bucketStart: Date;
+      if (scoreRange === "week") {
+        bucketStart = new Date(date);
+        bucketStart.setDate(date.getDate() - date.getDay());
+      } else if (scoreRange === "fortnight") {
+        bucketStart = new Date(date.getFullYear(), date.getMonth(), date.getDate() <= 15 ? 1 : 16);
+      } else {
+        bucketStart = new Date(date.getFullYear(), date.getMonth(), 1);
+      }
+      const key = bucketStart.toISOString().slice(0, 10);
+      const current = grouped.get(key) ?? { sum: 0, count: 0 };
+      current.sum += entry.score;
+      current.count += 1;
+      grouped.set(key, current);
+    });
+
+    const values = Array.from(grouped.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-6)
+      .map(([date, value]) => {
+        const average = value.count ? Math.round(value.sum / value.count) : 0;
+        const parsedDate = new Date(`${date}T00:00:00`);
+        const label = scoreRange === "month"
+          ? parsedDate.toLocaleDateString("es-MX", { month: "short", year: "2-digit" })
+          : parsedDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+        return { label, score: average };
+      });
+
+    const max = Math.max(...values.map((item) => item.score), 1);
+    return values.map((item) => ({
+      ...item,
+      height: Math.max((item.score / max) * 100, item.score > 0 ? 12 : 4),
+    }));
+  }, [dailyAuditScoreHistory, scoreRange]);
 
   return (
     <>
@@ -174,15 +202,15 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-12 gap-5">
+          <div className="grid grid-cols-12 gap-4">
             <article className="col-span-12 lg:col-span-5 overflow-hidden rounded-3xl border border-white/60 bg-gradient-to-br from-primary/90 via-[#4146b8]/88 to-[#6970e7]/85 p-6 text-white shadow-[0_24px_60px_-30px_rgba(46,49,146,0.78)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100/90">Score Operativo</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100/90">Score de auditorías</p>
               {isLoading ? (
                 <div className="mt-4 h-20 w-52 animate-pulse rounded-2xl bg-white/20" />
               ) : (
                 <div className="mt-3 flex items-end gap-2">
-                  <span className="text-6xl font-black leading-none">{completionRate}%</span>
-                  <span className="pb-2 text-sm font-medium text-indigo-100">cumplimiento</span>
+                  <span className="text-6xl font-black leading-none">{auditScore}%</span>
+                  <span className="pb-2 text-sm font-medium text-indigo-100">promedio</span>
                 </div>
               )}
 
@@ -202,46 +230,66 @@ export default function DashboardPage() {
             </article>
 
             <article className="col-span-12 lg:col-span-7 rounded-3xl border border-white/65 bg-white/80 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Trust AI Express</h3>
-                <span className="rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold uppercase text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">DeepSeek</span>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Tendencia diaria de score</h3>
+                <div className="flex gap-2">
+                  {[
+                    { value: "month", label: "Mensual" },
+                    { value: "week", label: "Semanal" },
+                    { value: "fortnight", label: "15 días" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setScoreRange(option.value as ScoreRange)}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${scoreRange === option.value
+                        ? "bg-primary text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                        }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                {isLoading
-                  ? "Analizando estado del negocio..."
-                  : trustAIExpress?.summary || "Resumen no disponible por ahora."
-                }
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {auditTopics.map((topic) => (
-                  <span key={topic} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                    {topic}
-                  </span>
+
+              <div className="mt-5 grid h-56 grid-cols-6 items-end gap-3">
+                {scoreBars.map((item) => (
+                  <div key={item.label} className="flex h-full flex-col justify-end gap-2">
+                    <div className="relative h-full rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+                      <div
+                        className="absolute bottom-1 left-1 right-1 rounded-lg bg-gradient-to-t from-primary to-professional-green transition-all duration-700 ease-out"
+                        style={{ height: `${item.height}%` }}
+                      />
+                      <span className="absolute left-1/2 top-2 -translate-x-1/2 text-[11px] font-bold text-slate-700 dark:text-slate-200">{item.score}%</span>
+                    </div>
+                    <span className="text-center text-[11px] font-semibold text-slate-500 dark:text-slate-300">{item.label}</span>
+                  </div>
                 ))}
               </div>
             </article>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
             {statsCards.map((item, index) => (
               <article
                 key={item.label}
-                className="apple-card-enter group relative overflow-hidden rounded-2xl border border-white/65 bg-white/72 p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55"
+                className="apple-card-enter group relative overflow-hidden rounded-xl border border-white/65 bg-white/72 p-3 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55"
                 style={{ animationDelay: `${index * 70}ms` }}
               >
                 {isLoading ? (
-                  <div className="space-y-3">
-                    <div className="h-9 w-9 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
-                    <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-                    <div className="h-8 w-14 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                  <div className="space-y-2">
+                    <div className="h-7 w-7 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+                    <div className="h-3 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                    <div className="h-6 w-12 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                   </div>
                 ) : (
                   <>
-                    <div className={`mb-6 inline-flex rounded-xl p-2.5 ${item.iconStyle}`}>
-                      <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                    <div className={`mb-2 inline-flex rounded-lg p-2 ${item.iconStyle}`}>
+                      <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
                     </div>
-                    <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">{item.label}</h3>
-                    <p className="mt-1 text-3xl font-bold leading-none text-slate-900 dark:text-white">{item.value}</p>
+                    <p className="text-xl font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
+                    <h3 className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{item.label}</h3>
                   </>
                 )}
               </article>
