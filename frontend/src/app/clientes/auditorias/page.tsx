@@ -91,7 +91,10 @@ const typeStyles: Record<string, string> = {
 export default function AuditoriasPage() {
   const [audits, setAudits] = useState<AuditApi[]>([]);
   const [inspectors, setInspectors] = useState<User[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedClient, setSelectedClient] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [selectedInspector, setSelectedInspector] = useState("");
   const [activeFilter, setActiveFilter] = useState<(typeof mobileFilters)[number]["value"]>("finalizada");
   const [isLoading, setIsLoading] = useState(true);
@@ -140,41 +143,46 @@ export default function AuditoriasPage() {
     };
   }, []);
 
+  const clientOptions = useMemo(
+    () => Array.from(new Set(audits.map((audit) => audit.client).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es")),
+    [audits],
+  );
+
+  const branchOptions = useMemo(
+    () => Array.from(new Set(audits.map((audit) => audit.branch).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es")),
+    [audits],
+  );
+
+  const filteredAudits = useMemo(() => {
+    return audits.filter((audit) => {
+      const typeLabel = auditType(audit.status);
+      const mappedFilter = typeLabel === "Programada" ? "programada" : "finalizada";
+      const matchesFilter = activeFilter === "all" || activeFilter === mappedFilter;
+      const matchesInspector = !selectedInspector || audit.inspector === selectedInspector;
+      const matchesClient = !selectedClient || audit.client === selectedClient;
+      const matchesBranch = !selectedBranch || audit.branch === selectedBranch;
+      const auditDate = new Date(audit.audited_at);
+      const isValidDate = !Number.isNaN(auditDate.getTime());
+      const lowerBound = startDate ? new Date(`${startDate}T00:00:00`) : null;
+      const upperBound = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
+      const matchesDateRange =
+        !isValidDate ||
+        ((!lowerBound || auditDate >= lowerBound) &&
+          (!upperBound || auditDate <= upperBound));
+
+      return matchesFilter && matchesInspector && matchesClient && matchesBranch && matchesDateRange;
+    });
+  }, [activeFilter, audits, endDate, selectedBranch, selectedClient, selectedInspector, startDate]);
+
   const stats = useMemo(() => {
-    const completed = audits.filter((audit) => audit.status === "completed");
+    const completed = filteredAudits.filter((audit) => audit.status === "completed");
     const scores = completed.map((audit) => resolveScore(audit)).filter((score): score is number => score !== null);
     const average = scores.length ? Math.round(scores.reduce((acc, score) => acc + score, 0) / scores.length) : 0;
 
     return {
       average,
     };
-  }, [audits]);
-
-  const filteredAudits = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-
-    return audits.filter((audit) => {
-      const typeLabel = auditType(audit.status);
-      const mappedFilter = typeLabel === "Programada" ? "programada" : "finalizada";
-      const matchesFilter = activeFilter === "all" || activeFilter === mappedFilter;
-      const matchesInspector = !selectedInspector || audit.inspector === selectedInspector;
-      const matchesQuery =
-        !query ||
-        [
-          `#AUD-${audit.id}`,
-          audit.client,
-          audit.branch,
-          audit.area,
-          audit.inspector,
-          audit.form_name ?? "",
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-
-      return matchesFilter && matchesInspector && matchesQuery;
-    });
-  }, [activeFilter, audits, searchTerm, selectedInspector]);
+  }, [filteredAudits]);
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando auditorías...";
@@ -186,19 +194,51 @@ export default function AuditoriasPage() {
     <>
       <DashboardHeader
         title="Historial de Auditorías"
-        description="Consulta auditorías realizadas y aplica filtros por inspector, estado o texto. El score mostrado es generado por Trust AI con base en las auditorías visibles según tu rol."
+        description="Consulta auditorías realizadas y aplica filtros por inspector, estado, cliente, sucursal y rango de fechas. El score mostrado es generado por Trust AI según los filtros actuales."
       />
 
       <div className="md:hidden px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 dark:bg-[#161e27]/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5 shadow-sm">
-          <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">search</span>
-          <input
-            className="bg-transparent border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-200 w-full placeholder-slate-500 dark:placeholder-slate-400 text-base"
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Buscar auditorías..."
-            type="text"
-            value={searchTerm}
-          />
+        <div className="grid grid-cols-1 gap-2">
+          <select
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            onChange={(event) => setSelectedClient(event.target.value)}
+            value={selectedClient}
+          >
+            <option value="">Todos los clientes</option>
+            {clientOptions.map((client) => (
+              <option key={client} value={client}>
+                {client}
+              </option>
+            ))}
+          </select>
+          <select
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            onChange={(event) => setSelectedBranch(event.target.value)}
+            value={selectedBranch}
+          >
+            <option value="">Todas las sucursales</option>
+            {branchOptions.map((branch) => (
+              <option key={branch} value={branch}>
+                {branch}
+              </option>
+            ))}
+          </select>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              max={endDate || undefined}
+              onChange={(event) => setStartDate(event.target.value)}
+              type="date"
+              value={startDate}
+            />
+            <input
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              min={startDate || undefined}
+              onChange={(event) => setEndDate(event.target.value)}
+              type="date"
+              value={endDate}
+            />
+          </div>
         </div>
       </div>
 
@@ -301,14 +341,37 @@ export default function AuditoriasPage() {
           <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27] lg:flex-row">
             <div className="flex w-full flex-col gap-4 lg:flex-row">
               <div className="relative w-full lg:w-72">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">search</span>
-                <input
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Cliente, sucursal o área..."
-                  type="text"
-                  value={searchTerm}
-                />
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">business</span>
+                <select
+                  className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-8 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+                  onChange={(event) => setSelectedClient(event.target.value)}
+                  value={selectedClient}
+                >
+                  <option value="">Todos los clientes</option>
+                  {clientOptions.map((client) => (
+                    <option key={client} value={client}>
+                      {client}
+                    </option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">expand_more</span>
+              </div>
+
+              <div className="relative w-full lg:w-56">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">store</span>
+                <select
+                  className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-8 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+                  onChange={(event) => setSelectedBranch(event.target.value)}
+                  value={selectedBranch}
+                >
+                  <option value="">Todas las sucursales</option>
+                  {branchOptions.map((branch) => (
+                    <option key={branch} value={branch}>
+                      {branch}
+                    </option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">expand_more</span>
               </div>
 
               <div className="relative w-full lg:w-48">
@@ -326,6 +389,26 @@ export default function AuditoriasPage() {
                   ))}
                 </select>
                 <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">expand_more</span>
+              </div>
+
+              <div className="w-full lg:w-44">
+                <input
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+                  max={endDate || undefined}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  type="date"
+                  value={startDate}
+                />
+              </div>
+
+              <div className="w-full lg:w-44">
+                <input
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+                  min={startDate || undefined}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  type="date"
+                  value={endDate}
+                />
               </div>
 
               <div className="relative w-full lg:w-44">
