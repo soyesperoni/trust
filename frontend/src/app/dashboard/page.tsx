@@ -4,11 +4,16 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../components/DashboardHeader";
+import PageTransition from "../components/PageTransition";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { INSPECTOR_ROLE } from "../lib/permissions";
 import { getSessionUserEmail } from "../lib/session";
 
-import PageTransition from "../components/PageTransition";
+type TrustAIExpress = {
+  summary: string;
+  provider: string;
+  model: string;
+};
 
 type DashboardStats = {
   clients: number;
@@ -19,6 +24,9 @@ type DashboardStats = {
   visits: number;
   incidents: number;
   pending_visits: number;
+  audits: number;
+  completed_audits: number;
+  scheduled_audits: number;
 };
 
 type Visit = {
@@ -32,10 +40,12 @@ type Visit = {
   status?: string;
 };
 
+
 export default function DashboardPage() {
   const { user } = useCurrentUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [todayVisits, setTodayVisits] = useState<Visit[]>([]);
+  const [trustAIExpress, setTrustAIExpress] = useState<TrustAIExpress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,9 +73,11 @@ export default function DashboardPage() {
           dashboardResponse.json(),
           visitsResponse.json(),
         ]);
+
         if (!isMounted) return;
 
         setStats(dashboardData.stats);
+        setTrustAIExpress(dashboardData.trust_ai_express ?? null);
         setTodayVisits(visitsData.results ?? []);
         setError(null);
       } catch (fetchError) {
@@ -89,293 +101,182 @@ export default function DashboardPage() {
 
   const statsCards = useMemo(
     () => [
-      {
-        label: "Clientes",
-        value: stats?.clients ?? 0,
-        icon: "apartment",
-        iconStyle:
-          "bg-primary/20 text-primary dark:bg-primary/15 dark:text-primary",
-      },
-      {
-        label: "Sucursales",
-        value: stats?.branches ?? 0,
-        icon: "storefront",
-        iconStyle:
-          "bg-professional-green/15 text-professional-green dark:bg-professional-green/20 dark:text-professional-green",
-      },
-      {
-        label: "Áreas",
-        value: stats?.areas ?? 0,
-        icon: "map",
-        iconStyle:
-          "bg-primary/15 text-professional-green dark:bg-primary/10 dark:text-primary",
-      },
-      {
-        label: "Dosificadores",
-        value: stats?.dispensers ?? 0,
-        icon: "water_drop",
-        iconStyle:
-          "bg-professional-green/10 text-professional-green dark:bg-professional-green/20 dark:text-professional-green",
-      },
-      {
-        label: "Productos",
-        value: stats?.products ?? 0,
-        icon: "inventory_2",
-        iconStyle:
-          "bg-primary/15 text-primary dark:bg-primary/10 dark:text-primary",
-      },
-      {
-        label: "Visitas",
-        value: stats?.visits ?? 0,
-        icon: "history",
-        iconStyle:
-          "bg-professional-green/10 text-professional-green dark:bg-professional-green/20 dark:text-professional-green",
-      },
-      {
-        label: "Visitas pendientes",
-        value: stats?.pending_visits ?? 0,
-        icon: "event_upcoming",
-        iconStyle:
-          "bg-primary/20 text-professional-green dark:bg-primary/15 dark:text-primary",
-      },
-      {
-        label: "Incidencias",
-        value: stats?.incidents ?? 0,
-        icon: "report_problem",
-        iconStyle:
-          "bg-primary/15 text-primary dark:bg-primary/10 dark:text-primary",
-      },
+      { label: "Clientes", value: stats?.clients ?? 0, icon: "apartment", iconStyle: "bg-primary/20 text-primary" },
+      { label: "Sucursales", value: stats?.branches ?? 0, icon: "storefront", iconStyle: "bg-professional-green/15 text-professional-green" },
+      { label: "Áreas", value: stats?.areas ?? 0, icon: "map", iconStyle: "bg-primary/15 text-professional-green" },
+      { label: "Dosificadores", value: stats?.dispensers ?? 0, icon: "water_drop", iconStyle: "bg-professional-green/10 text-professional-green" },
+      { label: "Productos", value: stats?.products ?? 0, icon: "inventory_2", iconStyle: "bg-primary/15 text-primary" },
+      { label: "Visitas", value: stats?.visits ?? 0, icon: "history", iconStyle: "bg-professional-green/10 text-professional-green" },
+      { label: "Auditorías", value: stats?.audits ?? 0, icon: "assignment_turned_in", iconStyle: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200" },
+      { label: "Incidencias", value: stats?.incidents ?? 0, icon: "report_problem", iconStyle: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" },
     ],
     [stats],
   );
 
-  const mobileCards = useMemo(
+  const auditTopics = useMemo(
     () => [
-      {
-        label: "Visitas pendientes",
-        value: stats?.pending_visits ?? 0,
-        icon: "pending_actions",
-        iconStyle:
-          "bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
-      },
-      {
-        label: "Incidencias",
-        value: stats?.incidents ?? 0,
-        icon: "report_problem",
-        iconStyle: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300",
-      },
+      "Cumplimiento de checklist",
+      "Evidencias fotográficas",
+      "Cierre de hallazgos",
+      "Tendencia de score por auditoría",
     ],
-    [stats],
+    [],
   );
 
   const todayScheduledVisits = useMemo(() => {
     const today = new Date();
     const isSameDate = (value: string) => {
       const date = new Date(value);
-      return (
-        date.getFullYear() === today.getFullYear() &&
-        date.getMonth() === today.getMonth() &&
-        date.getDate() === today.getDate()
-      );
+      return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
     };
 
-    const filtered = todayVisits.filter((visit) => {
-      if (!isSameDate(visit.visited_at)) return false;
-      if (user?.role !== INSPECTOR_ROLE || !user.full_name) return true;
-      return visit.inspector.trim().toLowerCase() === user.full_name.trim().toLowerCase();
-    });
-
-    return filtered.sort((a, b) => a.visited_at.localeCompare(b.visited_at));
+    return todayVisits
+      .filter((visit) => {
+        if (!isSameDate(visit.visited_at)) return false;
+        if (user?.role !== INSPECTOR_ROLE || !user.full_name) return true;
+        return visit.inspector.trim().toLowerCase() === user.full_name.trim().toLowerCase();
+      })
+      .sort((a, b) => a.visited_at.localeCompare(b.visited_at));
   }, [todayVisits, user?.full_name, user?.role]);
 
-  const dashboardInsights = useMemo(() => {
+  const overviewBars = useMemo(() => {
+    const items = [
+      { label: "Visitas", value: stats?.visits ?? 0, color: "from-primary to-indigo-400" },
+      { label: "Incidencias", value: stats?.incidents ?? 0, color: "from-red-500 to-rose-300" },
+      { label: "Auditorías", value: stats?.audits ?? 0, color: "from-professional-green to-lime-300" },
+      { label: "Auditorías finalizadas", value: stats?.completed_audits ?? 0, color: "from-emerald-500 to-green-300" },
+    ];
+    const maxValue = Math.max(...items.map((item) => item.value), 1);
+    return items.map((item) => ({ ...item, width: Math.max((item.value / maxValue) * 100, item.value > 0 ? 10 : 4) }));
+  }, [stats]);
+
+  const completionRate = useMemo(() => {
     const totalVisits = stats?.visits ?? 0;
     const pendingVisits = stats?.pending_visits ?? 0;
     const completedVisits = Math.max(totalVisits - pendingVisits, 0);
-    const completionRate = totalVisits === 0 ? 0 : Math.round((completedVisits / totalVisits) * 100);
-
-    const rawItems = [
-      { label: "Visitas OK", value: completedVisits, icon: "task_alt" },
-      { label: "Pendientes", value: pendingVisits, icon: "pending_actions" },
-      { label: "Incidencias", value: stats?.incidents ?? 0, icon: "report_problem" },
-      { label: "Clientes", value: stats?.clients ?? 0, icon: "apartment" },
-    ];
-    const maxValue = Math.max(...rawItems.map((item) => item.value), 1);
-    const chartItems = rawItems.map((item) => ({
-      ...item,
-      width: Math.max((item.value / maxValue) * 100, item.value > 0 ? 18 : 8),
-    }));
-
-    return {
-      completionRate,
-      completedVisits,
-      chartItems,
-    };
+    if (!totalVisits) return 0;
+    return Math.round((completedVisits / totalVisits) * 100);
   }, [stats]);
 
   return (
     <>
       <DashboardHeader
         title="Panel General"
-        description="Mostrando información según los accesos asignados al usuario."
+        description="Vista ejecutiva sin saltos visuales, con foco en visitas, incidencias y auditorías."
       />
 
       <PageTransition className="relative flex-1 overflow-y-auto p-4 md:p-8">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.42)_0%,rgba(146,185,59,0.33)_34%,rgba(255,255,255,0)_68%)] dark:bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.36)_0%,rgba(146,185,59,0.2)_38%,rgba(10,15,20,0)_68%)]" />
-        <section className="relative z-10 w-full">
+        <section className="relative z-10 w-full space-y-5">
           {error && !isLoading && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
               {error}
             </div>
           )}
 
-          <div className="md:hidden">
-            <div className="mb-4 grid grid-cols-2 gap-3">
-              {mobileCards.map((item) => (
-                <article
-                  key={item.label}
-                  className="flex h-full w-full flex-col justify-between rounded-2xl border border-white/60 bg-white/70 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55 dark:shadow-black/25"
-                >
-                  <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-full ${item.iconStyle}`}>
-                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">{item.value}</p>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-300">{item.label}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            <div className="mt-5">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Visitas de hoy</h3>
-                <Link
-                  href="/clientes/calendario"
-                  className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-yellow-500/20 dark:text-yellow-200"
-                >
-                  Ver todas
-                </Link>
-              </div>
-
-              <div className="space-y-3">
-                {todayScheduledVisits.map((visit) => {
-                  const date = new Date(visit.visited_at);
-                  const statusLabel = visit.status === "completed" ? "Finalizada" : "Programada";
-                  const tagClassName =
-                    statusLabel === "Finalizada"
-                      ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200"
-                      : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200";
-                  return (
-                    <article
-                      key={visit.id}
-                      className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55 dark:shadow-black/25"
-                    >
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div>
-                          <span className={`inline-flex rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase ${tagClassName}`}>
-                            {statusLabel}
-                          </span>
-                          <h4 className="mt-2 text-base font-bold text-slate-900 dark:text-white">{visit.client}</h4>
-                          <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-300">{visit.branch}</p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <span className="rounded-lg border border-white/70 bg-white/80 px-2 py-1 text-xs font-bold text-slate-600 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">
-                            {date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                          {user?.role === INSPECTOR_ROLE && visit.status === "scheduled" && (
-                            <Link
-                              aria-label={`Iniciar visita ${visit.id}`}
-                              href={`/clientes/visitas/${visit.id}/realizar`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-yellow-400 text-white shadow-sm transition-transform hover:scale-105"
-                            >
-                              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">Área: {visit.area}</p>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">Inspector asignado: {visit.inspector}</p>
-                    </article>
-                  );
-                })}
-
-                {!isLoading && !error && todayScheduledVisits.length === 0 && (
-                  <div className="rounded-2xl border border-dashed border-white/70 bg-white/70 p-4 text-sm text-slate-500 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/55 dark:text-slate-300">
-                    No hay visitas programadas para hoy.
-                  </div>
-                )}
-              </div>
-
-            </div>
-          </div>
-
-          <div className="hidden md:grid grid-cols-12 gap-5">
-            <article className="col-span-12 lg:col-span-5 overflow-hidden rounded-3xl border border-white/60 bg-gradient-to-br from-primary/90 via-[#4146b8]/88 to-[#6970e7]/85 p-6 text-white shadow-[0_24px_60px_-30px_rgba(46,49,146,0.78)] backdrop-blur-sm dark:border-indigo-300/30 dark:from-[#22288a]/85 dark:via-[#2e3192]/80 dark:to-[#3f49bf]/75">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100/90">
-                Score General
-              </p>
-              <div className="mt-3 flex items-end gap-2">
-                <span className="text-6xl font-black leading-none">{dashboardInsights.completionRate}%</span>
-                <span className="pb-2 text-sm font-medium text-indigo-100">cumplimiento</span>
-              </div>
-              <p className="mt-4 text-sm text-indigo-100/90">
-                {dashboardInsights.completedVisits} visitas completadas frente al total operativo actual.
-              </p>
+          <div className="grid grid-cols-12 gap-5">
+            <article className="col-span-12 lg:col-span-5 overflow-hidden rounded-3xl border border-white/60 bg-gradient-to-br from-primary/90 via-[#4146b8]/88 to-[#6970e7]/85 p-6 text-white shadow-[0_24px_60px_-30px_rgba(46,49,146,0.78)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100/90">Score Operativo</p>
+              {isLoading ? (
+                <div className="mt-4 h-20 w-52 animate-pulse rounded-2xl bg-white/20" />
+              ) : (
+                <div className="mt-3 flex items-end gap-2">
+                  <span className="text-6xl font-black leading-none">{completionRate}%</span>
+                  <span className="pb-2 text-sm font-medium text-indigo-100">cumplimiento</span>
+                </div>
+              )}
 
               <div className="mt-6 space-y-3">
-                {dashboardInsights.chartItems.map((item) => (
+                {overviewBars.map((item) => (
                   <div key={item.label} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-semibold text-indigo-100">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-sm">{item.icon}</span>
-                        {item.label}
-                      </span>
+                      <span>{item.label}</span>
                       <span>{item.value}</span>
                     </div>
                     <div className="h-2 rounded-full bg-white/20">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-professional-green to-yellow-200 transition-all duration-500"
-                        style={{ width: `${item.width}%` }}
-                      />
+                      <div className={`h-full rounded-full bg-gradient-to-r ${item.color} transition-all duration-700`} style={{ width: `${item.width}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
             </article>
 
-            <div className="col-span-12 lg:col-span-7 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {statsCards.map((item) => (
-                <article
-                  key={item.label}
-                  className="group relative overflow-hidden rounded-2xl border border-white/65 bg-white/72 p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_26px_65px_-32px_rgba(15,23,42,0.52)] dark:border-slate-700/70 dark:bg-slate-900/55"
-                >
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/80 via-professional-green to-yellow-500 opacity-70"></div>
-                  <div className="mb-6 flex items-center justify-between gap-3">
-                    <div
-                      className={`${item.iconStyle} rounded-xl p-2.5 transition-transform duration-300 group-hover:scale-105`}
-                    >
-                      <span className="material-symbols-outlined text-[22px]">
-                        {item.icon}
-                      </span>
-                    </div>
-                    <span className="rounded-full border border-white/70 bg-white/75 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
-                      Total
-                    </span>
+            <article className="col-span-12 lg:col-span-7 rounded-3xl border border-white/65 bg-white/80 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Trust AI Express</h3>
+                <span className="rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold uppercase text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">DeepSeek</span>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                {isLoading
+                  ? "Analizando estado del negocio..."
+                  : trustAIExpress?.summary || "Resumen no disponible por ahora."
+                }
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {auditTopics.map((topic) => (
+                  <span key={topic} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    {topic}
+                  </span>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {statsCards.map((item, index) => (
+              <article
+                key={item.label}
+                className="apple-card-enter group relative overflow-hidden rounded-2xl border border-white/65 bg-white/72 p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55"
+                style={{ animationDelay: `${index * 70}ms` }}
+              >
+                {isLoading ? (
+                  <div className="space-y-3">
+                    <div className="h-9 w-9 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+                    <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                    <div className="h-8 w-14 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                   </div>
-                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                    {item.label}
-                  </h3>
-                  <p className="mt-1 text-3xl font-bold leading-none text-slate-900 dark:text-white sm:text-4xl">
-                    {item.value}
-                  </p>
-                  {isLoading && (
-                    <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-                      Actualizando datos...
-                    </p>
-                  )}
-                </article>
-              ))}
+                ) : (
+                  <>
+                    <div className={`mb-6 inline-flex rounded-xl p-2.5 ${item.iconStyle}`}>
+                      <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                    </div>
+                    <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">{item.label}</h3>
+                    <p className="mt-1 text-3xl font-bold leading-none text-slate-900 dark:text-white">{item.value}</p>
+                  </>
+                )}
+              </article>
+            ))}
+          </div>
+
+          <div>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Visitas de hoy</h3>
+              <Link href="/clientes/calendario" className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-yellow-500/20 dark:text-yellow-200">Ver todas</Link>
+            </div>
+
+            <div className="space-y-3">
+              {todayScheduledVisits.map((visit) => {
+                const date = new Date(visit.visited_at);
+                const statusLabel = visit.status === "completed" ? "Finalizada" : "Programada";
+                return (
+                  <article key={visit.id} className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-base font-bold text-slate-900 dark:text-white">{visit.client}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{visit.branch} · {visit.area}</p>
+                      </div>
+                      <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{statusLabel}</span>
+                    </div>
+                    <div className="mt-2 text-sm text-slate-500 dark:text-slate-300">{date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} · {visit.inspector}</div>
+                  </article>
+                );
+              })}
+
+              {!isLoading && !error && todayScheduledVisits.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-white/70 bg-white/70 p-4 text-sm text-slate-500 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/55 dark:text-slate-300">
+                  No hay visitas programadas para hoy.
+                </div>
+              )}
             </div>
           </div>
         </section>

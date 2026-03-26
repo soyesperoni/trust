@@ -939,6 +939,87 @@ def _generate_deepseek_audit_analysis(audit: Audit, report: dict) -> dict:
     except (KeyError, TypeError, ValueError, json.JSONDecodeError):
         return _fallback_audit_ai_analysis(report)
 
+
+def _fallback_trust_ai_express_summary(stats: dict[str, int]) -> str:
+    visits = int(stats.get("visits") or 0)
+    pending_visits = int(stats.get("pending_visits") or 0)
+    incidents = int(stats.get("incidents") or 0)
+    audits = int(stats.get("audits") or 0)
+    completed_audits = int(stats.get("completed_audits") or 0)
+
+    if visits == 0 and audits == 0 and incidents == 0:
+        return "Sin operación registrada aún: no hay visitas, incidencias ni auditorías para analizar."
+
+    completion_ratio = 0 if visits <= 0 else round(((visits - pending_visits) / visits) * 100)
+    audit_ratio = 0 if audits <= 0 else round((completed_audits / audits) * 100)
+    return (
+        f"Visitas: {visits} ({completion_ratio}% ejecutadas). "
+        f"Incidencias: {incidents}. "
+        f"Auditorías: {audits} ({audit_ratio}% finalizadas)."
+    )
+
+
+def _generate_trust_ai_express_summary(stats: dict[str, int]) -> dict:
+    settings = _get_deepseek_settings()
+    fallback_summary = _fallback_trust_ai_express_summary(stats)
+    if settings is None or not settings.is_enabled or not settings.api_key:
+        return {
+            "summary": fallback_summary,
+            "provider": "fallback",
+            "model": "rule-based",
+        }
+
+    payload = {
+        "model": settings.model or "deepseek-chat",
+        "messages": [
+            {
+                "role": "system",
+                "content": "Eres Trust AI Express. Responde SOLO una frase breve y clara en español.",
+            },
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "instruccion": "Resume estado del negocio con visitas, incidencias y auditorías. Máximo 25 palabras.",
+                        "datos": stats,
+                    },
+                    ensure_ascii=False,
+                ),
+            },
+        ],
+        "temperature": 0.1,
+        "max_tokens": 60,
+    }
+
+    req = Request(
+        "https://api.deepseek.com/chat/completions",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {settings.api_key}",
+        },
+        method="POST",
+    )
+
+    provider = "deepseek"
+    try:
+        with urlopen(req, timeout=20) as response:
+            body = json.loads(response.read().decode("utf-8"))
+        content = str(body["choices"][0]["message"]["content"]).strip()
+    except (URLError, TimeoutError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+        content = fallback_summary
+        provider = "fallback"
+
+    if not content:
+        content = fallback_summary
+        provider = "fallback"
+
+    return {
+        "summary": " ".join(content.split())[:220],
+        "provider": provider,
+        "model": settings.model or "deepseek-chat",
+    }
+
 def _serialize_notification(item: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": item["id"],
@@ -1622,6 +1703,7 @@ def dashboard(request):
     products = Product.objects.all()
     visits = Visit.objects.all()
     incidents = Incident.objects.all()
+    audits = Audit.objects.all()
 
     clients = _filter_queryset_by_scope(clients, scope, client_lookup="id")
     branches = _filter_queryset_by_scope(branches, scope, branch_lookup="id")
@@ -1630,6 +1712,7 @@ def dashboard(request):
     products = _filter_queryset_by_scope(products, scope, area_lookup="dispenser__area_id")
     visits = _filter_queryset_by_scope(visits, scope, area_lookup="area_id")
     incidents = _filter_queryset_by_scope(incidents, scope, area_lookup="area_id")
+    audits = _filter_queryset_by_scope(audits, scope, area_lookup="area_id")
 
     stats = {
         "clients": clients.count(),
@@ -1640,7 +1723,11 @@ def dashboard(request):
         "visits": visits.count(),
         "pending_visits": visits.filter(visited_at__gt=now).count(),
         "incidents": incidents.count(),
+        "audits": audits.count(),
+        "completed_audits": audits.filter(status=Audit.Status.COMPLETED).count(),
+        "scheduled_audits": audits.filter(status=Audit.Status.SCHEDULED).count(),
     }
+    trust_ai_express = _generate_trust_ai_express_summary(stats)
     recent_visits = (
         visits.select_related("area__branch__client", "inspector")
         .order_by("-visited_at")[:6]
@@ -1661,7 +1748,7 @@ def dashboard(request):
                 "visited_at": visit.visited_at.isoformat(),
             }
         )
-    return JsonResponse({"stats": stats, "activity": activity})
+    return JsonResponse({"stats": stats, "activity": activity, "trust_ai_express": trust_ai_express})
 
 
 @csrf_exempt
