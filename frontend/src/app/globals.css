@@ -37,7 +37,7 @@
   --color-yellow-900: #10122c;
   --color-background-light: #fdfdfd;
   --color-background-dark: #0a0f14;
-  --font-display: "Manrope", sans-serif;
+  --font-display: "Poppins", sans-serif;
   --font-logo: "Poppins", sans-serif;
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
@@ -49,7 +49,14 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Manrope", sans-serif;
+  font-family: "Poppins", sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 .sidebar-link {
@@ -102,6 +109,30 @@ body {
 
 .page-transition {
   animation: page-fade-in 200ms ease-out;
+}
+
+.list-filter-select {
+  @apply appearance-none bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-2.5 pl-4 pr-10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer transition-all;
+}
+
+.list-filter-button {
+  @apply p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-300 hover:text-primary transition-all;
+}
+
+.list-table {
+  @apply w-full text-left border-collapse;
+}
+
+.list-table-head-row {
+  @apply bg-slate-50/90 dark:bg-slate-800/60 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700;
+}
+
+.list-table-row {
+  @apply hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors;
+}
+
+.list-action-btn {
+  @apply p-1.5 rounded-full text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors;
 }
 
 @media (prefers-reduced-motion: reduce) {

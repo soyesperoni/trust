@@ -353,9 +353,9 @@ export default function DispensadoresPage() {
             </div>
           </div>
           <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left border-collapse">
+            <table className="list-table">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700">
+                <tr className="list-table-head-row">
                   <th className="px-6 py-4">Dosificador</th>
                   <th className="px-6 py-4">Cliente</th>
                   <th className="px-6 py-4">Modelo</th>

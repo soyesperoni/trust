@@ -115,7 +115,7 @@ export default function ClientesPage() {
             <div className="flex items-center gap-2">
               <div className="relative">
                 <select
-                  className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 py-2.5 pl-4 pr-10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                  className="list-filter-select"
                   value={selectedRole}
                   onChange={(event) => setSelectedRole(event.target.value)}
                 >
@@ -133,7 +133,7 @@ export default function ClientesPage() {
               </div>
               <div className="relative">
                 <select
-                  className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 py-2.5 pl-4 pr-10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                  className="list-filter-select"
                   value={selectedStatus}
                   onChange={(event) => setSelectedStatus(event.target.value)}
                 >
@@ -147,7 +147,7 @@ export default function ClientesPage() {
                   </span>
                 </div>
               </div>
-              <button className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 transition-colors">
+              <button className="list-filter-button">
                 <span className="material-symbols-outlined text-[20px]">
                   filter_list
                 </span>
@@ -155,9 +155,9 @@ export default function ClientesPage() {
             </div>
           </div>
           <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left border-collapse">
+            <table className="list-table">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700 font-logo">
+                <tr className="list-table-head-row font-logo">
                   <th className="px-6 py-4">Nombre</th>
                   <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">Rol</th>
@@ -168,7 +168,7 @@ export default function ClientesPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                 {rows.map((user) => (
                   <tr
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
+                    className="list-table-row group"
                     key={user.id}
                   >
                     <td className="px-6 py-4">
