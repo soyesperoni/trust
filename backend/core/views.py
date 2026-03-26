@@ -1760,6 +1760,49 @@ def dashboard(request):
             }
         )
 
+    pending_visits_queryset = visits.filter(
+        status=Visit.Status.SCHEDULED, visited_at__gte=now
+    ).order_by("visited_at")
+    scheduled_audits_queryset = audits.filter(
+        status=Audit.Status.SCHEDULED, audited_at__gte=now
+    ).order_by("audited_at")
+
+    pending_visit_buckets: dict[str, dict[str, Any]] = {}
+    for visit in pending_visits_queryset:
+        visit_local_dt = timezone.localtime(visit.visited_at)
+        bucket_key = visit_local_dt.date().isoformat()
+        current_bucket = pending_visit_buckets.setdefault(
+            bucket_key,
+            {"date": bucket_key, "total": 0, "first_time": None, "last_time": None},
+        )
+        current_bucket["total"] += 1
+        visit_time = visit_local_dt.strftime("%H:%M")
+        if current_bucket["first_time"] is None:
+            current_bucket["first_time"] = visit_time
+        current_bucket["last_time"] = visit_time
+
+    scheduled_audit_buckets: dict[str, dict[str, Any]] = {}
+    for audit in scheduled_audits_queryset:
+        audit_local_dt = timezone.localtime(audit.audited_at)
+        bucket_key = audit_local_dt.date().isoformat()
+        current_bucket = scheduled_audit_buckets.setdefault(
+            bucket_key,
+            {"date": bucket_key, "total": 0, "first_time": None, "last_time": None},
+        )
+        current_bucket["total"] += 1
+        audit_time = audit_local_dt.strftime("%H:%M")
+        if current_bucket["first_time"] is None:
+            current_bucket["first_time"] = audit_time
+        current_bucket["last_time"] = audit_time
+
+    pending_visit_details = [
+        pending_visit_buckets[date_key] for date_key in sorted(pending_visit_buckets.keys())
+    ][:4]
+    scheduled_audit_details = [
+        scheduled_audit_buckets[date_key]
+        for date_key in sorted(scheduled_audit_buckets.keys())
+    ][:4]
+
     stats = {
         "clients": clients.count(),
         "branches": branches.count(),
@@ -1767,11 +1810,11 @@ def dashboard(request):
         "dispensers": dispensers.count(),
         "products": products.count(),
         "visits": visits.count(),
-        "pending_visits": visits.filter(visited_at__gt=now).count(),
+        "pending_visits": pending_visits_queryset.count(),
         "incidents": incidents.count(),
         "audits": audits.count(),
         "completed_audits": completed_audits.count(),
-        "scheduled_audits": audits.filter(status=Audit.Status.SCHEDULED).count(),
+        "scheduled_audits": scheduled_audits_queryset.count(),
         "audit_score": audit_score_average,
     }
     recent_visits = (
@@ -1795,7 +1838,13 @@ def dashboard(request):
             }
         )
     return JsonResponse(
-        {"stats": stats, "activity": activity, "daily_audit_score_history": daily_score_history}
+        {
+            "stats": stats,
+            "activity": activity,
+            "daily_audit_score_history": daily_score_history,
+            "pending_visit_details": pending_visit_details,
+            "scheduled_audit_details": scheduled_audit_details,
+        }
     )
 
 
