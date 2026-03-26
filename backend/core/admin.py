@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib import messages
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
 from django.db.models.deletion import ProtectedError, RestrictedError
 
 from .models import (
@@ -94,6 +94,30 @@ class SafeDeleteAdminMixin:
             except IntegrityError as retry_exc:
                 return retry_exc
 
+    def delete_legacy_dispenser_products_rows(self, **filters):
+        """
+        Limpia filas residuales de la tabla M2M anterior (`core_dispenser_products`).
+        Esta tabla puede quedar en bases ya migradas por `SeparateDatabaseAndState`.
+        """
+        legacy_table = "core_dispenser_products"
+        if not filters:
+            return 0
+
+        existing_tables = connection.introspection.table_names()
+        if legacy_table not in existing_tables:
+            return 0
+
+        allowed_columns = {"dispenser_id", "product_id"}
+        unknown_columns = set(filters.keys()) - allowed_columns
+        if unknown_columns:
+            return 0
+
+        where_clause = " AND ".join([f"{column} = %s" for column in filters])
+        params = list(filters.values())
+        with connection.cursor() as cursor:
+            cursor.execute(f"DELETE FROM {legacy_table} WHERE {where_clause}", params)
+            return cursor.rowcount
+
     def delete_model(self, request, obj):
         try:
             integrity_error = self._delete_with_cleanup_fallback(obj)
@@ -176,7 +200,8 @@ class DispenserAdmin(SafeDeleteAdminMixin, admin.ModelAdmin):
         updated_visits = obj.visits.exclude(dispenser_id=None).update(dispenser=None)
         updated_incidents = obj.incidents.exclude(dispenser_id=None).update(dispenser=None)
         deleted_assignments = obj.product_assignments.all().delete()[0]
-        return any([updated_visits, updated_incidents, deleted_assignments])
+        deleted_legacy_assignments = self.delete_legacy_dispenser_products_rows(dispenser_id=obj.id)
+        return any([updated_visits, updated_incidents, deleted_assignments, deleted_legacy_assignments])
 
 
 @admin.register(Product)
@@ -190,7 +215,8 @@ class ProductAdmin(SafeDeleteAdminMixin, admin.ModelAdmin):
 
     def cleanup_dependencies(self, obj):
         deleted_assignments = obj.dispenser_assignments.all().delete()[0]
-        return deleted_assignments > 0
+        deleted_legacy_assignments = self.delete_legacy_dispenser_products_rows(product_id=obj.id)
+        return (deleted_assignments + deleted_legacy_assignments) > 0
 
 
 @admin.register(Nozzle)
