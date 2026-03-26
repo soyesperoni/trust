@@ -76,24 +76,47 @@ textarea {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: color-mix(in srgb, var(--color-primary) 8%, white 92%);
+  border-radius: 9999px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary) 70%, white 30%) 0%,
+    color-mix(in srgb, var(--color-professional-green) 78%, white 22%) 100%
+  );
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: color-mix(in srgb, var(--color-primary) 18%, #020617 82%);
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary) 72%, #0f172a 28%) 0%,
+    color-mix(in srgb, var(--color-professional-green) 68%, #0f172a 32%) 100%
+  );
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-primary) 70%, var(--color-professional-green) 30%)
+    color-mix(in srgb, var(--color-primary) 8%, white 92%);
+}
+
+.dark .custom-scrollbar {
+  scrollbar-color: color-mix(in srgb, var(--color-primary) 68%, var(--color-professional-green) 32%)
+    color-mix(in srgb, var(--color-primary) 18%, #020617 82%);
 }
 
 @keyframes page-fade-in {
