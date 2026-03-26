@@ -3,7 +3,7 @@ import json
 import re
 import textwrap
 from functools import lru_cache
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Q
 from datetime import datetime
@@ -2436,7 +2436,12 @@ def product_detail(request, product_id: int):
 
     if request.method == "DELETE":
         try:
-            product.delete()
+            with transaction.atomic():
+                # Evitamos conflictos de integridad en catálogos heredados donde
+                # la relación producto-dispensador pudo haberse creado con llaves
+                # foráneas sin borrado en cascada.
+                DispenserProductAssignment.objects.filter(product=product).delete()
+                product.delete()
         except ProtectedError:
             return JsonResponse(
                 {"error": "No se puede eliminar el producto porque tiene registros relacionados."},

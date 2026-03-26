@@ -133,6 +133,21 @@ class ProductApiTests(TestCase):
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Product.objects.filter(pk=product.id).exists())
 
+    def test_delete_product_with_dispenser_assignments(self):
+        product = Product.objects.create(name="Producto con asignaciones")
+        model = DispenserModel.objects.create(name="Modelo QA")
+        dispenser = Dispenser.objects.create(model=model, identifier="DSP-DELETE")
+        DispenserProductAssignment.objects.create(dispenser=dispenser, product=product)
+
+        response = self.client.delete(
+            f"/api/products/{product.id}/",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Product.objects.filter(pk=product.id).exists())
+        self.assertEqual(DispenserProductAssignment.objects.filter(dispenser=dispenser).count(), 0)
+
     @patch("core.views.Product.delete", side_effect=IntegrityError)
     def test_delete_product_returns_validation_error_on_integrity_conflict(self, _delete_mock):
         product = Product.objects.create(name="Producto bloqueado")
