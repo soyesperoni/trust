@@ -29,6 +29,13 @@ type DailyAuditScore = {
 
 type ScoreRange = "month" | "week" | "fortnight";
 
+const getLocalDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const getScoreColor = (score: number) => {
   if (score >= 85) return { solid: "#16a34a", light: "#4ade80", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" };
   if (score >= 70) return { solid: "#2563eb", light: "#60a5fa", badge: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" };
@@ -146,7 +153,7 @@ export default function DashboardPage() {
         const weekStart = new Date(entry.date);
         weekStart.setDate(entry.date.getDate() - entry.date.getDay());
         weekStart.setHours(0, 0, 0, 0);
-        const bucketKey = weekStart.toISOString().slice(0, 10);
+        const bucketKey = getLocalDateKey(weekStart);
         const current = grouped.get(bucketKey) ?? { sum: 0, count: 0, date: weekStart };
         current.sum += entry.score;
         current.count += 1;
@@ -171,19 +178,39 @@ export default function DashboardPage() {
     const dayCount = 15;
     const byDate = new Map<string, number>();
     sanitized.forEach((entry) => {
-      byDate.set(entry.date.toISOString().slice(0, 10), entry.score);
+      byDate.set(getLocalDateKey(entry.date), entry.score);
     });
 
-    const anchor = sanitized.length > 0
-      ? sanitized[sanitized.length - 1].date
-      : new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - (dayCount - 1));
+
+    const seedScore = [...sanitized]
+      .reverse()
+      .find((entry) => entry.date <= startDate)?.score;
+
+    let currentScore = seedScore ?? 0;
     const values = Array.from({ length: dayCount }, (_, offset) => {
-      const date = new Date(anchor);
-      date.setDate(anchor.getDate() - (dayCount - offset - 1));
-      const key = date.toISOString().slice(0, 10);
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + offset);
+
+      if (date > today) {
+        return {
+          label: date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
+          score: currentScore,
+        };
+      }
+
+      const key = getLocalDateKey(date);
+      const dayScore = byDate.get(key);
+      if (dayScore !== undefined) {
+        currentScore = dayScore;
+      }
+
       return {
         label: date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
-        score: byDate.get(key) ?? 0,
+        score: currentScore,
       };
     });
 
