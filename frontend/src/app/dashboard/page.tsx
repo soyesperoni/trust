@@ -46,7 +46,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
   const [scoreRange, setScoreRange] = useState<ScoreRange>("fortnight");
-  const [lineAnimationProgress, setLineAnimationProgress] = useState(0);
+  const [barAnimationProgress, setBarAnimationProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -210,54 +210,23 @@ export default function DashboardPage() {
   }, [dailyAuditScoreHistory, scoreRange]);
 
   useEffect(() => {
-    setLineAnimationProgress(0);
+    setBarAnimationProgress(0);
     const timer = window.setTimeout(() => {
-      setLineAnimationProgress(1);
+      setBarAnimationProgress(1);
     }, 80);
 
     return () => window.clearTimeout(timer);
   }, [scoreBars]);
 
-  const lineChartData = useMemo(() => {
-    const chartWidth = 1000;
-    const chartHeight = 260;
-    const chartPaddingX = 34;
-    const drawableWidth = chartWidth - chartPaddingX * 2;
-    const points = scoreBars.map((item, index) => {
-      const x = scoreBars.length > 1 ? chartPaddingX + (index / (scoreBars.length - 1)) * drawableWidth : chartWidth / 2;
-      const y = chartHeight - (item.score / 100) * chartHeight;
-      return { ...item, x, y };
-    });
+  const visibleScoreBars = useMemo(() => {
+    if (scoreBars.length <= 1) return scoreBars;
 
-    const scoreValues = points.map((point) => point.score);
-    const minScore = scoreValues.length ? Math.min(...scoreValues) : null;
-    const maxScore = scoreValues.length ? Math.max(...scoreValues) : null;
+    let lastTrendChangeIndex = scoreBars.length - 1;
+    while (lastTrendChangeIndex > 0 && scoreBars[lastTrendChangeIndex].score === scoreBars[lastTrendChangeIndex - 1].score) {
+      lastTrendChangeIndex -= 1;
+    }
 
-    const polylinePoints = points.map((point) => `${point.x},${point.y}`).join(" ");
-    const areaPath = points.length
-      ? `M ${points[0].x} ${chartHeight} L ${points.map((point) => `${point.x} ${point.y}`).join(" L ")} L ${points[points.length - 1].x} ${chartHeight} Z`
-      : "";
-    const pathLength = points.reduce((total, point, index) => {
-      if (index === 0) return total;
-      const previous = points[index - 1];
-      return total + Math.hypot(point.x - previous.x, point.y - previous.y);
-    }, 0);
-
-    const valueLabelIndexes = new Set<number>();
-    points.forEach((point, index) => {
-      const previousScore = index > 0 ? points[index - 1].score : null;
-      const nextScore = index < points.length - 1 ? points[index + 1].score : null;
-      const isEdge = index === 0 || index === points.length - 1;
-      const isTurningPoint = previousScore !== null && nextScore !== null && (point.score > previousScore && point.score > nextScore || point.score < previousScore && point.score < nextScore);
-      const isRelevantChange = previousScore === null || point.score !== previousScore;
-      const isMinOrMax = point.score === minScore || point.score === maxScore;
-
-      if (isEdge || isTurningPoint || (isRelevantChange && isMinOrMax)) {
-        valueLabelIndexes.add(index);
-      }
-    });
-
-    return { points, polylinePoints, areaPath, pathLength, valueLabelIndexes };
+    return scoreBars.slice(0, lastTrendChangeIndex + 1);
   }, [scoreBars]);
 
   return (
@@ -310,85 +279,35 @@ export default function DashboardPage() {
 
               <div className="mt-5 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-3 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
                 <div className="relative h-56 w-full">
-                  <svg viewBox="0 0 1000 260" className="h-full w-full overflow-visible">
-                    <defs>
-                      <linearGradient id="scoreLineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#2563eb" />
-                        <stop offset="100%" stopColor="#16a34a" />
-                      </linearGradient>
-                      <linearGradient id="scoreAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="rgba(37,99,235,0.22)" />
-                        <stop offset="100%" stopColor="rgba(37,99,235,0)" />
-                      </linearGradient>
-                    </defs>
-
-                    {[0, 25, 50, 75, 100].map((tick) => {
-                      const y = 260 - (tick / 100) * 260;
-                      return (
-                        <g key={tick}>
-                          <line x1="0" x2="1000" y1={y} y2={y} className="stroke-slate-300/75 dark:stroke-slate-700/70" strokeDasharray="4 6" />
-                          <text x="4" y={Math.max(y - 5, 12)} className="fill-slate-400 text-[10px] font-semibold dark:fill-slate-500">
-                            {tick}%
-                          </text>
-                        </g>
-                      );
-                    })}
-
-                    {lineChartData.areaPath && <path d={lineChartData.areaPath} fill="url(#scoreAreaGradient)" />}
-
-                    {lineChartData.polylinePoints && (
-                      <polyline
-                        points={lineChartData.polylinePoints}
-                        fill="none"
-                        stroke="url(#scoreLineGradient)"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{
-                          strokeDasharray: lineChartData.pathLength || 1,
-                          strokeDashoffset: (lineChartData.pathLength || 1) * (1 - lineAnimationProgress),
-                          transition: "stroke-dashoffset 900ms ease-out",
-                        }}
-                      />
-                    )}
-
-                    {lineChartData.points.map((point, index) => (
-                      <g
-                        key={`${point.label}-${index}`}
-                        style={{
-                          opacity: lineAnimationProgress,
-                          transform: `translateY(${(1 - lineAnimationProgress) * 8}px)`,
-                          transition: `opacity 500ms ease ${index * 40}ms, transform 500ms ease ${index * 40}ms`,
-                        }}
-                      >
-                        <circle
-                          cx={point.x}
-                          cy={point.y}
-                          r="8"
-                          fill={getScoreColor(point.score).solid}
-                          fillOpacity="0.18"
-                        />
-                        <circle
-                          cx={point.x}
-                          cy={point.y}
-                          r="4.5"
-                          fill={getScoreColor(point.score).solid}
-                          className="drop-shadow-[0_2px_6px_rgba(15,23,42,0.35)]"
-                        />
-                        <text
-                          x={point.x}
-                          y={Math.max(point.y - 16, 16)}
-                          textAnchor="middle"
-                          className={`fill-slate-700 text-[11px] font-bold dark:fill-slate-100 ${lineChartData.valueLabelIndexes.has(index) ? "opacity-100" : "opacity-0"}`}
-                        >
-                          {point.score}%
-                        </text>
-                      </g>
+                  <div className="absolute inset-0">
+                    {[100, 75, 50, 25, 0].map((tick) => (
+                      <div key={tick} className="absolute inset-x-0" style={{ bottom: `${tick}%` }}>
+                        <div className="border-t border-dashed border-slate-300/75 dark:border-slate-700/70" />
+                        <span className="absolute -top-3 left-0 text-[10px] font-semibold text-slate-400 dark:text-slate-500">{tick}%</span>
+                      </div>
                     ))}
-                  </svg>
+                  </div>
+
+                  <div className="relative z-10 flex h-full items-end gap-2 px-6 pb-1">
+                    {visibleScoreBars.map((item, index) => (
+                      <div key={`${item.label}-${index}`} className="flex min-w-0 flex-1 flex-col items-center justify-end">
+                        <span className="mb-1 text-[10px] font-bold text-slate-600 dark:text-slate-200">{item.score}%</span>
+                        <div
+                          className="w-full rounded-t-md bg-gradient-to-t from-primary to-professional-green shadow-[0_6px_15px_-8px_rgba(22,163,74,0.65)]"
+                          style={{
+                            height: `${Math.max(item.score, 2)}%`,
+                            opacity: barAnimationProgress,
+                            transform: `scaleY(${barAnimationProgress})`,
+                            transformOrigin: "bottom",
+                            transition: `transform 520ms ease ${index * 45}ms, opacity 420ms ease ${index * 45}ms`,
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className={`mt-2 grid gap-2 ${scoreRange === "month" || scoreRange === "week" ? "grid-cols-6" : "grid-cols-5 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-[repeat(15,minmax(0,1fr))]"}`}>
-                  {scoreBars.map((item, index) => (
+                  {visibleScoreBars.map((item, index) => (
                     <span key={`${item.label}-${index}`} className="truncate text-center text-[11px] font-semibold text-slate-500 dark:text-slate-300">
                       {item.label}
                     </span>
