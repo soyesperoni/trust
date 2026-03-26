@@ -77,9 +77,28 @@ class SafeDeleteAdminMixin:
             return f"{self.delete_error_message} Registro: '{obj}'. Detalle técnico: {detail}"
         return f"{self.delete_error_message} Registro: '{obj}'."
 
+    def cleanup_dependencies(self, obj):
+        """Permite limpiar relaciones manualmente cuando la BD no aplica cascada."""
+        return False
+
+    def _delete_with_cleanup_fallback(self, obj):
+        try:
+            obj.delete()
+            return None
+        except IntegrityError as exc:
+            if not self.cleanup_dependencies(obj):
+                return exc
+            try:
+                obj.delete()
+                return None
+            except IntegrityError as retry_exc:
+                return retry_exc
+
     def delete_model(self, request, obj):
         try:
-            super().delete_model(request, obj)
+            integrity_error = self._delete_with_cleanup_fallback(obj)
+            if integrity_error:
+                raise integrity_error
         except (ProtectedError, RestrictedError) as exc:
             self.message_user(request, self._build_protected_message(obj, exc), level=messages.ERROR)
         except IntegrityError as exc:
@@ -89,7 +108,9 @@ class SafeDeleteAdminMixin:
         failed = 0
         for obj in queryset:
             try:
-                obj.delete()
+                integrity_error = self._delete_with_cleanup_fallback(obj)
+                if integrity_error:
+                    raise integrity_error
             except (ProtectedError, RestrictedError) as exc:
                 failed += 1
                 self.message_user(request, self._build_protected_message(obj, exc), level=messages.ERROR)
@@ -151,6 +172,12 @@ class DispenserAdmin(SafeDeleteAdminMixin, admin.ModelAdmin):
     def client_name(self, obj):
         return obj.area.branch.client.name if obj.area else ""
 
+    def cleanup_dependencies(self, obj):
+        updated_visits = obj.visits.exclude(dispenser_id=None).update(dispenser=None)
+        updated_incidents = obj.incidents.exclude(dispenser_id=None).update(dispenser=None)
+        deleted_assignments = obj.product_assignments.all().delete()[0]
+        return any([updated_visits, updated_incidents, deleted_assignments])
+
 
 @admin.register(Product)
 class ProductAdmin(SafeDeleteAdminMixin, admin.ModelAdmin):
@@ -160,6 +187,10 @@ class ProductAdmin(SafeDeleteAdminMixin, admin.ModelAdmin):
     @admin.display(description="Dosificadores")
     def linked_dispensers(self, obj):
         return ", ".join(obj.dispensers.values_list("identifier", flat=True)) or "Sin asignar"
+
+    def cleanup_dependencies(self, obj):
+        deleted_assignments = obj.dispenser_assignments.all().delete()[0]
+        return deleted_assignments > 0
 
 
 @admin.register(Nozzle)

@@ -6,6 +6,7 @@ from django.core import signing
 from django.db import IntegrityError
 from django.db.models.deletion import ProtectedError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.admin.sites import AdminSite
 from django.contrib.messages import get_messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.test import TestCase
@@ -14,6 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from config import settings_prod
+from .admin import DispenserAdmin, ProductAdmin
 from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, DispenserProductAssignment, Incident, Product, User, Visit
 from .views import _fallback_audit_ai_analysis
 
@@ -239,6 +241,47 @@ class AdminDeletionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         messages = [message.message for message in get_messages(response.wsgi_request)]
         self.assertTrue(any("Incidencia" in message for message in messages))
+
+    def test_product_admin_cleanup_dependencies_deletes_assignments(self):
+        model = DispenserModel.objects.create(name="Modelo producto")
+        dispenser = Dispenser.objects.create(model=model, identifier="DISP-PROD")
+        product = Product.objects.create(name="Producto con relación")
+        DispenserProductAssignment.objects.create(dispenser=dispenser, product=product)
+        product_admin = ProductAdmin(Product, AdminSite())
+
+        cleaned = product_admin.cleanup_dependencies(product)
+
+        self.assertTrue(cleaned)
+        self.assertFalse(
+            DispenserProductAssignment.objects.filter(dispenser=dispenser, product=product).exists()
+        )
+
+    def test_dispenser_admin_cleanup_dependencies_unlinks_and_deletes_related(self):
+        client = Client.objects.create(name="Cliente cleanup", code="CL-CLEAN")
+        branch = Branch.objects.create(client=client, name="Sucursal cleanup")
+        area = Area.objects.create(branch=branch, name="Área cleanup")
+        model = DispenserModel.objects.create(name="Modelo cleanup")
+        dispenser = Dispenser.objects.create(model=model, identifier="DISP-CLEAN", area=area)
+        product = Product.objects.create(name="Producto cleanup")
+        DispenserProductAssignment.objects.create(dispenser=dispenser, product=product)
+        visit = Visit.objects.create(area=area, dispenser=dispenser)
+        incident = Incident.objects.create(
+            client=client,
+            branch=branch,
+            area=area,
+            dispenser=dispenser,
+            description="Incidencia cleanup",
+        )
+        dispenser_admin = DispenserAdmin(Dispenser, AdminSite())
+
+        cleaned = dispenser_admin.cleanup_dependencies(dispenser)
+
+        self.assertTrue(cleaned)
+        visit.refresh_from_db()
+        incident.refresh_from_db()
+        self.assertIsNone(visit.dispenser)
+        self.assertIsNone(incident.dispenser)
+        self.assertFalse(DispenserProductAssignment.objects.filter(dispenser=dispenser).exists())
 
 
 class IncidentRelationTests(TestCase):
