@@ -221,11 +221,17 @@ export default function DashboardPage() {
   const lineChartData = useMemo(() => {
     const chartWidth = 1000;
     const chartHeight = 260;
+    const chartPaddingX = 34;
+    const drawableWidth = chartWidth - chartPaddingX * 2;
     const points = scoreBars.map((item, index) => {
-      const x = scoreBars.length > 1 ? (index / (scoreBars.length - 1)) * chartWidth : chartWidth / 2;
+      const x = scoreBars.length > 1 ? chartPaddingX + (index / (scoreBars.length - 1)) * drawableWidth : chartWidth / 2;
       const y = chartHeight - (item.score / 100) * chartHeight;
       return { ...item, x, y };
     });
+
+    const scoreValues = points.map((point) => point.score);
+    const minScore = scoreValues.length ? Math.min(...scoreValues) : null;
+    const maxScore = scoreValues.length ? Math.max(...scoreValues) : null;
 
     const polylinePoints = points.map((point) => `${point.x},${point.y}`).join(" ");
     const areaPath = points.length
@@ -237,7 +243,21 @@ export default function DashboardPage() {
       return total + Math.hypot(point.x - previous.x, point.y - previous.y);
     }, 0);
 
-    return { points, polylinePoints, areaPath, pathLength };
+    const valueLabelIndexes = new Set<number>();
+    points.forEach((point, index) => {
+      const previousScore = index > 0 ? points[index - 1].score : null;
+      const nextScore = index < points.length - 1 ? points[index + 1].score : null;
+      const isEdge = index === 0 || index === points.length - 1;
+      const isTurningPoint = previousScore !== null && nextScore !== null && (point.score > previousScore && point.score > nextScore || point.score < previousScore && point.score < nextScore);
+      const isRelevantChange = previousScore === null || point.score !== previousScore;
+      const isMinOrMax = point.score === minScore || point.score === maxScore;
+
+      if (isEdge || isTurningPoint || (isRelevantChange && isMinOrMax)) {
+        valueLabelIndexes.add(index);
+      }
+    });
+
+    return { points, polylinePoints, areaPath, pathLength, valueLabelIndexes };
   }, [scoreBars]);
 
   return (
@@ -306,8 +326,8 @@ export default function DashboardPage() {
                       const y = 260 - (tick / 100) * 260;
                       return (
                         <g key={tick}>
-                          <line x1="0" x2="1000" y1={y} y2={y} className="stroke-slate-300/60 dark:stroke-slate-700/60" strokeDasharray="5 8" />
-                          <text x="6" y={Math.max(y - 5, 12)} className="fill-slate-400 text-[10px] font-semibold dark:fill-slate-500">
+                          <line x1="0" x2="1000" y1={y} y2={y} className="stroke-slate-300/75 dark:stroke-slate-700/70" strokeDasharray="4 6" />
+                          <text x="4" y={Math.max(y - 5, 12)} className="fill-slate-400 text-[10px] font-semibold dark:fill-slate-500">
                             {tick}%
                           </text>
                         </g>
@@ -359,7 +379,7 @@ export default function DashboardPage() {
                           x={point.x}
                           y={Math.max(point.y - 16, 16)}
                           textAnchor="middle"
-                          className="fill-slate-700 text-[11px] font-bold dark:fill-slate-100"
+                          className={`fill-slate-700 text-[11px] font-bold dark:fill-slate-100 ${lineChartData.valueLabelIndexes.has(index) ? "opacity-100" : "opacity-0"}`}
                         >
                           {point.score}%
                         </text>
