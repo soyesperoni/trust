@@ -4,7 +4,9 @@ from unittest.mock import patch
 
 from django.core import signing
 from django.db import IntegrityError
+from django.db.models.deletion import ProtectedError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.messages import get_messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.test import TestCase
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
@@ -207,6 +209,57 @@ class AdminDeletionTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Dispenser.objects.filter(pk=dispenser.pk).exists())
+
+    @patch("core.models.Dispenser.delete")
+    def test_admin_delete_dispenser_shows_dependent_record_when_protected(self, delete_mock):
+        client = Client.objects.create(name="Cliente", code="CL-PROT")
+        branch = Branch.objects.create(client=client, name="Sucursal")
+        area = Area.objects.create(branch=branch, name="Área")
+        model = DispenserModel.objects.create(name="Modelo")
+        dispenser = Dispenser.objects.create(model=model, identifier="DISP-001", area=area)
+        incident = Incident.objects.create(
+            client=client,
+            branch=branch,
+            area=area,
+            dispenser=dispenser,
+            description="Incidencia activa",
+        )
+        delete_mock.side_effect = ProtectedError("registro protegido", [incident])
+
+        response = self.client.post(
+            reverse("admin:core_dispenser_changelist"),
+            {
+                "action": "delete_selected",
+                ACTION_CHECKBOX_NAME: [str(dispenser.pk)],
+                "post": "yes",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        messages = [message.message for message in get_messages(response.wsgi_request)]
+        self.assertTrue(any("Incidencia" in message for message in messages))
+
+
+class IncidentRelationTests(TestCase):
+    def test_delete_dispenser_keeps_incident_and_unlinks_dispenser(self):
+        client = Client.objects.create(name="Cliente", code="CL-REL")
+        branch = Branch.objects.create(client=client, name="Sucursal")
+        area = Area.objects.create(branch=branch, name="Área")
+        model = DispenserModel.objects.create(name="Modelo")
+        dispenser = Dispenser.objects.create(model=model, identifier="DISP-REL", area=area)
+        incident = Incident.objects.create(
+            client=client,
+            branch=branch,
+            area=area,
+            dispenser=dispenser,
+            description="Incidencia histórica",
+        )
+
+        dispenser.delete()
+        incident.refresh_from_db()
+
+        self.assertIsNone(incident.dispenser)
 
 class ProductionSettingsTests(TestCase):
     def test_default_storage_is_configured_for_media_uploads(self):
