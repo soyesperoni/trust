@@ -133,15 +133,20 @@ export default function DashboardPage() {
         grouped.set(bucketKey, current);
       });
 
-      const values = Array.from(grouped.values())
-        .sort((a, b) => a.date.getTime() - b.date.getTime())
-        .slice(-6)
-        .map((item) => ({
-          label: item.date.toLocaleDateString("es-MX", { month: "short", year: "2-digit" }),
-          score: item.count ? Math.round(item.sum / item.count) : 0,
-        }));
+      const today = new Date();
+      const monthBuckets = Array.from({ length: 6 }, (_, index) => {
+        const offset = 5 - index;
+        const bucketDate = new Date(today.getFullYear(), today.getMonth() - offset, 1);
+        const bucketKey = `${bucketDate.getFullYear()}-${bucketDate.getMonth() + 1}`;
+        const bucket = grouped.get(bucketKey);
+        return {
+          label: bucketDate.toLocaleDateString("es-MX", { month: "short", year: "2-digit" }),
+          score: bucket?.count ? Math.round(bucket.sum / bucket.count) : 0,
+          isPlaceholder: !bucket,
+        };
+      });
 
-      return values;
+      return monthBuckets;
     }
 
     if (scoreRange === "week") {
@@ -157,15 +162,25 @@ export default function DashboardPage() {
         grouped.set(bucketKey, current);
       });
 
-      const values = Array.from(grouped.values())
-        .sort((a, b) => a.date.getTime() - b.date.getTime())
-        .slice(-6)
-        .map((item) => ({
-          label: item.date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
-          score: item.count ? Math.round(item.sum / item.count) : 0,
-        }));
+      const today = new Date();
+      const currentWeekStart = new Date(today);
+      currentWeekStart.setDate(today.getDate() - today.getDay());
+      currentWeekStart.setHours(0, 0, 0, 0);
 
-      return values;
+      const weekBuckets = Array.from({ length: 6 }, (_, index) => {
+        const offset = 5 - index;
+        const bucketDate = new Date(currentWeekStart);
+        bucketDate.setDate(currentWeekStart.getDate() - offset * 7);
+        const bucketKey = getLocalDateKey(bucketDate);
+        const bucket = grouped.get(bucketKey);
+        return {
+          label: bucketDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
+          score: bucket?.count ? Math.round(bucket.sum / bucket.count) : 0,
+          isPlaceholder: !bucket,
+        };
+      });
+
+      return weekBuckets;
     }
 
     const dayCount = 15;
@@ -192,6 +207,7 @@ export default function DashboardPage() {
         return {
           label: date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
           score: currentScore,
+          isPlaceholder: false,
         };
       }
 
@@ -204,6 +220,7 @@ export default function DashboardPage() {
       return {
         label: date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
         score: currentScore,
+        isPlaceholder: false,
       };
     });
 
@@ -265,18 +282,13 @@ export default function DashboardPage() {
           <div className="grid grid-cols-12 gap-4">
             <article className="col-span-12 lg:col-span-4 rounded-3xl border border-white/65 bg-white/80 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex h-full min-h-[22rem] flex-col items-center justify-center rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-6 text-center dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Score actual</p>
                 <div className="mt-4 flex items-end gap-1">
-                  <span className="text-7xl font-black leading-none text-slate-900 dark:text-white">
+                  <span className="text-[10.5rem] font-black leading-none text-slate-900 dark:text-white">
                     {isLoading ? "..." : animatedAuditScore}
                   </span>
-                  <span className="pb-2 text-3xl font-bold text-slate-500 dark:text-slate-300">%</span>
+                  <span className="pb-5 text-[4.5rem] font-bold text-slate-500 dark:text-slate-300">%</span>
                 </div>
-                {!isLoading && (
-                  <span className={`mt-6 rounded-full px-4 py-1.5 text-sm font-bold ${auditScoreColor.badge}`}>
-                    Objetivo visual: {auditScore}%
-                  </span>
-                )}
+                <p className="mt-6 text-base font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-300">Score actual</p>
               </div>
             </article>
 
@@ -325,9 +337,14 @@ export default function DashboardPage() {
                   <div className="relative z-10 flex h-full items-end gap-2 px-6 pb-1">
                     {scoreBars.map((item, index) => (
                       <div key={`${item.label}-${index}`} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                        <span className="mb-1 text-[10px] font-bold text-slate-600 dark:text-slate-200">{item.score}%</span>
+                        <span className={`mb-1 text-[10px] font-bold ${item.isPlaceholder ? "text-slate-400 dark:text-slate-500" : "text-slate-600 dark:text-slate-200"}`}>
+                          {item.score}%
+                        </span>
                         <div
-                          className="w-full rounded-t-md bg-gradient-to-t from-primary to-professional-green shadow-[0_6px_15px_-8px_rgba(22,163,74,0.65)]"
+                          className={`w-full rounded-t-md ${item.isPlaceholder
+                            ? "bg-slate-300 dark:bg-slate-700"
+                            : "bg-gradient-to-t from-primary to-professional-green shadow-[0_6px_15px_-8px_rgba(22,163,74,0.65)]"
+                            }`}
                           style={{
                             height: `${Math.max(item.score, 2)}%`,
                             opacity: barAnimationProgress,
