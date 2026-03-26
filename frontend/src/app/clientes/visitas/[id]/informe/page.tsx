@@ -43,6 +43,11 @@ type Visit = {
     responsible_signature?: string;
     checklist?: VisitChecklistItem[];
   } | null;
+  dispenser_reports?: {
+    dispenser_id: number;
+    comment?: string;
+    photos?: string[];
+  }[];
   media?: VisitMedia[];
 };
 
@@ -253,6 +258,24 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
       ),
     [visit?.visit_report?.checklist],
   );
+
+  const dispenserReportsMap = useMemo(() => {
+    const map = new Map<number, { comment: string; photos: string[] }>();
+    (visit?.dispenser_reports ?? []).forEach((entry) => {
+      const dispenserId = Number(entry.dispenser_id);
+      if (Number.isNaN(dispenserId)) return;
+      const comment = String(entry.comment ?? "").trim();
+      const photos = Array.isArray(entry.photos)
+        ? entry.photos
+            .map((photo) => String(photo ?? "").trim())
+            .filter((photo) => photo.length > 0)
+            .slice(0, 4)
+        : [];
+
+      map.set(dispenserId, { comment, photos });
+    });
+    return map;
+  }, [visit?.dispenser_reports]);
 
   const dispenserEvidence = useMemo(() => {
     if (!visit) return [];
@@ -467,6 +490,44 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
                         ))
                       ) : (
                         <p className="text-sm text-slate-500">Sin productos conectados.</p>
+                      )}
+                    </div>
+                    <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Comentario del dosificador</p>
+                      <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
+                        {dispenserReportsMap.get(dispenser.id)?.comment || "Sin comentario registrado."}
+                      </p>
+                    </div>
+                    <div className="mt-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Fotos del dosificador</p>
+                      {dispenserReportsMap.get(dispenser.id)?.photos?.length ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {dispenserReportsMap.get(dispenser.id)?.photos?.map((photoUrl, index) => {
+                            const absoluteUrl = toAbsoluteMediaUrl(photoUrl);
+                            return (
+                              <button
+                                key={`${dispenser.id}-photo-${index + 1}`}
+                                className="group relative h-28 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 text-left dark:border-slate-700"
+                                onClick={() => absoluteUrl && setSelectedImage(absoluteUrl)}
+                                type="button"
+                              >
+                                {absoluteUrl ? (
+                                  <img
+                                    alt={`Foto ${index + 1} del dosificador ${dispenser.identifier}`}
+                                    className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                                    src={absoluteUrl}
+                                  />
+                                ) : (
+                                  <div className="flex h-full items-center justify-center">
+                                    <span className="material-symbols-outlined text-2xl text-slate-400">image</span>
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500">Sin fotos registradas.</p>
                       )}
                     </div>
                   </div>

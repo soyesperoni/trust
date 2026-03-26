@@ -515,12 +515,52 @@ def _apply_dispenser_product_assignments(dispenser: Dispenser, assignments_data)
     return None
 
 
+def _normalize_dispenser_report_entries(visit: Visit) -> list[dict[str, Any]]:
+    report = _get_visit_report_data(visit)
+    raw_entries = report.get("dispenser_reports")
+    if not isinstance(raw_entries, list):
+        return []
+
+    normalized_entries: list[dict[str, Any]] = []
+    for raw_entry in raw_entries:
+        if not isinstance(raw_entry, dict):
+            continue
+
+        raw_dispenser_id = raw_entry.get("dispenser_id")
+        try:
+            dispenser_id = int(raw_dispenser_id)
+        except (TypeError, ValueError):
+            continue
+
+        comment = str(raw_entry.get("comment") or "").strip()
+        photos_input = raw_entry.get("photos")
+        photos: list[str] = []
+        if isinstance(photos_input, list):
+            for item in photos_input:
+                if not isinstance(item, str):
+                    continue
+                photo_url = item.strip()
+                if photo_url:
+                    photos.append(photo_url)
+
+        normalized_entries.append(
+            {
+                "dispenser_id": dispenser_id,
+                "comment": comment,
+                "photos": photos[:4],
+            }
+        )
+
+    return normalized_entries
+
+
 def _serialize_visit(visit: Visit) -> dict:
     inspector = "Sin asignar"
     inspector_id = None
     if visit.inspector:
         inspector = visit.inspector.get_full_name() or visit.inspector.username
         inspector_id = visit.inspector_id
+    dispenser_reports = _normalize_dispenser_report_entries(visit)
     return {
         "id": visit.id,
         "client": visit.area.branch.client.name,
@@ -545,6 +585,7 @@ def _serialize_visit(visit: Visit) -> dict:
         "end_latitude": visit.end_latitude,
         "end_longitude": visit.end_longitude,
         "visit_report": visit.visit_report,
+        "dispenser_reports": dispenser_reports,
         "media": [
             {
                 "id": medium.id,
