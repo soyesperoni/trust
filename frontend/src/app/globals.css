@@ -222,6 +222,40 @@ textarea {
   animation: login-content-intro 620ms cubic-bezier(0.22, 1, 0.36, 1) 880ms forwards;
 }
 
+.login-submit-button {
+  --cursor-x: 50%;
+  --cursor-y: 50%;
+  position: relative;
+  isolation: isolate;
+}
+
+.login-submit-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(
+      130px circle at var(--cursor-x) var(--cursor-y),
+      color-mix(in srgb, var(--color-professional-green) 74%, white 26%) 0%,
+      color-mix(in srgb, var(--color-professional-green) 52%, transparent 48%) 33%,
+      transparent 75%
+    ),
+    var(--color-primary);
+  transition: background 140ms ease;
+}
+
+.login-submit-button:hover::before {
+  background:
+    radial-gradient(
+      145px circle at var(--cursor-x) var(--cursor-y),
+      color-mix(in srgb, var(--color-professional-green) 82%, white 18%) 0%,
+      color-mix(in srgb, var(--color-professional-green) 62%, transparent 38%) 34%,
+      transparent 76%
+    ),
+    var(--color-primary);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .login-lights-intro,
   .login-logo-intro,
