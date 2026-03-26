@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 import re
 import textwrap
 from functools import lru_cache
@@ -57,6 +58,10 @@ REPORT_LOGO_PATHS = [
     Path(__file__).resolve().parents[2] / "frontend/public/trust_logo_s.svg",
     Path(__file__).resolve().parents[2] / "frontend/public/trust_logo.svg",
 ]
+N8N_VISIT_WEBHOOK_URL = "https://n8n.circlesuite.net/webhook/4fb6a143-135c-4577-81f0-088464808c30"
+N8N_INCIDENT_WEBHOOK_URL = "https://n8n.circlesuite.net/webhook/8af08811-33a1-45fd-b335-b21e1c42ba16"
+N8N_AUDIT_WEBHOOK_URL = "https://n8n.circlesuite.net/webhook/014ddff5-f214-4387-a85c-ab9de445b0f4"
+logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
@@ -222,6 +227,7 @@ def _extract_user_data(request):
                 data = data.copy()
             except (MultiPartParserError, ValueError):
                 return None, None
+
         if "client_ids" in data and isinstance(data.get("client_ids"), str):
             data.setlist("client_ids", [value for value in data.getlist("client_ids") if value != ""])
         if "branch_ids" in data and isinstance(data.get("branch_ids"), str):
@@ -234,6 +240,46 @@ def _extract_user_data(request):
         return json.loads(request.body or "{}"), request.FILES
     except json.JSONDecodeError:
         return None, None
+
+
+def _collect_related_area_users(area: Area) -> list[dict[str, Any]]:
+    users = (
+        User.objects.filter(
+            Q(areas=area)
+            | Q(branches=area.branch)
+            | Q(clients=area.branch.client)
+        )
+        .distinct()
+        .order_by("id")
+    )
+    payload: list[dict[str, Any]] = []
+    for user in users:
+        full_name = user.get_full_name().strip()
+        payload.append(
+            {
+                "id": user.id,
+                "name": full_name or user.username,
+                "email": user.email,
+                "role": user.role,
+                "role_label": user.get_role_display(),
+            }
+        )
+    return payload
+
+
+def _post_json_webhook(url: str, payload: dict[str, Any]) -> None:
+    data = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
+    req = Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=10):
+            return
+    except (URLError, TimeoutError, ValueError, OSError) as exc:
+        logger.warning("No se pudo enviar webhook a %s: %s", url, exc)
 
 
 def _as_id_list(source, key: str):
@@ -2659,6 +2705,19 @@ def visit_mobile_flow(request, visit_id: int):
                 media_type = VisitMedia.MediaType.OTHER
             VisitMedia.objects.create(visit=visit, media_type=media_type, file=evidence)
 
+        visit_payload = _serialize_visit(visit)
+        visit_pdf_base64 = base64.b64encode(_build_visit_pdf(visit, public_report_url=None)).decode("utf-8")
+        _post_json_webhook(
+            N8N_VISIT_WEBHOOK_URL,
+            {
+                "event": "visit_completed",
+                "source": "flutter",
+                "visit": visit_payload,
+                "related_area_users": _collect_related_area_users(visit.area),
+                "visit_confirmation_pdf_base64": visit_pdf_base64,
+            },
+        )
+
         return JsonResponse(_serialize_visit(visit))
 
 
@@ -2922,6 +2981,16 @@ def audit_mobile_flow(request, audit_id: int):
             else:
                 media_type = AuditMedia.MediaType.OTHER
             AuditMedia.objects.create(audit=audit, media_type=media_type, file=evidence)
+
+        _post_json_webhook(
+            N8N_AUDIT_WEBHOOK_URL,
+            {
+                "event": "audit_completed",
+                "source": "flutter",
+                "audit": _serialize_audit(audit),
+                "related_area_users": _collect_related_area_users(audit.area),
+            },
+        )
 
         return JsonResponse(_serialize_audit(audit))
 
@@ -3559,6 +3628,16 @@ def incidents(request):
             media_type=media_type,
             file=evidence,
         )
+
+    _post_json_webhook(
+        N8N_INCIDENT_WEBHOOK_URL,
+        {
+            "event": "incident_created",
+            "source": "flutter_or_nextjs",
+            "incident": _serialize_incident(incident),
+            "related_area_users": _collect_related_area_users(area),
+        },
+    )
 
     return JsonResponse(_serialize_incident(incident), status=201)
 
