@@ -797,6 +797,18 @@ class IncidentPermissionsTests(TestCase):
             role=User.Role.ACCOUNT_ADMIN,
         )
         self.account_admin.clients.add(self.client_entity)
+        self.general_admin = User.objects.create_user(
+            username="ga-inc",
+            email="ga-inc@test.com",
+            password="secret123",
+            role=User.Role.GENERAL_ADMIN,
+        )
+        self.inspector = User.objects.create_user(
+            username="insp-inc",
+            email="insp-inc@test.com",
+            password="secret123",
+            role=User.Role.INSPECTOR,
+        )
 
     def test_branch_admin_can_create_incident(self):
         response = self.client.post(
@@ -833,6 +845,51 @@ class IncidentPermissionsTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+    def test_inspector_can_schedule_visit_from_incident_without_assignment(self):
+        incident = Incident.objects.create(
+            client=self.client_entity,
+            branch=self.branch,
+            area=self.area,
+            dispenser=self.dispenser,
+            description="Incidencia para agendar",
+        )
+
+        response = self.client.post(
+            f"/api/incidents/{incident.id}/schedule-visit/",
+            data=json.dumps(
+                {
+                    "visited_at": timezone.now().isoformat(),
+                    "notes": "Programada desde incidencia",
+                    "inspector_id": self.inspector.id,
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.inspector.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertIsNone(payload["inspector_id"])
+        self.assertFalse(Incident.objects.filter(pk=incident.id).exists())
+
+    def test_inspector_can_schedule_visit_from_calendar_without_assignment(self):
+        response = self.client.post(
+            "/api/visits/",
+            data=json.dumps(
+                {
+                    "area_id": self.area.id,
+                    "visited_at": timezone.now().isoformat(),
+                    "notes": "Visita programada",
+                    "inspector_id": self.inspector.id,
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.inspector.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(response.json()["inspector_id"])
 
 
 class AuditApiTests(TestCase):
@@ -915,7 +972,7 @@ class AuditApiTests(TestCase):
         self.assertEqual(payload["form_schema"]["questions"][0]["response_type"], "yes_no")
         self.assertEqual(payload["form_schema"]["questions"][0]["question_weight"], 100)
         self.assertEqual(payload["area_id"], self.area.id)
-        self.assertEqual(payload["inspector_id"], self.inspector.id)
+        self.assertIsNone(payload["inspector_id"])
 
     def test_audit_form_defaults_question_weight_and_yes_no_scores(self):
         response = self.client.post(
