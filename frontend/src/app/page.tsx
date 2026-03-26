@@ -78,7 +78,7 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background-light font-display antialiased transition-colors duration-300 dark:bg-background-dark">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,#dbe3ff_0%,rgba(245,247,251,0)_52%)] dark:bg-[radial-gradient(circle_at_top,#1b2554_0%,rgba(10,15,20,0)_56%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,#93c5fd_0%,#86efac_38%,rgba(245,247,251,0)_68%)] dark:bg-[radial-gradient(circle_at_top,#1d4ed8_0%,#166534_42%,rgba(10,15,20,0)_70%)]" />
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-4">
         <div className="flex w-full max-w-[460px] flex-col items-center gap-8">
           <BrandLogo size="xxl" className="scale-[1.3]" />
