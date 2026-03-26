@@ -3637,7 +3637,7 @@ def incident_schedule_visit(request, incident_id: int):
 
     visit = Visit.objects.create(
         area=incident.area,
-        dispenser=incident.dispenser,
+        dispenser=None,
         inspector=inspector,
         visited_at=visited_at,
         notes=f"[INCIDENCIA #{incident.id}] {notes}".strip(),
