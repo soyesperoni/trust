@@ -165,6 +165,90 @@ class TrustRepository {
   }
 
 
+
+  Future<List<Map<String, dynamic>>> loadDispenserModels(String email) async {
+    final json = await _apiClient.getJson('/dispenser-models/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  Future<List<Map<String, dynamic>>> loadProducts(String email) async {
+    final json = await _apiClient.getJson('/products/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  Future<Map<String, dynamic>> createClient({
+    required String email,
+    required String name,
+    required String code,
+    String notes = '',
+  }) {
+    return _apiClient.postJson(
+      '/clients/',
+      email: email,
+      body: {
+        'name': name,
+        'code': code,
+        'notes': notes,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> createBranch({
+    required String email,
+    required int clientId,
+    required String name,
+    String address = '',
+    String city = '',
+  }) {
+    return _apiClient.postJson(
+      '/branches/',
+      email: email,
+      body: {
+        'client_id': clientId,
+        'name': name,
+        'address': address,
+        'city': city,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> createArea({
+    required String email,
+    required int branchId,
+    required String name,
+    String description = '',
+  }) {
+    return _apiClient.postJson(
+      '/areas/',
+      email: email,
+      body: {
+        'branch_id': branchId,
+        'name': name,
+        'description': description,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> createDispenser({
+    required String email,
+    required int areaId,
+    required int modelId,
+    List<int> productIds = const [],
+  }) {
+    return _apiClient.postJson(
+      '/dispensers/',
+      email: email,
+      body: {
+        'area_id': areaId,
+        'model_id': modelId,
+        'product_ids': productIds,
+        'is_active': true,
+      },
+    );
+  }
+
   Future<List<Map<String, dynamic>>> loadClients(String email) async {
     final json = await _apiClient.getJson('/clients/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);

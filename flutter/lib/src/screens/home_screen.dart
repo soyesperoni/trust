@@ -9,6 +9,7 @@ import '../models/user_role.dart';
 import 'tabs/incidents_tab.dart';
 import 'tabs/visits_tab.dart';
 import 'notifications_screen.dart';
+import 'dashboard_quick_setup_screen.dart';
 import 'profile_screen.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
@@ -99,6 +100,19 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(widget.isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round),
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
+          if (widget.role == UserRole.generalAdmin || widget.role == UserRole.inspector)
+            _TopBarIconButton(
+              tooltip: 'Alta rápida de cliente',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => DashboardQuickSetupScreen(email: widget.email),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_rounded),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           const SizedBox(width: 2),
           _TopBarIconButton(
             onPressed: () {
