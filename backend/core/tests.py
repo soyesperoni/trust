@@ -3,6 +3,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.core import signing
+from django.db import IntegrityError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
@@ -111,6 +112,41 @@ class ClientApiTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Client.objects.filter(pk=target_client.id).exists())
 
+
+class ProductApiTests(TestCase):
+    def setUp(self):
+        self.general_admin = User.objects.create_user(
+            username="ga-products",
+            email="ga-products@test.com",
+            password="secret123",
+            role=User.Role.GENERAL_ADMIN,
+        )
+
+    def test_delete_product_as_general_admin(self):
+        product = Product.objects.create(name="Producto X")
+
+        response = self.client.delete(
+            f"/api/products/{product.id}/",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Product.objects.filter(pk=product.id).exists())
+
+    @patch("core.views.Product.delete", side_effect=IntegrityError)
+    def test_delete_product_returns_validation_error_on_integrity_conflict(self, _delete_mock):
+        product = Product.objects.create(name="Producto bloqueado")
+
+        response = self.client.delete(
+            f"/api/products/{product.id}/",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["error"],
+            "No se pudo eliminar el producto por una restricción de integridad.",
+        )
 
 class ProductionSettingsTests(TestCase):
     def test_default_storage_is_configured_for_media_uploads(self):

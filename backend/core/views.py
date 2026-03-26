@@ -2435,8 +2435,19 @@ def product_detail(request, product_id: int):
         return JsonResponse({"error": "Solo el administrador general puede modificar productos."}, status=403)
 
     if request.method == "DELETE":
-        product.delete()
-        return JsonResponse({}, status=204)
+        try:
+            product.delete()
+        except ProtectedError:
+            return JsonResponse(
+                {"error": "No se puede eliminar el producto porque tiene registros relacionados."},
+                status=400,
+            )
+        except IntegrityError:
+            return JsonResponse(
+                {"error": "No se pudo eliminar el producto por una restricción de integridad."},
+                status=400,
+            )
+        return HttpResponse(status=204)
 
     data, files = _extract_user_data(request)
     if data is None:
