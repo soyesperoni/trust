@@ -38,7 +38,7 @@ const getScoreColor = (score: number) => {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
-  const [scoreRange, setScoreRange] = useState<ScoreRange>("month");
+  const [scoreRange, setScoreRange] = useState<ScoreRange>("fortnight");
   const [animatedHeights, setAnimatedHeights] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -287,10 +287,10 @@ export default function DashboardPage() {
                 ) : (
                   <>
                     <div className="flex items-center justify-center gap-2">
+                      <p className="text-[2rem] font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
                       <div className={`inline-flex rounded-lg p-2 ${item.iconStyle}`}>
                         <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
                       </div>
-                      <p className="text-[2rem] font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
                     </div>
                     <h3 className="mt-1 text-center text-sm font-semibold text-slate-500 dark:text-slate-400">{item.label}</h3>
                   </>
