@@ -5,8 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../components/DashboardHeader";
 import PageTransition from "../components/PageTransition";
-import { useCurrentUser } from "../hooks/useCurrentUser";
-import { INSPECTOR_ROLE } from "../lib/permissions";
 import { getSessionUserEmail } from "../lib/session";
 
 type DashboardStats = {
@@ -24,17 +22,6 @@ type DashboardStats = {
   audit_score: number;
 };
 
-type Visit = {
-  id: number;
-  client: string;
-  branch: string;
-  area: string;
-  visited_at: string;
-  inspector: string;
-  notes: string;
-  status?: string;
-};
-
 type DailyAuditScore = {
   date: string;
   score: number;
@@ -44,9 +31,7 @@ type DailyAuditScore = {
 type ScoreRange = "month" | "week" | "fortnight";
 
 export default function DashboardPage() {
-  const { user } = useCurrentUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [todayVisits, setTodayVisits] = useState<Visit[]>([]);
   const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
   const [scoreRange, setScoreRange] = useState<ScoreRange>("month");
   const [isLoading, setIsLoading] = useState(true);
@@ -58,30 +43,20 @@ export default function DashboardPage() {
     const loadDashboard = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const [dashboardResponse, visitsResponse] = await Promise.all([
-          fetch("/api/dashboard/", {
-            cache: "no-store",
-            headers: { "x-current-user-email": currentUserEmail },
-          }),
-          fetch("/api/visits/", {
-            cache: "no-store",
-            headers: { "x-current-user-email": currentUserEmail },
-          }),
-        ]);
-        if (!dashboardResponse.ok || !visitsResponse.ok) {
+        const dashboardResponse = await fetch("/api/dashboard/", {
+          cache: "no-store",
+          headers: { "x-current-user-email": currentUserEmail },
+        });
+        if (!dashboardResponse.ok) {
           throw new Error("No se pudo cargar el dashboard.");
         }
 
-        const [dashboardData, visitsData] = await Promise.all([
-          dashboardResponse.json(),
-          visitsResponse.json(),
-        ]);
+        const dashboardData = await dashboardResponse.json();
 
         if (!isMounted) return;
 
         setStats(dashboardData.stats);
         setDailyAuditScoreHistory(dashboardData.daily_audit_score_history ?? []);
-        setTodayVisits(visitsData.results ?? []);
         setError(null);
       } catch (fetchError) {
         if (!isMounted) return;
@@ -116,22 +91,6 @@ export default function DashboardPage() {
     [stats],
   );
 
-  const todayScheduledVisits = useMemo(() => {
-    const today = new Date();
-    const isSameDate = (value: string) => {
-      const date = new Date(value);
-      return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
-    };
-
-    return todayVisits
-      .filter((visit) => {
-        if (!isSameDate(visit.visited_at)) return false;
-        if (user?.role !== INSPECTOR_ROLE || !user.full_name) return true;
-        return visit.inspector.trim().toLowerCase() === user.full_name.trim().toLowerCase();
-      })
-      .sort((a, b) => a.visited_at.localeCompare(b.visited_at));
-  }, [todayVisits, user?.full_name, user?.role]);
-
   const overviewBars = useMemo(() => {
     const items = [
       { label: "Visitas", value: stats?.visits ?? 0, color: "from-primary to-indigo-400" },
@@ -146,38 +105,63 @@ export default function DashboardPage() {
   const auditScore = useMemo(() => Math.round(stats?.audit_score ?? 0), [stats?.audit_score]);
 
   const scoreBars = useMemo(() => {
-    const grouped = new Map<string, { sum: number; count: number }>();
+    const sanitized = dailyAuditScoreHistory
+      .map((entry) => {
+        const date = new Date(`${entry.date}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return null;
+        const normalizedScore = entry.score <= 1 ? Math.round(entry.score * 100) : Math.round(entry.score);
+        return {
+          date,
+          score: Math.max(0, Math.min(100, normalizedScore)),
+        };
+      })
+      .filter((entry): entry is { date: Date; score: number } => entry !== null)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    dailyAuditScoreHistory.forEach((entry) => {
-      const date = new Date(`${entry.date}T00:00:00`);
-      if (Number.isNaN(date.getTime())) return;
-      let bucketStart: Date;
-      if (scoreRange === "week") {
-        bucketStart = new Date(date);
-        bucketStart.setDate(date.getDate() - date.getDay());
-      } else if (scoreRange === "fortnight") {
-        bucketStart = new Date(date.getFullYear(), date.getMonth(), date.getDate() <= 15 ? 1 : 16);
-      } else {
-        bucketStart = new Date(date.getFullYear(), date.getMonth(), 1);
-      }
-      const key = bucketStart.toISOString().slice(0, 10);
-      const current = grouped.get(key) ?? { sum: 0, count: 0 };
-      current.sum += entry.score;
-      current.count += 1;
-      grouped.set(key, current);
+    if (scoreRange === "month") {
+      const grouped = new Map<string, { sum: number; count: number; date: Date }>();
+      sanitized.forEach((entry) => {
+        const bucketKey = `${entry.date.getFullYear()}-${entry.date.getMonth() + 1}`;
+        const bucketDate = new Date(entry.date.getFullYear(), entry.date.getMonth(), 1);
+        const current = grouped.get(bucketKey) ?? { sum: 0, count: 0, date: bucketDate };
+        current.sum += entry.score;
+        current.count += 1;
+        grouped.set(bucketKey, current);
+      });
+
+      const values = Array.from(grouped.values())
+        .sort((a, b) => a.date.getTime() - b.date.getTime())
+        .slice(-6)
+        .map((item) => ({
+          label: item.date.toLocaleDateString("es-MX", { month: "short", year: "2-digit" }),
+          score: item.count ? Math.round(item.sum / item.count) : 0,
+        }));
+
+      const max = Math.max(...values.map((item) => item.score), 1);
+      return values.map((item) => ({
+        ...item,
+        height: Math.max((item.score / max) * 100, item.score > 0 ? 12 : 4),
+      }));
+    }
+
+    const dayCount = scoreRange === "week" ? 7 : 15;
+    const byDate = new Map<string, number>();
+    sanitized.forEach((entry) => {
+      byDate.set(entry.date.toISOString().slice(0, 10), entry.score);
     });
 
-    const values = Array.from(grouped.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .slice(-6)
-      .map(([date, value]) => {
-        const average = value.count ? Math.round(value.sum / value.count) : 0;
-        const parsedDate = new Date(`${date}T00:00:00`);
-        const label = scoreRange === "month"
-          ? parsedDate.toLocaleDateString("es-MX", { month: "short", year: "2-digit" })
-          : parsedDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
-        return { label, score: average };
-      });
+    const anchor = sanitized.length > 0
+      ? sanitized[sanitized.length - 1].date
+      : new Date();
+    const values = Array.from({ length: dayCount }, (_, offset) => {
+      const date = new Date(anchor);
+      date.setDate(anchor.getDate() - (dayCount - offset - 1));
+      const key = date.toISOString().slice(0, 10);
+      return {
+        label: date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
+        score: byDate.get(key) ?? 0,
+      };
+    });
 
     const max = Math.max(...values.map((item) => item.score), 1);
     return values.map((item) => ({
@@ -203,14 +187,21 @@ export default function DashboardPage() {
           )}
 
           <div className="grid grid-cols-12 gap-4">
-            <article className="col-span-12 lg:col-span-5 overflow-hidden rounded-3xl border border-white/60 bg-gradient-to-br from-primary/90 via-[#4146b8]/88 to-[#6970e7]/85 p-6 text-white shadow-[0_24px_60px_-30px_rgba(46,49,146,0.78)]">
+            <article className="col-span-12 lg:col-span-5 overflow-hidden rounded-3xl border border-primary/40 bg-gradient-to-br from-primary via-[#3f4fc9] to-[#6a74ed] p-6 text-white shadow-[0_24px_60px_-30px_rgba(46,49,146,0.78)]">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100/90">Score de auditorías</p>
               {isLoading ? (
                 <div className="mt-4 h-20 w-52 animate-pulse rounded-2xl bg-white/20" />
               ) : (
-                <div className="mt-3 flex items-end gap-2">
-                  <span className="text-6xl font-black leading-none">{auditScore}%</span>
-                  <span className="pb-2 text-sm font-medium text-indigo-100">promedio</span>
+                <div className="mt-4 flex items-center gap-4">
+                  <div
+                    className="grid h-28 w-28 place-items-center rounded-full"
+                    style={{ background: `conic-gradient(#9ad643 ${Math.max(0, Math.min(100, auditScore))}%, rgba(255,255,255,0.24) 0)` }}
+                  >
+                    <div className="grid h-[5.2rem] w-[5.2rem] place-items-center rounded-full bg-primary/85 text-2xl font-black">
+                      {auditScore}%
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold text-indigo-100">Promedio general</span>
                 </div>
               )}
 
@@ -253,7 +244,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="mt-5 grid h-56 grid-cols-6 items-end gap-3">
+              <div className={`mt-5 grid h-56 items-end gap-3 ${scoreRange === "month" ? "grid-cols-6" : scoreRange === "week" ? "grid-cols-7" : "grid-cols-5 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-[repeat(15,minmax(0,1fr))]"}`}>
                 {scoreBars.map((item) => (
                   <div key={item.label} className="flex h-full flex-col justify-end gap-2">
                     <div className="relative h-full rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
@@ -296,36 +287,8 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <div>
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Visitas de hoy</h3>
-              <Link href="/clientes/calendario" className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-yellow-500/20 dark:text-yellow-200">Ver todas</Link>
-            </div>
-
-            <div className="space-y-3">
-              {todayScheduledVisits.map((visit) => {
-                const date = new Date(visit.visited_at);
-                const statusLabel = visit.status === "completed" ? "Finalizada" : "Programada";
-                return (
-                  <article key={visit.id} className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="text-base font-bold text-slate-900 dark:text-white">{visit.client}</p>
-                        <p className="text-sm text-slate-600 dark:text-slate-300">{visit.branch} · {visit.area}</p>
-                      </div>
-                      <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{statusLabel}</span>
-                    </div>
-                    <div className="mt-2 text-sm text-slate-500 dark:text-slate-300">{date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} · {visit.inspector}</div>
-                  </article>
-                );
-              })}
-
-              {!isLoading && !error && todayScheduledVisits.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-white/70 bg-white/70 p-4 text-sm text-slate-500 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/55 dark:text-slate-300">
-                  No hay visitas programadas para hoy.
-                </div>
-              )}
-            </div>
+          <div className="flex justify-end">
+            <Link href="/clientes/calendario" className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-yellow-500/20 dark:text-yellow-200">Ir a calendario</Link>
           </div>
         </section>
       </PageTransition>
