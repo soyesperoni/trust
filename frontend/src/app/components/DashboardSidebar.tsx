@@ -72,13 +72,13 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
   });
 
   return (
-    <aside className={`hidden shrink-0 flex-col border-r border-slate-200 bg-white transition-all duration-300 dark:border-slate-800 dark:bg-[#161e27] md:flex ${collapsed ? "w-20" : "w-64"}`}>
+    <aside className={`hidden shrink-0 flex-col border-r border-slate-200 bg-white transition-all duration-300 dark:border-slate-800 dark:bg-[#161e27] md:flex ${collapsed ? "w-20" : "w-56"}`}>
       <div
-        className={`relative flex h-20 items-center border-b border-slate-100 px-3 dark:border-slate-800 ${
+        className={`relative flex h-20 items-center border-b border-slate-100 px-4 dark:border-slate-800 ${
           collapsed ? "justify-center" : "justify-start"
         }`}
       >
-        <BrandLogo compact={collapsed} size="lg" className={collapsed ? "" : "scale-[1.15]"} />
+        <BrandLogo compact={collapsed} size="lg" className={collapsed ? "" : "origin-left"} />
         <button
           aria-label={collapsed ? "Expandir menú" : "Minimizar menú"}
           className="absolute right-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
