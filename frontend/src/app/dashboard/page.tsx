@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../components/DashboardHeader";
+import { useCurrentUser } from "../hooks/useCurrentUser";
+import { ACCOUNT_ADMIN_ROLE } from "../lib/permissions";
 import PageTransition from "../components/PageTransition";
 import { getSessionUserEmail } from "../lib/session";
 
@@ -50,6 +52,7 @@ const getScoreColor = (score: number) => {
 };
 
 export default function DashboardPage() {
+  const { user } = useCurrentUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
   const [pendingVisitDetails, setPendingVisitDetails] = useState<ScheduledDetail[]>([]);
@@ -106,8 +109,8 @@ export default function DashboardPage() {
   }, []);
 
   const statsCards = useMemo(
-    () => [
-      { label: "Clientes", value: stats?.clients ?? 0, icon: "apartment", iconStyle: "bg-primary/20 text-primary" },
+    () => {
+      const cards = [
       { label: "Sucursales", value: stats?.branches ?? 0, icon: "storefront", iconStyle: "bg-professional-green/15 text-professional-green" },
       { label: "Áreas", value: stats?.areas ?? 0, icon: "map", iconStyle: "bg-primary/15 text-professional-green" },
       { label: "Dosificadores", value: stats?.dispensers ?? 0, icon: "water_drop", iconStyle: "bg-professional-green/10 text-professional-green" },
@@ -115,8 +118,18 @@ export default function DashboardPage() {
       { label: "Visitas", value: stats?.visits ?? 0, icon: "history", iconStyle: "bg-professional-green/10 text-professional-green" },
       { label: "Auditorías", value: stats?.audits ?? 0, icon: "assignment_turned_in", iconStyle: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200" },
       { label: "Incidencias", value: stats?.incidents ?? 0, icon: "report_problem", iconStyle: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" },
-    ],
-    [stats],
+      ];
+
+      if (user?.role === ACCOUNT_ADMIN_ROLE) {
+        return cards;
+      }
+
+      return [
+        { label: "Clientes", value: stats?.clients ?? 0, icon: "apartment", iconStyle: "bg-primary/20 text-primary" },
+        ...cards,
+      ];
+    },
+    [stats, user?.role],
   );
 
   const auditScore = useMemo(() => Math.round(stats?.audit_score ?? 0), [stats?.audit_score]);
