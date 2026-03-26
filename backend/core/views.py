@@ -151,6 +151,9 @@ def _build_access_scope(current_user: User | None) -> dict[str, list[int]] | Non
     if not current_user or current_user.role == User.Role.GENERAL_ADMIN:
         return None
 
+    if current_user.role == User.Role.INSPECTOR:
+        return None
+
     role_assignments = {
         User.Role.ACCOUNT_ADMIN: {
             "clients": set(current_user.clients.values_list("id", flat=True)),
@@ -161,11 +164,6 @@ def _build_access_scope(current_user: User | None) -> dict[str, list[int]] | Non
             "clients": set(),
             "branches": set(current_user.branches.values_list("id", flat=True)),
             "areas": set(),
-        },
-        User.Role.INSPECTOR: {
-            "clients": set(current_user.clients.values_list("id", flat=True)),
-            "branches": set(current_user.branches.values_list("id", flat=True)),
-            "areas": set(current_user.areas.values_list("id", flat=True)),
         },
     }
     assignments = role_assignments.get(current_user.role, {"clients": set(), "branches": set(), "areas": set()})
@@ -1725,7 +1723,7 @@ def dashboard(request):
     branches = _filter_queryset_by_scope(branches, scope, branch_lookup="id")
     areas = _filter_queryset_by_scope(areas, scope, area_lookup="id")
     dispensers = _filter_queryset_by_scope(dispensers, scope, area_lookup="area_id")
-    products = _filter_queryset_by_scope(products, scope, area_lookup="dispenser__area_id")
+    products = _filter_queryset_by_scope(products, scope, area_lookup="dispensers__area_id")
     visits = _filter_queryset_by_scope(visits, scope, area_lookup="area_id")
     incidents = _filter_queryset_by_scope(incidents, scope, area_lookup="area_id")
     audits = _filter_queryset_by_scope(audits, scope, area_lookup="area_id")
@@ -1746,6 +1744,8 @@ def dashboard(request):
     daily_score_bucket: dict[str, list[int]] = {}
     for audit, score in completed_with_score:
         reference_date = audit.completed_at or audit.audited_at
+        if reference_date is None:
+            continue
         bucket_key = timezone.localtime(reference_date).date().isoformat()
         daily_score_bucket.setdefault(bucket_key, []).append(score)
 
@@ -1823,6 +1823,8 @@ def dashboard(request):
     )
     activity = []
     for visit in recent_visits:
+        if visit.visited_at is None:
+            continue
         inspector = "Sin asignar"
         if visit.inspector:
             inspector = visit.inspector.get_full_name() or visit.inspector.username

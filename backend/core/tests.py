@@ -455,14 +455,13 @@ class HierarchicalAccessScopeTests(TestCase):
         self.assertEqual(stats["areas"], 1)
         self.assertEqual(stats["visits"], 1)
 
-    def test_inspector_can_access_by_assigned_area_only(self):
+    def test_inspector_has_global_access_scope(self):
         user = User.objects.create_user(
             username="inspector-scope",
             email="inspector-scope@test.com",
             password="secret",
             role=User.Role.INSPECTOR,
         )
-        user.areas.add(self.area_a1)
 
         allowed_response = self.client.get(
             f"/api/visits/{self.visit_a1.id}/report",
@@ -470,11 +469,11 @@ class HierarchicalAccessScopeTests(TestCase):
         )
         self.assertEqual(allowed_response.status_code, 400)
 
-        blocked_response = self.client.get(
+        second_response = self.client.get(
             f"/api/visits/{self.visit_b1.id}/report",
             HTTP_X_CURRENT_USER_EMAIL=user.email,
         )
-        self.assertEqual(blocked_response.status_code, 404)
+        self.assertEqual(second_response.status_code, 400)
 
     def test_dashboard_returns_daily_audit_score_history(self):
         form = AuditForm.objects.create(name="Checklist", schema={"questions": []})
