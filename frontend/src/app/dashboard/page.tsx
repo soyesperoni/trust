@@ -27,6 +27,13 @@ type DailyAuditScore = {
   audits: number;
 };
 
+type ScheduledDetail = {
+  date: string;
+  total: number;
+  first_time: string | null;
+  last_time: string | null;
+};
+
 type ScoreRange = "month" | "week" | "fortnight";
 
 const getLocalDateKey = (date: Date) => {
@@ -45,10 +52,14 @@ const getScoreColor = (score: number) => {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
+  const [pendingVisitDetails, setPendingVisitDetails] = useState<ScheduledDetail[]>([]);
+  const [scheduledAuditDetails, setScheduledAuditDetails] = useState<ScheduledDetail[]>([]);
   const [scoreRange, setScoreRange] = useState<ScoreRange>("fortnight");
   const [barAnimationProgress, setBarAnimationProgress] = useState(0);
   const [scoreChartAnimationKey, setScoreChartAnimationKey] = useState(0);
   const [animatedAuditScore, setAnimatedAuditScore] = useState(0);
+  const [animatedPendingVisits, setAnimatedPendingVisits] = useState(0);
+  const [animatedScheduledAudits, setAnimatedScheduledAudits] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,6 +83,8 @@ export default function DashboardPage() {
 
         setStats(dashboardData.stats);
         setDailyAuditScoreHistory(dashboardData.daily_audit_score_history ?? []);
+        setPendingVisitDetails(dashboardData.pending_visit_details ?? []);
+        setScheduledAuditDetails(dashboardData.scheduled_audit_details ?? []);
         setError(null);
       } catch (fetchError) {
         if (!isMounted) return;
@@ -108,6 +121,8 @@ export default function DashboardPage() {
 
   const auditScore = useMemo(() => Math.round(stats?.audit_score ?? 0), [stats?.audit_score]);
   const auditScoreColor = useMemo(() => getScoreColor(auditScore), [auditScore]);
+  const pendingVisitsTotal = useMemo(() => stats?.pending_visits ?? 0, [stats?.pending_visits]);
+  const scheduledAuditsTotal = useMemo(() => stats?.scheduled_audits ?? 0, [stats?.scheduled_audits]);
 
   const scoreBars = useMemo(() => {
     const sanitized = dailyAuditScoreHistory
@@ -243,16 +258,15 @@ export default function DashboardPage() {
 
     let animationFrame = 0;
     const duration = 1100;
-    const startValue = 0;
-    const targetValue = auditScore;
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const easedProgress = 1 - Math.pow(1 - progress, 3);
-      const nextValue = Math.round(startValue + (targetValue - startValue) * easedProgress);
-      setAnimatedAuditScore(nextValue);
+      setAnimatedAuditScore(Math.round(auditScore * easedProgress));
+      setAnimatedPendingVisits(Math.round(pendingVisitsTotal * easedProgress));
+      setAnimatedScheduledAudits(Math.round(scheduledAuditsTotal * easedProgress));
 
       if (progress < 1) {
         animationFrame = window.requestAnimationFrame(animate);
@@ -260,10 +274,21 @@ export default function DashboardPage() {
     };
 
     setAnimatedAuditScore(0);
+    setAnimatedPendingVisits(0);
+    setAnimatedScheduledAudits(0);
     animationFrame = window.requestAnimationFrame(animate);
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [auditScore, isLoading]);
+  }, [auditScore, isLoading, pendingVisitsTotal, scheduledAuditsTotal]);
+
+  const formatScheduleDate = (value: string) =>
+    new Date(`${value}T00:00:00`).toLocaleDateString("es-MX", { weekday: "short", day: "2-digit", month: "short" });
+
+  const formatTimeRange = (detail: ScheduledDetail) => {
+    if (!detail.first_time && !detail.last_time) return "Hora por definir";
+    if (detail.first_time === detail.last_time) return detail.first_time;
+    return `${detail.first_time ?? "--:--"} - ${detail.last_time ?? "--:--"}`;
+  };
 
   return (
     <>
@@ -398,6 +423,60 @@ export default function DashboardPage() {
                 )}
               </article>
             ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <article className="apple-card-enter rounded-2xl border border-white/65 bg-white/78 p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Pendiente</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Visitas programadas</h3>
+                </div>
+                <div className="text-right">
+                  <p className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent">
+                    {isLoading ? "..." : animatedPendingVisits}
+                  </p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">visitas</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {pendingVisitDetails.length ? pendingVisitDetails.map((detail) => (
+                  <div key={`${detail.date}-visit`} className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2 dark:border-slate-700/70 dark:bg-slate-900/45">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{formatScheduleDate(detail.date)}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{formatTimeRange(detail)}</p>
+                    </div>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary dark:bg-primary/20">{detail.total}</span>
+                  </div>
+                )) : <p className="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Sin visitas pendientes programadas.</p>}
+              </div>
+            </article>
+
+            <article className="apple-card-enter rounded-2xl border border-white/65 bg-white/78 p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Programadas</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Auditorías pendientes</h3>
+                </div>
+                <div className="text-right">
+                  <p className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent">
+                    {isLoading ? "..." : animatedScheduledAudits}
+                  </p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">auditorías</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {scheduledAuditDetails.length ? scheduledAuditDetails.map((detail) => (
+                  <div key={`${detail.date}-audit`} className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2 dark:border-slate-700/70 dark:bg-slate-900/45">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{formatScheduleDate(detail.date)}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Horario: {formatTimeRange(detail)}</p>
+                    </div>
+                    <span className="rounded-full bg-professional-green/15 px-2.5 py-1 text-xs font-bold text-professional-green dark:bg-professional-green/25">{detail.total}</span>
+                  </div>
+                )) : <p className="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Sin auditorías programadas pendientes.</p>}
+              </div>
+            </article>
           </div>
         </section>
       </PageTransition>
