@@ -137,7 +137,7 @@ export default function EditarSucursalPage() {
         description="Actualiza los datos de la sucursal en el backend de Django."
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="max-w-3xl mx-auto bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
+        <div className="w-full bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
               {error}
