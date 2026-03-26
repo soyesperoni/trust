@@ -279,7 +279,13 @@ class Incident(models.Model):
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="incidents")
     branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="incidents")
     area = models.ForeignKey(Area, on_delete=models.PROTECT, related_name="incidents")
-    dispenser = models.ForeignKey(Dispenser, on_delete=models.PROTECT, related_name="incidents")
+    dispenser = models.ForeignKey(
+        Dispenser,
+        on_delete=models.SET_NULL,
+        related_name="incidents",
+        blank=True,
+        null=True,
+    )
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 

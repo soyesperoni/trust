@@ -59,10 +59,24 @@ class DispenserProductAssignmentInline(admin.TabularInline):
 class SafeDeleteAdminMixin:
     delete_error_message = "No se pudo eliminar algunos registros por dependencias o restricciones de integridad."
 
+    def _format_protected_objects(self, protected_objects):
+        labels = []
+        for protected_obj in protected_objects:
+            labels.append(f"{protected_obj._meta.verbose_name}: {protected_obj}")
+        return ", ".join(labels)
+
+    def _build_protected_message(self, obj, exc):
+        protected_labels = self._format_protected_objects(exc.protected_objects)
+        if not protected_labels:
+            return f"No se pudo eliminar '{obj}' porque está siendo utilizado por otros registros."
+        return f"No se pudo eliminar '{obj}' porque está siendo utilizado por: {protected_labels}."
+
     def delete_model(self, request, obj):
         try:
             super().delete_model(request, obj)
-        except (ProtectedError, IntegrityError):
+        except ProtectedError as exc:
+            self.message_user(request, self._build_protected_message(obj, exc), level=messages.ERROR)
+        except IntegrityError:
             self.message_user(request, self.delete_error_message, level=messages.ERROR)
 
     def delete_queryset(self, request, queryset):
@@ -70,7 +84,10 @@ class SafeDeleteAdminMixin:
         for obj in queryset:
             try:
                 obj.delete()
-            except (ProtectedError, IntegrityError):
+            except ProtectedError as exc:
+                failed += 1
+                self.message_user(request, self._build_protected_message(obj, exc), level=messages.ERROR)
+            except IntegrityError:
                 failed += 1
         if failed:
             self.message_user(
