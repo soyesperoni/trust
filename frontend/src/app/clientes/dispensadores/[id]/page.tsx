@@ -198,7 +198,18 @@ export default function EditarDosificadorPage() {
   };
 
   const selectedProducts = products.filter((product) => selectedProductIds.includes(String(product.id)));
-  const filteredProductsForModal = products.filter((product) => product.name.toLowerCase().includes(productSearchTerm.toLowerCase().trim()));
+  const normalizeSearchText = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  const normalizedSearchTerms = normalizeSearchText(productSearchTerm).split(/\s+/).filter(Boolean);
+  const filteredProductsForModal = products.filter((product) => {
+    if (!normalizedSearchTerms.length) return true;
+    const normalizedProductName = normalizeSearchText(product.name);
+    return normalizedSearchTerms.every((term) => normalizedProductName.includes(term));
+  });
 
   const openProductModal = () => {
     setPendingProductIds(selectedProductIds);
