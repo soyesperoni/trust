@@ -128,6 +128,48 @@ class ProductApiTests(TestCase):
             role=User.Role.GENERAL_ADMIN,
         )
 
+    def test_create_product_persists_photo(self):
+        image = SimpleUploadedFile("producto.jpg", b"fake-image-bytes", content_type="image/jpeg")
+
+        response = self.client.post(
+            "/api/products/",
+            data={
+                "name": "Producto con foto",
+                "description": "Descripción",
+                "photo": image,
+            },
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        product = Product.objects.get(name="Producto con foto")
+        self.assertTrue(bool(product.photo))
+
+    def test_update_product_persists_photo_from_multipart_put(self):
+        product = Product.objects.create(name="Producto editable")
+        image = SimpleUploadedFile("actualizado.jpg", b"updated-image", content_type="image/jpeg")
+
+        body = encode_multipart(
+            BOUNDARY,
+            {
+                "name": "Producto editable",
+                "description": "Actualizado",
+                "photo": image,
+            },
+        )
+
+        response = self.client.generic(
+            "PUT",
+            f"/api/products/{product.id}/",
+            data=body,
+            content_type=MULTIPART_CONTENT,
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        product.refresh_from_db()
+        self.assertTrue(bool(product.photo))
+
     def test_delete_product_as_general_admin(self):
         product = Product.objects.create(name="Producto X")
 

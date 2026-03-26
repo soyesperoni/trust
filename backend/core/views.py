@@ -2411,7 +2411,8 @@ def products(request):
     if not name:
         return JsonResponse({"error": "El nombre es obligatorio."}, status=400)
 
-    product = Product.objects.create(name=name, description=description)
+    photo = files.get("photo") if files else None
+    product = Product.objects.create(name=name, description=description, photo=photo)
     return JsonResponse(_serialize_product(product), status=201)
 
 
@@ -2461,6 +2462,12 @@ def product_detail(request, product_id: int):
 
     if not product.name:
         return JsonResponse({"error": "El nombre no puede estar vacío."}, status=400)
+
+    photo = files.get("photo") if files else None
+    if photo is not None:
+        if product.photo:
+            product.photo.delete(save=False)
+        product.photo = photo
 
     product.save()
     return JsonResponse(_serialize_product(product))
