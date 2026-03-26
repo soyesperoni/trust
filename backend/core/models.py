@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -125,7 +126,17 @@ class DispenserProductAssignment(models.Model):
         ordering = ["dispenser__identifier", "product__name"]
 
     def __str__(self) -> str:
-        return f"{self.dispenser.identifier} - {self.product.name}"
+        try:
+            dispenser_label = self.dispenser.identifier
+        except ObjectDoesNotExist:
+            dispenser_label = f"Dispensador #{self.dispenser_id}"
+
+        try:
+            product_label = self.product.name
+        except ObjectDoesNotExist:
+            product_label = f"Producto #{self.product_id}"
+
+        return f"{dispenser_label} - {product_label}"
 
 
 class Visit(models.Model):

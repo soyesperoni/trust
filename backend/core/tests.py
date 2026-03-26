@@ -5,8 +5,10 @@ from unittest.mock import patch
 from django.core import signing
 from django.db import IntegrityError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.test import TestCase
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
+from django.urls import reverse
 from django.utils import timezone
 
 from config import settings_prod
@@ -162,6 +164,49 @@ class ProductApiTests(TestCase):
             response.json()["error"],
             "No se pudo eliminar el producto por una restricción de integridad.",
         )
+
+
+class AdminDeletionTests(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser(
+            username="superadmin",
+            email="superadmin@test.com",
+            password="secret123",
+        )
+        self.client.force_login(self.admin_user)
+
+    @patch("core.models.Product.delete", side_effect=IntegrityError)
+    def test_admin_bulk_delete_product_handles_integrity_error_without_500(self, _delete_mock):
+        product = Product.objects.create(name="Producto protegido")
+
+        response = self.client.post(
+            reverse("admin:core_product_changelist"),
+            {
+                "action": "delete_selected",
+                ACTION_CHECKBOX_NAME: [str(product.pk)],
+                "post": "yes",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Product.objects.filter(pk=product.pk).exists())
+
+    @patch("core.models.Dispenser.delete", side_effect=IntegrityError)
+    def test_admin_bulk_delete_dispenser_handles_integrity_error_without_500(self, _delete_mock):
+        model = DispenserModel.objects.create(name="Modelo protegido")
+        dispenser = Dispenser.objects.create(model=model, identifier="DISP-PROT")
+
+        response = self.client.post(
+            reverse("admin:core_dispenser_changelist"),
+            {
+                "action": "delete_selected",
+                ACTION_CHECKBOX_NAME: [str(dispenser.pk)],
+                "post": "yes",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Dispenser.objects.filter(pk=dispenser.pk).exists())
 
 class ProductionSettingsTests(TestCase):
     def test_default_storage_is_configured_for_media_uploads(self):

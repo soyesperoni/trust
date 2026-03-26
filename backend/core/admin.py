@@ -1,5 +1,8 @@
 from django.contrib import admin
+from django.contrib import messages
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.db import IntegrityError
+from django.db.models.deletion import ProtectedError
 
 from .models import (
     Area,
@@ -53,6 +56,30 @@ class DispenserProductAssignmentInline(admin.TabularInline):
     autocomplete_fields = ("product", "nozzle")
 
 
+class SafeDeleteAdminMixin:
+    delete_error_message = "No se pudo eliminar algunos registros por dependencias o restricciones de integridad."
+
+    def delete_model(self, request, obj):
+        try:
+            super().delete_model(request, obj)
+        except (ProtectedError, IntegrityError):
+            self.message_user(request, self.delete_error_message, level=messages.ERROR)
+
+    def delete_queryset(self, request, queryset):
+        failed = 0
+        for obj in queryset:
+            try:
+                obj.delete()
+            except (ProtectedError, IntegrityError):
+                failed += 1
+        if failed:
+            self.message_user(
+                request,
+                f"{self.delete_error_message} ({failed} elemento(s) no eliminados).",
+                level=messages.ERROR,
+            )
+
+
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     list_display = ("name", "code")
@@ -86,7 +113,7 @@ class DispenserModelAdmin(admin.ModelAdmin):
 
 
 @admin.register(Dispenser)
-class DispenserAdmin(admin.ModelAdmin):
+class DispenserAdmin(SafeDeleteAdminMixin, admin.ModelAdmin):
     list_display = ("identifier", "model", "area", "branch_name", "client_name")
     list_filter = ("model", "area__branch__client")
     search_fields = ("identifier", "model__name", "area__name", "area__branch__name")
@@ -102,7 +129,7 @@ class DispenserAdmin(admin.ModelAdmin):
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(SafeDeleteAdminMixin, admin.ModelAdmin):
     list_display = ("name", "linked_dispensers")
     search_fields = ("name", "dispensers__identifier")
 
