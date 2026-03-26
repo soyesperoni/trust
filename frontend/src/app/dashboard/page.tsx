@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
   const [scoreRange, setScoreRange] = useState<ScoreRange>("fortnight");
   const [barAnimationProgress, setBarAnimationProgress] = useState(0);
+  const [scoreChartAnimationKey, setScoreChartAnimationKey] = useState(0);
   const [animatedAuditScore, setAnimatedAuditScore] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -228,13 +229,14 @@ export default function DashboardPage() {
   }, [dailyAuditScoreHistory, scoreRange]);
 
   useEffect(() => {
+    setScoreChartAnimationKey((current) => current + 1);
     setBarAnimationProgress(0);
     const timer = window.setTimeout(() => {
       setBarAnimationProgress(1);
     }, 80);
 
     return () => window.clearTimeout(timer);
-  }, [scoreBars]);
+  }, [scoreRange, scoreBars]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -334,7 +336,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
 
-                  <div className="relative z-10 flex h-full items-end gap-2 px-6 pb-1">
+                  <div key={scoreChartAnimationKey} className="relative z-10 flex h-full items-end gap-2 px-6 pb-1">
                     {scoreBars.map((item, index) => (
                       <div key={`${item.label}-${index}`} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
                         <span className={`mb-1 text-[10px] font-bold ${item.isPlaceholder ? "text-slate-400 dark:text-slate-500" : "text-slate-600 dark:text-slate-200"}`}>
@@ -383,13 +385,15 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-center gap-2">
-                      <p className="text-[2rem] font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <p className="text-[22px] font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
+                        <h3 className="truncate text-left text-sm font-semibold text-slate-500 dark:text-slate-400">{item.label}</h3>
+                      </div>
                       <div className={`inline-flex rounded-lg p-2 ${item.iconStyle}`}>
                         <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
                       </div>
                     </div>
-                    <h3 className="mt-1 text-center text-sm font-semibold text-slate-500 dark:text-slate-400">{item.label}</h3>
                   </>
                 )}
               </article>
