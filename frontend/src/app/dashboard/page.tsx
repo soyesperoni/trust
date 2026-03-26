@@ -30,9 +30,9 @@ type DailyAuditScore = {
 type ScoreRange = "month" | "week" | "fortnight";
 
 const getScoreColor = (score: number) => {
-  if (score >= 85) return { solid: "#22c55e", light: "#86efac", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" };
-  if (score >= 70) return { solid: "#f59e0b", light: "#fcd34d", badge: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300" };
-  return { solid: "#ef4444", light: "#fca5a5", badge: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300" };
+  if (score >= 85) return { solid: "#16a34a", light: "#4ade80", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" };
+  if (score >= 70) return { solid: "#2563eb", light: "#60a5fa", badge: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" };
+  return { solid: "#6b7280", light: "#d1d5db", badge: "bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-200" };
 };
 
 export default function DashboardPage() {
@@ -140,7 +140,35 @@ export default function DashboardPage() {
       }));
     }
 
-    const dayCount = scoreRange === "week" ? 7 : 15;
+    if (scoreRange === "week") {
+      const grouped = new Map<string, { sum: number; count: number; date: Date }>();
+      sanitized.forEach((entry) => {
+        const weekStart = new Date(entry.date);
+        weekStart.setDate(entry.date.getDate() - entry.date.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const bucketKey = weekStart.toISOString().slice(0, 10);
+        const current = grouped.get(bucketKey) ?? { sum: 0, count: 0, date: weekStart };
+        current.sum += entry.score;
+        current.count += 1;
+        grouped.set(bucketKey, current);
+      });
+
+      const values = Array.from(grouped.values())
+        .sort((a, b) => a.date.getTime() - b.date.getTime())
+        .slice(-6)
+        .map((item) => ({
+          label: item.date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
+          score: item.count ? Math.round(item.sum / item.count) : 0,
+        }));
+
+      const max = Math.max(...values.map((item) => item.score), 1);
+      return values.map((item) => ({
+        ...item,
+        height: Math.max((item.score / max) * 100, item.score > 0 ? 12 : 4),
+      }));
+    }
+
+    const dayCount = 15;
     const byDate = new Map<string, number>();
     sanitized.forEach((entry) => {
       byDate.set(entry.date.toISOString().slice(0, 10), entry.score);
@@ -204,8 +232,8 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex gap-2">
                   {[
-                    { value: "month", label: "Mensual" },
-                    { value: "week", label: "Semanal" },
+                    { value: "month", label: "Últimos 6 meses" },
+                    { value: "week", label: "Últimas 6 semanas" },
                     { value: "fortnight", label: "15 días" },
                   ].map((option) => (
                     <button
@@ -223,7 +251,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className={`mt-5 grid h-56 items-end gap-3 ${scoreRange === "month" ? "grid-cols-6" : scoreRange === "week" ? "grid-cols-7" : "grid-cols-5 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-[repeat(15,minmax(0,1fr))]"}`}>
+              <div className={`mt-5 grid h-56 items-end gap-3 ${scoreRange === "month" || scoreRange === "week" ? "grid-cols-6" : "grid-cols-5 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-[repeat(15,minmax(0,1fr))]"}`}>
                 {scoreBars.map((item, index) => (
                   <div key={`${item.label}-${index}`} className="flex h-full flex-col justify-end gap-2">
                     <div className="relative h-full rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
@@ -258,11 +286,11 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between gap-1">
-                      <p className="text-[2rem] font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
-                      <div className={`inline-flex rounded-lg p-2.5 ${item.iconStyle}`}>
+                    <div className="flex items-center justify-center gap-2">
+                      <div className={`inline-flex rounded-lg p-2 ${item.iconStyle}`}>
                         <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
                       </div>
+                      <p className="text-[2rem] font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
                     </div>
                     <h3 className="mt-1 text-center text-sm font-semibold text-slate-500 dark:text-slate-400">{item.label}</h3>
                   </>
