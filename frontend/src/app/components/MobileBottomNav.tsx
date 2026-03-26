@@ -16,7 +16,7 @@ type MobileNavItem = {
 const mobileItems: MobileNavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
   { label: "Calendario", href: "/clientes/calendario", icon: "calendar_today" },
-  { label: "Historial", href: "/clientes/visitas", icon: "history" },
+  { label: "Visitas", href: "/clientes/visitas", icon: "history" },
   { label: "Incidencias", href: "/clientes/incidencias", icon: "report_problem" },
 ];
 
