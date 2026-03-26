@@ -156,7 +156,7 @@ export default function NuevaAreaPage() {
         description="Registra una nueva área con los mismos campos del admin de Django."
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="max-w-3xl mx-auto bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
+        <div className="w-full bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 p-6 md:p-8 space-y-6">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
               Datos del área
