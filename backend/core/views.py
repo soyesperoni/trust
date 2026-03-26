@@ -2319,6 +2319,13 @@ def dispenser_detail(request, dispenser_id: int):
                 },
                 status=409,
             )
+        except IntegrityError:
+            return JsonResponse(
+                {
+                    "error": "No se puede eliminar el dosificador porque tiene datos relacionados.",
+                },
+                status=409,
+            )
         return JsonResponse({}, status=204)
 
     data, files = _extract_user_data(request)
