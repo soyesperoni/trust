@@ -283,10 +283,10 @@ export default function DashboardPage() {
             <article className="col-span-12 lg:col-span-4 rounded-3xl border border-white/65 bg-white/80 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex h-full min-h-[22rem] flex-col items-center justify-center rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-6 text-center dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
                 <div className="mt-4 flex items-end gap-1">
-                  <span className="text-[10.5rem] font-black leading-none text-slate-900 dark:text-white">
+                  <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[12.6rem] font-black leading-none text-transparent">
                     {isLoading ? "..." : animatedAuditScore}
                   </span>
-                  <span className="pb-5 text-[4.5rem] font-bold text-slate-500 dark:text-slate-300">%</span>
+                  <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-5 text-[4.5rem] font-bold text-transparent">%</span>
                 </div>
                 <p className="mt-6 text-base font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-300">Score actual</p>
               </div>
