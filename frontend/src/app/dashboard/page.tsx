@@ -46,7 +46,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
   const [scoreRange, setScoreRange] = useState<ScoreRange>("fortnight");
-  const [animatedHeights, setAnimatedHeights] = useState<number[]>([]);
+  const [lineAnimationProgress, setLineAnimationProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -140,11 +140,7 @@ export default function DashboardPage() {
           score: item.count ? Math.round(item.sum / item.count) : 0,
         }));
 
-      const max = Math.max(...values.map((item) => item.score), 1);
-      return values.map((item) => ({
-        ...item,
-        height: Math.max((item.score / max) * 100, item.score > 0 ? 12 : 4),
-      }));
+      return values;
     }
 
     if (scoreRange === "week") {
@@ -168,11 +164,7 @@ export default function DashboardPage() {
           score: item.count ? Math.round(item.sum / item.count) : 0,
         }));
 
-      const max = Math.max(...values.map((item) => item.score), 1);
-      return values.map((item) => ({
-        ...item,
-        height: Math.max((item.score / max) * 100, item.score > 0 ? 12 : 4),
-      }));
+      return values;
     }
 
     const dayCount = 15;
@@ -214,20 +206,38 @@ export default function DashboardPage() {
       };
     });
 
-    const max = Math.max(...values.map((item) => item.score), 1);
-    return values.map((item) => ({
-      ...item,
-      height: Math.max((item.score / max) * 100, item.score > 0 ? 12 : 4),
-    }));
+    return values;
   }, [dailyAuditScoreHistory, scoreRange]);
 
   useEffect(() => {
-    setAnimatedHeights(new Array(scoreBars.length).fill(0));
+    setLineAnimationProgress(0);
     const timer = window.setTimeout(() => {
-      setAnimatedHeights(scoreBars.map((bar) => bar.height));
+      setLineAnimationProgress(1);
     }, 80);
 
     return () => window.clearTimeout(timer);
+  }, [scoreBars]);
+
+  const lineChartData = useMemo(() => {
+    const chartWidth = 1000;
+    const chartHeight = 260;
+    const points = scoreBars.map((item, index) => {
+      const x = scoreBars.length > 1 ? (index / (scoreBars.length - 1)) * chartWidth : chartWidth / 2;
+      const y = chartHeight - (item.score / 100) * chartHeight;
+      return { ...item, x, y };
+    });
+
+    const polylinePoints = points.map((point) => `${point.x},${point.y}`).join(" ");
+    const areaPath = points.length
+      ? `M ${points[0].x} ${chartHeight} L ${points.map((point) => `${point.x} ${point.y}`).join(" L ")} L ${points[points.length - 1].x} ${chartHeight} Z`
+      : "";
+    const pathLength = points.reduce((total, point, index) => {
+      if (index === 0) return total;
+      const previous = points[index - 1];
+      return total + Math.hypot(point.x - previous.x, point.y - previous.y);
+    }, 0);
+
+    return { points, polylinePoints, areaPath, pathLength };
   }, [scoreBars]);
 
   return (
@@ -278,22 +288,92 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className={`mt-5 grid h-56 items-end gap-3 ${scoreRange === "month" || scoreRange === "week" ? "grid-cols-6" : "grid-cols-5 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-[repeat(15,minmax(0,1fr))]"}`}>
-                {scoreBars.map((item, index) => (
-                  <div key={`${item.label}-${index}`} className="flex h-full flex-col justify-end gap-2">
-                    <div className="relative h-full rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
-                      <div
-                        className="absolute bottom-1 left-1 right-1 rounded-lg transition-[height] duration-700 ease-out"
+              <div className="mt-5 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-3 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
+                <div className="relative h-56 w-full">
+                  <svg viewBox="0 0 1000 260" className="h-full w-full overflow-visible">
+                    <defs>
+                      <linearGradient id="scoreLineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#2563eb" />
+                        <stop offset="100%" stopColor="#16a34a" />
+                      </linearGradient>
+                      <linearGradient id="scoreAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="rgba(37,99,235,0.22)" />
+                        <stop offset="100%" stopColor="rgba(37,99,235,0)" />
+                      </linearGradient>
+                    </defs>
+
+                    {[0, 25, 50, 75, 100].map((tick) => {
+                      const y = 260 - (tick / 100) * 260;
+                      return (
+                        <g key={tick}>
+                          <line x1="0" x2="1000" y1={y} y2={y} className="stroke-slate-300/60 dark:stroke-slate-700/60" strokeDasharray="5 8" />
+                          <text x="6" y={Math.max(y - 5, 12)} className="fill-slate-400 text-[10px] font-semibold dark:fill-slate-500">
+                            {tick}%
+                          </text>
+                        </g>
+                      );
+                    })}
+
+                    {lineChartData.areaPath && <path d={lineChartData.areaPath} fill="url(#scoreAreaGradient)" />}
+
+                    {lineChartData.polylinePoints && (
+                      <polyline
+                        points={lineChartData.polylinePoints}
+                        fill="none"
+                        stroke="url(#scoreLineGradient)"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                         style={{
-                          height: `${animatedHeights[index] ?? 0}%`,
-                          backgroundImage: `linear-gradient(to top, ${getScoreColor(item.score).solid}, ${getScoreColor(item.score).light})`,
+                          strokeDasharray: lineChartData.pathLength || 1,
+                          strokeDashoffset: (lineChartData.pathLength || 1) * (1 - lineAnimationProgress),
+                          transition: "stroke-dashoffset 900ms ease-out",
                         }}
                       />
-                      <span className="absolute left-1/2 top-2 -translate-x-1/2 text-[11px] font-bold text-slate-700 dark:text-slate-200">{item.score}%</span>
-                    </div>
-                    <span className="text-center text-[11px] font-semibold text-slate-500 dark:text-slate-300">{item.label}</span>
-                  </div>
-                ))}
+                    )}
+
+                    {lineChartData.points.map((point, index) => (
+                      <g
+                        key={`${point.label}-${index}`}
+                        style={{
+                          opacity: lineAnimationProgress,
+                          transform: `translateY(${(1 - lineAnimationProgress) * 8}px)`,
+                          transition: `opacity 500ms ease ${index * 40}ms, transform 500ms ease ${index * 40}ms`,
+                        }}
+                      >
+                        <circle
+                          cx={point.x}
+                          cy={point.y}
+                          r="8"
+                          fill={getScoreColor(point.score).solid}
+                          fillOpacity="0.18"
+                        />
+                        <circle
+                          cx={point.x}
+                          cy={point.y}
+                          r="4.5"
+                          fill={getScoreColor(point.score).solid}
+                          className="drop-shadow-[0_2px_6px_rgba(15,23,42,0.35)]"
+                        />
+                        <text
+                          x={point.x}
+                          y={Math.max(point.y - 16, 16)}
+                          textAnchor="middle"
+                          className="fill-slate-700 text-[11px] font-bold dark:fill-slate-100"
+                        >
+                          {point.score}%
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+                <div className={`mt-2 grid gap-2 ${scoreRange === "month" || scoreRange === "week" ? "grid-cols-6" : "grid-cols-5 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-[repeat(15,minmax(0,1fr))]"}`}>
+                  {scoreBars.map((item, index) => (
+                    <span key={`${item.label}-${index}`} className="truncate text-center text-[11px] font-semibold text-slate-500 dark:text-slate-300">
+                      {item.label}
+                    </span>
+                  ))}
+                </div>
               </div>
             </article>
           </div>
