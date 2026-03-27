@@ -139,7 +139,7 @@ export default function AjustesPage() {
     <>
       <DashboardHeader title="Ajustes de Usuario" description="Administra tu información de perfil y credenciales de acceso." />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <form className="mx-auto w-full max-w-4xl space-y-8" onSubmit={handleSubmit}>
+        <form className="w-full space-y-8" onSubmit={handleSubmit}>
           <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-card dark:border-slate-800 dark:bg-[#161e27]">
             <div className="border-b border-slate-100 p-6 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Información del Perfil</h3>

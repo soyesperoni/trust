@@ -183,7 +183,7 @@ export default function NotificationsPage() {
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
