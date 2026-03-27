@@ -42,7 +42,7 @@ const navItems: NavItem[] = [
 ];
 
 const linkClassName = (isActive: boolean, collapsed: boolean) =>
-  `flex items-center ${collapsed ? "justify-center" : "gap-3"} px-4 py-3.5 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer ${
+  `flex items-center ${collapsed ? "justify-center" : "gap-2.5"} px-4 py-3 text-sm text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer ${
     isActive ? "bg-yellow-50 text-slate-900 border-r-4 border-primary font-semibold" : ""
   }`;
 
@@ -93,7 +93,7 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
           const isActive = item.href === activePath;
           return (
             <Link key={item.label} className={linkClassName(isActive, collapsed)} href={item.href} title={collapsed ? item.label : undefined}>
-              <span className="material-symbols-outlined">{item.icon}</span>
+              <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
               {!collapsed && item.label}
             </Link>
           );
