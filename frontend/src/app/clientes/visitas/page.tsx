@@ -449,7 +449,6 @@ export default function VisitasPage() {
                     <th className="px-6 py-4">Fecha</th>
                     <th className="px-6 py-4">Cliente / Sucursal</th>
                     <th className="px-6 py-4">Área</th>
-                    <th className="px-6 py-4">Dosificador</th>
                     <th className="px-6 py-4">Inspector</th>
                     <th className="px-6 py-4">Estado</th>
                     <th className="px-6 py-4 text-right">Acciones</th>
@@ -485,9 +484,6 @@ export default function VisitasPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{visit.area}</td>
-                        <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
-                          {visit.dispenser ?? "D-—"}
-                        </td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                           {visit.inspector}
                         </td>
@@ -533,21 +529,21 @@ export default function VisitasPage() {
                   })}
                   {error && !isLoading && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-red-500">
+                      <td colSpan={6} className="px-6 py-8 text-center text-red-500">
                         {error}
                       </td>
                     </tr>
                   )}
                   {isLoading && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
                         Cargando visitas...
                       </td>
                     </tr>
                   )}
                   {!error && !isLoading && filteredVisits.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
                         No hay visitas que coincidan con los filtros aplicados.
                       </td>
                     </tr>
