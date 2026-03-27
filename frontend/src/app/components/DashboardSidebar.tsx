@@ -43,8 +43,10 @@ const navItems: NavItem[] = [
 
 const linkClassName = (isActive: boolean, collapsed: boolean) =>
   `flex items-center ${collapsed ? "justify-center" : "gap-2"} px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer ${
-    isActive ? "bg-yellow-50 text-slate-900 border-r-4 border-primary font-semibold" : ""
+    isActive ? "bg-yellow-50 border-r-4 border-primary font-semibold" : ""
   }`;
+
+const activeGradientTextClassName = "bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent";
 
 export default function DashboardSidebar({ activePath }: DashboardSidebarProps) {
   const { user } = useCurrentUser();
@@ -93,8 +95,8 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
           const isActive = item.href === activePath;
           return (
             <Link key={item.label} className={linkClassName(isActive, collapsed)} href={item.href} title={collapsed ? item.label : undefined}>
-              <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
-              {!collapsed && item.label}
+              <span className={`material-symbols-outlined text-[18px] ${isActive ? activeGradientTextClassName : ""}`}>{item.icon}</span>
+              {!collapsed && <span className={isActive ? activeGradientTextClassName : ""}>{item.label}</span>}
             </Link>
           );
         })}
