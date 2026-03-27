@@ -238,9 +238,8 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
     <>
       <DashboardHeader title="Informe de auditoría" description="Detalle visual y técnico de la auditoría registrada." />
 
-      <section className="relative w-full flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8">
-        <div className="dashboard-lights-motion pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.42)_0%,rgba(146,185,59,0.33)_34%,rgba(255,255,255,0)_68%)] dark:bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.36)_0%,rgba(146,185,59,0.2)_38%,rgba(10,15,20,0)_68%)]" />
-        <div className="relative z-10">
+      <section className="w-full flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8">
+        <div>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-[#1a232e] dark:text-slate-200"
@@ -422,7 +421,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
                 const photoUrl = toUrl(photo.file);
                 if (!photoUrl) return null;
                 return (
-                  <button key={photo.id} className="apple-card-enter group relative aspect-[9/16] overflow-hidden rounded-lg border" onClick={() => setSelectedMedia({ type: "image", url: photoUrl })} style={{ animationDelay: `${440 + index * 50}ms` }} type="button">
+                  <button key={photo.id} className="apple-card-enter group relative aspect-[9/16] w-full max-w-[170px] overflow-hidden rounded-lg border" onClick={() => setSelectedMedia({ type: "image", url: photoUrl })} style={{ animationDelay: `${440 + index * 50}ms` }} type="button">
                     <img src={photoUrl} alt="Evidencia" className="h-full w-full object-contain bg-slate-100 dark:bg-slate-800" />
                     <span className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">Ver</span>
                   </button>
