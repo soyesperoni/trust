@@ -100,6 +100,7 @@ export default function AuditoriasPage() {
   const [animatedAverageScore, setAnimatedAverageScore] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -211,9 +212,36 @@ export default function AuditoriasPage() {
 
     setAnimatedAverageScore(0);
     animationFrame = window.requestAnimationFrame(animate);
-
     return () => window.cancelAnimationFrame(animationFrame);
   }, [isLoading, stats.average]);
+
+  const downloadAuditReport = async (auditId: number) => {
+    try {
+      setActionError(null);
+      const currentUserEmail = getSessionUserEmail();
+      const response = await fetch(`/api/audits/${auditId}/report`, {
+        method: "GET",
+        headers: { "x-current-user-email": currentUserEmail },
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "No se pudo descargar el informe." }));
+        throw new Error(payload.error ?? "No se pudo descargar el informe.");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `auditoria-${auditId}-informe.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (downloadError) {
+      setActionError(downloadError instanceof Error ? downloadError.message : "No se pudo descargar el informe.");
+    }
+  };
 
   return (
     <>
@@ -222,6 +250,12 @@ export default function AuditoriasPage() {
         description="Consulta auditorías realizadas y aplica filtros por inspector, estado, cliente, sucursal y rango de fechas."
       />
 
+
+      {actionError ? (
+        <div className="mx-4 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 md:mx-8">
+          {actionError}
+        </div>
+      ) : null}
       <div className="md:hidden px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 dark:bg-[#161e27]/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
         <div className="grid grid-cols-1 gap-2">
           <select
@@ -332,13 +366,23 @@ export default function AuditoriasPage() {
                 </div>
               </div>
               {audit.status === "completed" ? (
-                <Link
-                  className="mt-3 inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-                  href={`/clientes/auditorias/${audit.id}/informe`}
-                >
-                  Ver informe
-                  <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                </Link>
+                <div className="mt-3 flex items-center gap-2">
+                  <Link
+                    className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                    href={`/clientes/auditorias/${audit.id}/informe`}
+                  >
+                    Ver informe
+                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                  </Link>
+                  <button
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:text-slate-200"
+                    onClick={() => void downloadAuditReport(audit.id)}
+                    type="button"
+                  >
+                    Descargar PDF
+                    <span className="material-symbols-outlined text-[14px]">download</span>
+                  </button>
+                </div>
               ) : null}
             </article>
           );
@@ -499,6 +543,14 @@ export default function AuditoriasPage() {
                               <Link className="list-action-btn hover:text-professional-green" href={`/clientes/auditorias/${audit.id}/informe`} title="Ver informe">
                                 <span className="material-symbols-outlined text-[20px]">visibility</span>
                               </Link>
+                              <button
+                                className="list-action-btn hover:text-blue-600"
+                                onClick={() => void downloadAuditReport(audit.id)}
+                                title="Descargar informe en PDF"
+                                type="button"
+                              >
+                                <span className="material-symbols-outlined text-[20px]">download</span>
+                              </button>
                             </div>
                           ) : (
                             <div className="flex items-center justify-end">
