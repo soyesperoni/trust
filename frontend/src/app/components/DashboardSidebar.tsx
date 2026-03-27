@@ -80,7 +80,7 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
           collapsed ? "justify-center" : "justify-start"
         }`}
       >
-        <BrandLogo compact={collapsed} size={collapsed ? "lg" : "xl"} className={collapsed ? "" : "origin-left"} />
+        <BrandLogo compact={collapsed} size={collapsed ? "lg" : "xl"} className={collapsed ? "" : "origin-left scale-110"} />
         <button
           aria-label={collapsed ? "Expandir menú" : "Minimizar menú"}
           className="absolute right-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
