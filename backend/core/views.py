@@ -1932,6 +1932,7 @@ def dashboard(request):
         "dispensers": dispensers.count(),
         "products": products.count(),
         "visits": visits.count(),
+        "completed_visits": completed_visits.count(),
         "pending_visits": scheduled_visits_queryset.count(),
         "overdue_visits": overdue_visits_queryset.count(),
         "incidents": incidents.count(),
