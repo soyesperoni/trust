@@ -43,12 +43,6 @@ const getLocalDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getScoreColor = (score: number) => {
-  if (score >= 85) return { solid: "#16a34a", light: "#4ade80", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300" };
-  if (score >= 70) return { solid: "#2563eb", light: "#60a5fa", badge: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" };
-  return { solid: "#6b7280", light: "#d1d5db", badge: "bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-200" };
-};
-
 export default function DashboardPage() {
   const { user } = useCurrentUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -146,7 +140,6 @@ export default function DashboardPage() {
   );
 
   const complianceScore = useMemo(() => Math.round(stats?.compliance_score ?? stats?.audit_score ?? 0), [stats?.audit_score, stats?.compliance_score]);
-  const complianceScoreColor = useMemo(() => getScoreColor(complianceScore), [complianceScore]);
   const pendingVisitsTotal = useMemo(() => stats?.pending_visits ?? 0, [stats?.pending_visits]);
   const scheduledAuditsTotal = useMemo(() => stats?.scheduled_audits ?? 0, [stats?.scheduled_audits]);
   const incidentsTotal = useMemo(() => stats?.incidents ?? 0, [stats?.incidents]);
@@ -439,11 +432,6 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-bold text-slate-900 sm:text-lg dark:text-white">Tendencia diaria de cumplimiento</h3>
-                  {!isLoading && (
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${complianceScoreColor.badge}`}>
-                      Cumplimiento: {complianceScore}%
-                    </span>
-                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {[
