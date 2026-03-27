@@ -71,6 +71,9 @@ export default function AreasPage() {
 
   const [areas, setAreas] = useState<AreaRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | AreaStatus>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -158,16 +161,31 @@ export default function AreasPage() {
     }
   };
 
+  const uniqueClients = useMemo(
+    () => Array.from(new Set(areas.map((area) => area.client))).sort((a, b) => a.localeCompare(b)),
+    [areas],
+  );
+  const uniqueBranches = useMemo(
+    () => Array.from(new Set(areas.map((area) => area.branch))).sort((a, b) => a.localeCompare(b)),
+    [areas],
+  );
+
   const filteredAreas = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return areas;
+    return areas.filter((area) => {
+      const matchesQuery =
+        !query ||
+        [area.name, area.branch, area.client, area.status, String(area.id)].some((value) =>
+          value.toLowerCase().includes(query),
+        );
 
-    return areas.filter((area) =>
-      [area.name, area.branch, area.client, area.status, String(area.id)].some((value) =>
-        value.toLowerCase().includes(query),
-      ),
-    );
-  }, [areas, searchTerm]);
+      const matchesClient = !clientFilter || area.client === clientFilter;
+      const matchesBranch = !branchFilter || area.branch === branchFilter;
+      const matchesStatus = !statusFilter || area.status === statusFilter;
+
+      return matchesQuery && matchesClient && matchesBranch && matchesStatus;
+    });
+  }, [areas, branchFilter, clientFilter, searchTerm, statusFilter]);
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando áreas...";
@@ -185,7 +203,7 @@ export default function AreasPage() {
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
             <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
               {canManageAreas ? (
                 <Link
@@ -209,25 +227,41 @@ export default function AreasPage() {
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <select className="list-filter-select">
-                  <option value="">Todos los Estados</option>
-                  <option value="activo">Activo</option>
-                  <option value="mantenimiento">Mantenimiento</option>
-                  <option value="inactivo">Inactivo</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                  <span className="material-symbols-outlined text-[20px]">
-                    expand_more
-                  </span>
-                </div>
-              </div>
-              <button className="list-filter-button">
-                <span className="material-symbols-outlined text-[20px]">
-                  filter_list
-                </span>
-              </button>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={clientFilter}
+                onChange={(event) => setClientFilter(event.target.value)}
+              >
+                <option value="">Todos los clientes</option>
+                {uniqueClients.map((client) => (
+                  <option key={client} value={client}>
+                    {client}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={branchFilter}
+                onChange={(event) => setBranchFilter(event.target.value)}
+              >
+                <option value="">Todas las sucursales</option>
+                {uniqueBranches.map((branch) => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as "" | AreaStatus)}
+              >
+                <option value="">Todos los estados</option>
+                <option value="Activo">Activo</option>
+                <option value="Mantenimiento">Mantenimiento</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
             </div>
           </div>
           <div className="overflow-x-auto flex-1">

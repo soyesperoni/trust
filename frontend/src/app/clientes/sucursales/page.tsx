@@ -77,6 +77,9 @@ export default function SucursalesPage() {
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | Branch["status"]>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingBranchId, setDeletingBranchId] = useState<number | null>(null);
@@ -191,20 +194,30 @@ export default function SucursalesPage() {
       setDeletingBranchId(null);
     }
   };
+  const uniqueClients = useMemo(
+    () => Array.from(new Set(branches.map((branch) => branch.client))).sort((a, b) => a.localeCompare(b)),
+    [branches],
+  );
+  const uniqueCities = useMemo(
+    () => Array.from(new Set(branches.map((branch) => branch.city))).sort((a, b) => a.localeCompare(b)),
+    [branches],
+  );
+
   const filteredBranches = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return branches;
+    return branches.filter((branch) => {
+      const matchesQuery =
+        !query ||
+        [branch.name, branch.client, branch.city, branch.status, String(branch.id)].some((value) =>
+          value.toLowerCase().includes(query),
+        );
+      const matchesClient = !clientFilter || branch.client === clientFilter;
+      const matchesCity = !cityFilter || branch.city === cityFilter;
+      const matchesStatus = !statusFilter || branch.status === statusFilter;
 
-    return branches.filter((branch) =>
-      [
-        branch.name,
-        branch.client,
-        branch.city,
-        branch.status,
-        String(branch.id),
-      ].some((value) => value.toLowerCase().includes(query)),
-    );
-  }, [branches, searchTerm]);
+      return matchesQuery && matchesClient && matchesCity && matchesStatus;
+    });
+  }, [branches, cityFilter, clientFilter, searchTerm, statusFilter]);
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando sucursales...";
@@ -222,7 +235,7 @@ export default function SucursalesPage() {
       />
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
             <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
               {canManageBranches ? (
                 <Link
@@ -246,24 +259,40 @@ export default function SucursalesPage() {
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <select className="list-filter-select">
-                  <option value="">Todos los Estados</option>
-                  <option value="activa">Activa</option>
-                  <option value="inactiva">Inactiva</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                  <span className="material-symbols-outlined text-[20px]">
-                    expand_more
-                  </span>
-                </div>
-              </div>
-              <button className="list-filter-button">
-                <span className="material-symbols-outlined text-[20px]">
-                  filter_list
-                </span>
-              </button>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={clientFilter}
+                onChange={(event) => setClientFilter(event.target.value)}
+              >
+                <option value="">Todos los clientes</option>
+                {uniqueClients.map((client) => (
+                  <option key={client} value={client}>
+                    {client}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={cityFilter}
+                onChange={(event) => setCityFilter(event.target.value)}
+              >
+                <option value="">Todas las ciudades</option>
+                {uniqueCities.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as "" | Branch["status"])}
+              >
+                <option value="">Todos los estados</option>
+                <option value="Activa">Activa</option>
+                <option value="Inactiva">Inactiva</option>
+              </select>
             </div>
           </div>
           <div className="overflow-x-auto flex-1">
