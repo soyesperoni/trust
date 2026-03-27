@@ -14,7 +14,7 @@ import {
   isBranchAdminAllowedPath,
   isInspectorAllowedPath,
 } from "../lib/permissions";
-import { getSessionUserEmail, SESSION_USER_UPDATED_EVENT } from "../lib/session";
+import { hasSessionUser, SESSION_USER_UPDATED_EVENT } from "../lib/session";
 import DashboardSidebar from "./DashboardSidebar";
 import MobileBottomNav from "./MobileBottomNav";
 
@@ -76,8 +76,8 @@ export default function AppShell({ children }: AppShellProps) {
         window.removeEventListener(SESSION_USER_UPDATED_EVENT, handleChange);
       };
     },
-    () => (isPublicPage ? true : Boolean(getSessionUserEmail())),
-    () => (isPublicPage ? true : false),
+    () => (isPublicPage ? true : hasSessionUser()),
+    () => isPublicPage,
   );
 
   useEffect(() => {

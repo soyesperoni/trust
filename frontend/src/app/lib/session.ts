@@ -7,16 +7,40 @@ const notifySessionChange = () => {
   window.dispatchEvent(new Event(SESSION_USER_UPDATED_EVENT));
 };
 
-export const getSessionUserEmail = () => {
-  if (typeof window === "undefined") return "";
+const getSessionUserRaw = () => {
+  if (typeof window === "undefined") return null;
+
   try {
     const raw = window.localStorage.getItem(SESSION_USER_KEY);
-    if (!raw) return "";
-    const parsed = JSON.parse(raw) as { email?: string };
-    return parsed.email?.trim() ?? "";
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as {
+      email?: string;
+      full_name?: string;
+      id?: number;
+    };
+
+    return parsed && typeof parsed === "object" ? parsed : null;
   } catch {
-    return "";
+    return null;
   }
+};
+
+export const hasSessionUser = () => {
+  const parsed = getSessionUserRaw();
+  if (!parsed) return false;
+
+  const hasEmail = typeof parsed.email === "string" && parsed.email.trim().length > 0;
+  const hasName = typeof parsed.full_name === "string" && parsed.full_name.trim().length > 0;
+  const hasId = typeof parsed.id === "number" && Number.isFinite(parsed.id) && parsed.id > 0;
+
+  return hasEmail || hasName || hasId;
+};
+
+export const getSessionUserEmail = () => {
+  const parsed = getSessionUserRaw();
+  if (!parsed) return "";
+  return parsed.email?.trim() ?? "";
 };
 
 export const setSessionUser = (user: unknown) => {

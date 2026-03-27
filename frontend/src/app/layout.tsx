@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   title: "Trust - Inicio de Sesión",
   description: "Inicia sesión para gestionar tus mantenimientos.",
   icons: {
-    icon: "/icono_app.png",
-    shortcut: "/icono_app.png",
-    apple: "/icono_app.png",
+    icon: [{ url: "/icono_app.png?v=1", type: "image/png" }],
+    shortcut: ["/icono_app.png?v=1"],
+    apple: [{ url: "/icono_app.png?v=1", type: "image/png" }],
   },
 };
 
@@ -35,6 +35,7 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+        <link rel="icon" type="image/png" href="/icono_app.png?v=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
