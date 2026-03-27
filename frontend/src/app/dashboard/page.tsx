@@ -147,54 +147,6 @@ export default function DashboardPage() {
   const pendingVisitsTotal = useMemo(() => stats?.pending_visits ?? 0, [stats?.pending_visits]);
   const scheduledAuditsTotal = useMemo(() => stats?.scheduled_audits ?? 0, [stats?.scheduled_audits]);
   const incidentsTotal = useMemo(() => stats?.incidents ?? 0, [stats?.incidents]);
-  const scoreBreakdown = useMemo(() => {
-    const completedVisits = stats?.completed_visits ?? 0;
-    const completedAudits = stats?.completed_audits ?? 0;
-    const overdueVisits = stats?.overdue_visits ?? 0;
-    const overdueAudits = stats?.overdue_audits ?? 0;
-    const openIncidents = stats?.incidents ?? 0;
-
-    const compliantTotal = completedVisits + completedAudits;
-    const nonCompliantTotal = overdueVisits + overdueAudits + openIncidents;
-    const totalEvents = compliantTotal + nonCompliantTotal;
-    const gapFromHundred = Math.max(0, Number((100 - complianceScore).toFixed(2)));
-
-    const factors = [
-      {
-        key: "overdue_visits",
-        count: overdueVisits,
-      },
-      {
-        key: "overdue_audits",
-        count: overdueAudits,
-      },
-      {
-        key: "incidents",
-        count: openIncidents,
-      },
-    ].map((factor) => {
-      const impactOnTotal = totalEvents > 0 ? Number(((factor.count / totalEvents) * 100).toFixed(2)) : 0;
-      return {
-        ...factor,
-        impactOnTotal,
-      };
-    });
-
-    return {
-      nonCompliantTotal,
-      totalEvents,
-      gapFromHundred,
-      factors,
-    };
-  }, [
-    complianceScore,
-    stats?.completed_audits,
-    stats?.completed_visits,
-    stats?.incidents,
-    stats?.overdue_audits,
-    stats?.overdue_visits,
-  ]);
-
   const scoreBars = useMemo(() => {
     const sanitized = dailyComplianceScoreHistory
       .map((entry) => {
@@ -314,15 +266,6 @@ export default function DashboardPage() {
     return values;
   }, [dailyComplianceScoreHistory, scoreRange]);
 
-  const factorImpacts = useMemo(
-    () => ({
-      overdueVisits: scoreBreakdown.factors.find((factor) => factor.key === "overdue_visits")?.impactOnTotal ?? 0,
-      overdueAudits: scoreBreakdown.factors.find((factor) => factor.key === "overdue_audits")?.impactOnTotal ?? 0,
-      incidents: scoreBreakdown.factors.find((factor) => factor.key === "incidents")?.impactOnTotal ?? 0,
-    }),
-    [scoreBreakdown.factors],
-  );
-
   useEffect(() => {
     setScoreChartAnimationKey((current) => current + 1);
     setBarAnimationProgress(0);
@@ -400,62 +343,52 @@ export default function DashboardPage() {
                       </div>
                       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
-                          <p className="flex items-baseline gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent">
+                          <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
                             <span className="text-4xl font-black leading-none sm:text-5xl">
                               {isLoading ? "..." : animatedPendingVisits}
                             </span>
-                            <span className="text-xs font-semibold uppercase tracking-[0.08em]">visitas programadas</span>
-                          </p>
-                          <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                            Pendientes por realizar.
-                          </p>
+                            <span className="text-4xl font-black leading-none sm:text-5xl">visitas</span>
+                            <span className="text-4xl font-black leading-none sm:text-5xl">programadas</span>
+                          </div>
                         </article>
                         <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
-                          <p className="flex items-baseline gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent">
+                          <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
                             <span className="text-4xl font-black leading-none sm:text-5xl">
                               {isLoading ? "..." : animatedScheduledAudits}
                             </span>
-                            <span className="text-xs font-semibold uppercase tracking-[0.08em]">auditorías pendientes</span>
-                          </p>
-                          <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                            Programadas por ejecutar.
-                          </p>
+                            <span className="text-4xl font-black leading-none sm:text-5xl">auditorías</span>
+                            <span className="text-4xl font-black leading-none sm:text-5xl">pendientes</span>
+                          </div>
                         </article>
                       </div>
                     </div>
                     <div className="grid w-full grid-cols-1 gap-3">
                       <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
-                        <p className="flex items-baseline gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent">
+                        <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
                           <span className="text-4xl font-black leading-none sm:text-5xl">
                             {isLoading ? "..." : animatedOverdueVisits}
                           </span>
-                          <span className="text-xs font-semibold uppercase tracking-[0.08em]">visitas vencidas</span>
-                        </p>
-                        <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                          Impacto: {factorImpacts.overdueVisits.toFixed(2)}%
-                        </p>
+                          <span className="text-4xl font-black leading-none sm:text-5xl">visitas</span>
+                          <span className="text-4xl font-black leading-none sm:text-5xl">vencidas</span>
+                        </div>
                       </article>
                       <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
-                        <p className="flex items-baseline gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent">
+                        <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
                           <span className="text-4xl font-black leading-none sm:text-5xl">
                             {isLoading ? "..." : animatedOverdueAudits}
                           </span>
-                          <span className="text-xs font-semibold uppercase tracking-[0.08em]">auditorías vencidas</span>
-                        </p>
-                        <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                          Impacto: {factorImpacts.overdueAudits.toFixed(2)}%
-                        </p>
+                          <span className="text-4xl font-black leading-none sm:text-5xl">auditorías</span>
+                          <span className="text-4xl font-black leading-none sm:text-5xl">vencidas</span>
+                        </div>
                       </article>
                       <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
-                        <p className="flex items-baseline gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent">
+                        <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
                           <span className="text-4xl font-black leading-none sm:text-5xl">
                             {isLoading ? "..." : animatedIncidents}
                           </span>
-                          <span className="text-xs font-semibold uppercase tracking-[0.08em]">incidencias activas</span>
-                        </p>
-                        <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                          Impacto: {factorImpacts.incidents.toFixed(2)}%
-                        </p>
+                          <span className="text-4xl font-black leading-none sm:text-5xl">incidencias</span>
+                          <span className="text-4xl font-black leading-none sm:text-5xl">activas</span>
+                        </div>
                       </article>
                     </div>
                   </div>
