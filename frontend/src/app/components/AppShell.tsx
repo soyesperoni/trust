@@ -61,6 +61,11 @@ export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading } = useCurrentUser();
+  const isHydrated = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
   const isMobileIncidentCreation = pathname === "/clientes/incidencias/nueva";
   const isMobileVisitFlow = pathname.includes("/clientes/visitas/") && pathname.endsWith("/realizar");
   const isPublicVisitReport = pathname.startsWith("/visits/report/public/");
@@ -77,11 +82,11 @@ export default function AppShell({ children }: AppShellProps) {
       };
     },
     () => (isPublicPage ? true : hasSessionUser()),
-    () => isPublicPage,
+    () => true,
   );
 
   useEffect(() => {
-    if (!pathname || isLoading || isPublicPage) return;
+    if (!isHydrated || !pathname || isLoading || isPublicPage) return;
     if (hasSession === false) {
       router.replace("/");
       return;
@@ -98,13 +103,13 @@ export default function AppShell({ children }: AppShellProps) {
     if (user?.role === INSPECTOR_ROLE && !isInspectorAllowedPath(pathname)) {
       router.replace("/dashboard");
     }
-  }, [hasSession, isLoading, isPublicPage, pathname, router, user?.role]);
+  }, [hasSession, isHydrated, isLoading, isPublicPage, pathname, router, user?.role]);
 
   if (!pathname || isPublicPage) {
     return <>{children}</>;
   }
 
-  if (!hasSession) return null;
+  if (!isHydrated || !hasSession) return null;
 
   const activePath = resolveActivePath(pathname);
 
