@@ -6,6 +6,7 @@ export const GENERAL_ADMIN_ROLE = "general_admin";
 export const DASHBOARD_RESTRICTED_ROLES = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE];
 
 const ACCOUNT_ADMIN_BLOCKED_PATH_PREFIXES = [
+  "/clientes/auditorias/plantillas",
   "/clientes/sucursales/nueva",
   "/clientes/areas/nueva",
   "/clientes/calendario/nueva",
@@ -14,6 +15,7 @@ const ACCOUNT_ADMIN_BLOCKED_PATH_PREFIXES = [
 ];
 
 const BRANCH_ADMIN_BLOCKED_PATH_PREFIXES = [
+  "/clientes/auditorias/plantillas",
   "/clientes/sucursales",
   "/clientes/areas/nueva",
   "/clientes/calendario/nueva",

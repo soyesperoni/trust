@@ -38,7 +38,7 @@ const navItems: NavItem[] = [
   { icon: "history", label: "Visitas", href: "/clientes/visitas", accountAdminOnly: true, branchAdminOnly: true },
   { icon: "report_problem", label: "Incidencias", href: "/clientes/incidencias", accountAdminOnly: true, branchAdminOnly: true },
   { icon: "assignment_turned_in", label: "Auditorías", href: "/clientes/auditorias", accountAdminOnly: true, branchAdminOnly: true },
-  { icon: "fact_check", label: "Plantillas", href: "/clientes/auditorias/plantillas", accountAdminOnly: true, branchAdminOnly: true },
+  { icon: "fact_check", label: "Plantillas", href: "/clientes/auditorias/plantillas" },
 ];
 
 const linkClassName = (isActive: boolean, collapsed: boolean) =>
