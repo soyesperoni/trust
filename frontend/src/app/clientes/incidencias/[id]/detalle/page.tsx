@@ -125,8 +125,8 @@ export default function IncidentDetailPage() {
 
         {incident ? (
           <>
-            <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-6 shadow-card dark:border-slate-700 dark:from-[#18222d] dark:via-[#121b25] dark:to-[#0f172a]">
-              <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
+            <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-[linear-gradient(140deg,rgba(255,255,255,0.94)_0%,rgba(59,130,246,0.08)_40%,rgba(16,185,129,0.1)_100%)] p-6 shadow-[0_22px_55px_-26px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700 dark:bg-[linear-gradient(140deg,rgba(15,23,42,0.95)_0%,rgba(37,99,235,0.26)_45%,rgba(16,185,129,0.22)_100%)]">
+              <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr] lg:items-start">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-300">Trust • Incidencias</p>
                   <h1 className="mt-3 text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">Incidencia #{incident.id}</h1>
