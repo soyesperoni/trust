@@ -326,7 +326,7 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
     <>
       <DashboardHeader title="Informe de visita" description="Detalle visual y técnico de la visita registrada." />
 
-      <section className="mx-auto w-full max-w-[1400px] flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8">
+      <section className="mx-auto w-full max-w-[1400px] flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8 report-mode">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-[#1a232e] dark:text-slate-200"
@@ -343,6 +343,50 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
             <span className="material-symbols-outlined text-[18px]">download</span>
             Descargar PDF
           </button>
+        </div>
+
+        <article className="report-sheet report-cover mb-6 flex flex-col justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-slate-200">Trust · Informe Corporativo</p>
+            <h1 className="mt-6 text-5xl font-semibold leading-tight">Informe de Visita Técnica</h1>
+            <p className="mt-6 max-w-xl text-base text-slate-100">Reporte ejecutivo con enfoque operativo y trazabilidad para toma de decisiones.</p>
+          </div>
+          <div className="space-y-2 text-sm text-slate-100">
+            <p><span className="font-semibold">Cliente:</span> {visit.client || "Sin cliente"}</p>
+            <p><span className="font-semibold">Sucursal:</span> {visit.branch}</p>
+            <p><span className="font-semibold">Fecha:</span> {formattedDate}</p>
+            <p><span className="font-semibold">Inspector:</span> {visit.inspector || "Sin inspector"}</p>
+          </div>
+        </article>
+
+        <div className="report-sheet report-page-break mb-6">
+          <div className="report-divider pt-4">
+            <h2 className="text-xl font-semibold">Resumen ejecutivo</h2>
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="border border-slate-300 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Estado</p>
+                <p className="mt-1 text-lg font-semibold">{visit.status === "completed" ? "Finalizada" : "Programada"}</p>
+              </div>
+              <div className="border border-slate-300 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Evidencias</p>
+                <p className="mt-1 text-lg font-semibold">{imageMedia.length + videoMedia.length}</p>
+              </div>
+              <div className="border border-slate-300 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Dosificadores revisados</p>
+                <p className="mt-1 text-lg font-semibold">{dispenserEvidence.length}</p>
+              </div>
+            </div>
+            <div className="mt-6 space-y-3">
+              <div>
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Cobertura de checklist</p>
+                <div className="report-chart-bar"><span style={{ width: `${Math.min(100, Math.max(8, dispenserEvidence.length * 12))}%` }} /></div>
+              </div>
+              <div>
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Registro multimedia</p>
+                <div className="report-chart-bar"><span style={{ width: `${Math.min(100, Math.max(6, (imageMedia.length + videoMedia.length) * 10))}%` }} /></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-3">
