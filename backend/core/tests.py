@@ -740,6 +740,31 @@ class HierarchicalAccessScopeTests(TestCase):
         )
         self.assertEqual(second_response.status_code, 400)
 
+    def test_dashboard_pending_visits_counts_all_scheduled_visits(self):
+        now = timezone.now()
+        scheduled_before = Visit.objects.filter(status=Visit.Status.SCHEDULED).count()
+
+        Visit.objects.create(
+            area=self.area_a1,
+            status=Visit.Status.SCHEDULED,
+            visited_at=now - timedelta(days=1),
+        )
+        Visit.objects.create(
+            area=self.area_a1,
+            status=Visit.Status.SCHEDULED,
+            visited_at=now + timedelta(days=1),
+        )
+        Visit.objects.create(
+            area=self.area_a1,
+            status=Visit.Status.COMPLETED,
+            visited_at=now,
+        )
+
+        response = self.client.get("/api/dashboard/")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["stats"]["pending_visits"], scheduled_before + 2)
+
     def test_dashboard_returns_daily_audit_score_history(self):
         form = AuditForm.objects.create(name="Checklist", schema={"questions": []})
         base_date = timezone.now()

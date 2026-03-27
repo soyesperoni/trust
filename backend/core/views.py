@@ -1845,9 +1845,10 @@ def dashboard(request):
             }
         )
 
-    pending_visits_queryset = visits.filter(
-        status=Visit.Status.SCHEDULED, visited_at__gte=now
-    ).order_by("visited_at")
+    scheduled_visits_queryset = visits.filter(status=Visit.Status.SCHEDULED)
+    pending_visits_queryset = scheduled_visits_queryset.filter(visited_at__gte=now).order_by(
+        "visited_at"
+    )
     scheduled_audits_queryset = audits.filter(
         status=Audit.Status.SCHEDULED, audited_at__gte=now
     ).order_by("audited_at")
@@ -1895,7 +1896,7 @@ def dashboard(request):
         "dispensers": dispensers.count(),
         "products": products.count(),
         "visits": visits.count(),
-        "pending_visits": pending_visits_queryset.count(),
+        "pending_visits": scheduled_visits_queryset.count(),
         "incidents": incidents.count(),
         "audits": audits.count(),
         "completed_audits": completed_audits.count(),
