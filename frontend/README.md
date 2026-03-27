@@ -34,3 +34,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Reportes PDF (visitas y auditorías)
+
+Los endpoints de descarga de informes en `/api/visits/:id/report` y `/api/audits/:id/report` ahora priorizan el renderizador Puppeteer del backend.
+
+- `REPORT_RENDERER=puppeteer` (default): intenta primero `.../report-puppeteer.pdf` y hace fallback a `.../report.pdf` / `.../report`.
+- Cualquier otro valor: usa directamente los endpoints PDF heredados (`.../report.pdf` / `.../report`).

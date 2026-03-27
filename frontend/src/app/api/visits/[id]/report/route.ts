@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBackendBaseUrl } from "../../../../lib/backend";
+import { isPuppeteerReportRenderer } from "../../../../lib/reportRenderer";
 
 const backendBaseUrl = getBackendBaseUrl();
 
@@ -16,11 +17,16 @@ export async function GET(request: NextRequest, { params }: Params) {
     Accept: "application/pdf",
   };
 
-  // Backward compatibility: older backends expose /report and newer ones /report.pdf.
-  const candidateUrls = [
-    `${backendBaseUrl}/api/visits/${id}/report.pdf`,
-    `${backendBaseUrl}/api/visits/${id}/report`,
-  ];
+  const candidateUrls = isPuppeteerReportRenderer()
+    ? [
+        `${backendBaseUrl}/api/visits/${id}/report-puppeteer.pdf`,
+        `${backendBaseUrl}/api/visits/${id}/report.pdf`,
+        `${backendBaseUrl}/api/visits/${id}/report`,
+      ]
+    : [
+        `${backendBaseUrl}/api/visits/${id}/report.pdf`,
+        `${backendBaseUrl}/api/visits/${id}/report`,
+      ];
 
   let response: Response | null = null;
   for (const candidateUrl of candidateUrls) {
