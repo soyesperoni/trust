@@ -374,8 +374,8 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-12 gap-4 xl:gap-5">
-            <article className="col-span-12 xl:col-span-4 2xl:col-span-3 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch xl:gap-5">
+            <article className="w-full rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 xl:w-auto xl:flex-shrink-0 dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex h-full min-h-[18rem] flex-col rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-4 text-center sm:min-h-[22rem] sm:p-6 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
                 <div className="flex flex-1 flex-col items-center justify-center">
                   <div className="mt-4 flex w-full flex-col items-center justify-center gap-3 xl:flex-row xl:items-start xl:justify-between xl:gap-6">
@@ -428,7 +428,7 @@ export default function DashboardPage() {
               </div>
             </article>
 
-            <article className="col-span-12 xl:col-span-8 2xl:col-span-9 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
+            <article className="w-full rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 xl:min-w-0 xl:flex-1 dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-bold text-slate-900 sm:text-lg dark:text-white">Tendencia diaria de cumplimiento</h3>
@@ -455,7 +455,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-5 overflow-x-auto rounded-2xl bg-gradient-to-b from-white to-slate-50 p-2 sm:p-3 dark:from-slate-900/55 dark:to-slate-900/35">
-                <div className="relative h-64 w-full min-w-[460px] max-w-4xl sm:h-72 sm:min-w-[520px] lg:min-w-0 lg:max-w-3xl xl:max-w-4xl mx-auto">
+                <div className="relative h-64 w-full min-w-[460px] sm:h-72 sm:min-w-[520px] lg:min-w-0">
                   <div className="absolute inset-0">
                     {[100, 75, 50, 25, 0].map((tick) => (
                       <div key={tick} className="absolute inset-x-0" style={{ bottom: `${tick}%` }}>
@@ -488,7 +488,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 </div>
-                <div className="mt-2 grid min-w-[460px] max-w-4xl grid-cols-6 gap-2 sm:min-w-[520px] lg:min-w-0 lg:max-w-3xl xl:max-w-4xl mx-auto">
+                <div className="mt-2 grid min-w-[460px] grid-cols-6 gap-2 sm:min-w-[520px] lg:min-w-0">
                   {scoreBars.map((item, index) => (
                     <span key={`${item.label}-${index}`} className="truncate text-center text-[11px] font-semibold text-slate-500 dark:text-slate-300">
                       {item.label}
