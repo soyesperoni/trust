@@ -19,17 +19,24 @@ export async function GET(request: NextRequest, { params }: Params) {
   const candidateUrls = [
     `${backendBaseUrl}/api/visits/${id}/report-puppeteer`,
     `${backendBaseUrl}/api/visits/${id}/report-puppeteer.pdf`,
+    `${backendBaseUrl}/api/visits/${id}/report`,
+    `${backendBaseUrl}/api/visits/${id}/report/`,
+    `${backendBaseUrl}/api/visits/${id}/report.pdf`,
   ];
 
   let response: Response | null = null;
   for (const candidateUrl of candidateUrls) {
-    const candidateResponse = await fetch(candidateUrl, {
-      method: "GET",
-      headers: requestHeaders,
-    });
-    response = candidateResponse;
-    if (candidateResponse.ok || candidateResponse.status !== 404) {
-      break;
+    try {
+      const candidateResponse = await fetch(candidateUrl, {
+        method: "GET",
+        headers: requestHeaders,
+      });
+      response = candidateResponse;
+      if (candidateResponse.ok || candidateResponse.status !== 404) {
+        break;
+      }
+    } catch {
+      continue;
     }
   }
 
