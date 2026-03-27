@@ -346,27 +346,10 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
           </button>
         </div>
 
-        <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-[linear-gradient(140deg,rgba(255,255,255,0.94)_0%,rgba(59,130,246,0.08)_40%,rgba(16,185,129,0.1)_100%)] p-6 shadow-[0_22px_55px_-26px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700 dark:bg-[linear-gradient(140deg,rgba(15,23,42,0.95)_0%,rgba(37,99,235,0.26)_45%,rgba(16,185,129,0.22)_100%)]">
-          <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr] lg:items-start">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-300">Trust • Informe de visita</p>
-              <h1 className="mt-3 text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">Informe técnico de visita #{visit.id}</h1>
-              <p className="mt-3 max-w-3xl text-sm text-slate-600 dark:text-slate-300">Resumen ejecutivo con datos de ejecución, evidencia multimedia y estado de dosificadores en una vista de tarjetas moderna.</p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "80ms" }}>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Fecha</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{formattedDate}</p>
-              </div>
-              <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "140ms" }}>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Estado</p>
-                <p className="mt-1 text-sm font-semibold text-green-700 dark:text-green-300">{visit.status === "completed" ? "Finalizada" : "Programada"}</p>
-              </div>
-              <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "200ms" }}>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Evidencias</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{imageMedia.length + videoMedia.length}</p>
-              </div>
-            </div>
+        <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(14,165,233,0.06)_48%,rgba(16,185,129,0.08)_100%)] p-6 shadow-[0_22px_55px_-26px_rgba(15,23,42,0.35)] backdrop-blur-sm dark:border-slate-700/80 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.94)_0%,rgba(37,99,235,0.14)_50%,rgba(16,185,129,0.14)_100%)] md:p-7">
+          <div className="flex w-full flex-col items-start gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-300">Trust • Informe de visita</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">Informe técnico de visita #{visit.id}</h1>
           </div>
         </article>
 
