@@ -109,68 +109,60 @@ export default function PlantillasAuditoriaPage() {
         {error ? (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         ) : null}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <StatCard label="Total" value={String(templates.length)} />
-          <StatCard label="Activas" value={String(templates.filter((item) => item.is_active).length)} valueClassName="text-green-600" />
-          <StatCard label="Inactivas" value={String(templates.filter((item) => !item.is_active).length)} valueClassName="text-amber-500" />
-          <StatCard label="Áreas asignadas" value={String(templates.reduce((acc, item) => acc + item.areas_count, 0))} />
-        </div>
-
-        <div className="mt-6 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
-          {canManage ? (
-            <div className="mb-3 flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-              <Link
-                className="bg-professional-green text-white hover:bg-lime-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2 md:w-auto w-full justify-center md:justify-start"
-                href="/clientes/auditorias/plantillas/nueva"
+        <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
+            {canManage ? (
+              <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+                <Link
+                  className="bg-professional-green text-white hover:bg-lime-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2 md:w-auto w-full justify-center md:justify-start"
+                  href="/clientes/auditorias/plantillas/nueva"
+                >
+                  <span className="material-symbols-outlined text-[20px]">add</span>
+                  Crear plantilla
+                </Link>
+              </div>
+            ) : null}
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+              <div className="relative w-full md:w-96">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">search</span>
+                <input
+                  className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Nombre o categoría..."
+                  type="text"
+                  value={searchTerm}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setCategoryFilter(event.target.value)}
+                value={categoryFilter}
               >
-                <span className="material-symbols-outlined text-[20px]">add</span>
-                Crear plantilla
-              </Link>
-            </div>
-          ) : null}
-          <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-            <div className="relative w-full md:w-96">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">search</span>
-              <input
-                className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Nombre o categoría..."
-                type="text"
-                value={searchTerm}
-              />
-            </div>
-          </div>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <select
-              className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              value={categoryFilter}
-            >
-              <option value="">Todas las categorías</option>
-              {categoryOptions.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-            <select
-              className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-              onChange={(event) => setActiveFilter(event.target.value as StatusFilter)}
-              value={activeFilter}
-            >
-              {statusFilters.map((filter) => (
-                <option key={filter.value} value={filter.value}>
-                  {filter.label}
-                </option>
-              ))}
-            </select>
-            <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 px-1">
-              Mostrando {filteredTemplates.length} de {templates.length} plantillas
+                <option value="">Todas las categorías</option>
+                {categoryOptions.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setActiveFilter(event.target.value as StatusFilter)}
+                value={activeFilter}
+              >
+                {statusFilters.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </option>
+                ))}
+              </select>
+              <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 px-1">
+                Mostrando {filteredTemplates.length} de {templates.length} plantillas
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-6 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-card dark:border-slate-800 dark:bg-[#161e27]">
           <div className="custom-scrollbar overflow-x-auto">
             <table className="min-w-[900px] w-full border-collapse text-left text-sm">
               <thead>
@@ -244,14 +236,5 @@ export default function PlantillasAuditoriaPage() {
         </div>
       </PageTransition>
     </>
-  );
-}
-
-function StatCard({ label, value, valueClassName = "" }: { label: string; value: string; valueClassName?: string }) {
-  return (
-    <div className="bg-white dark:bg-[#161e27] p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-      <p className={`text-2xl font-black text-slate-900 dark:text-white ${valueClassName}`}>{value}</p>
-    </div>
   );
 }
