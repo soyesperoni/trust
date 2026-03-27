@@ -326,7 +326,7 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
     <>
       <DashboardHeader title="Informe de visita" description="Detalle visual y técnico de la visita registrada." />
 
-      <section className="mx-auto w-full max-w-[1400px] flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8 report-mode">
+      <section className="w-full flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-[#1a232e] dark:text-slate-200"
@@ -344,6 +344,30 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
             Descargar PDF
           </button>
         </div>
+
+        <article className="mb-6 overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-6 shadow-card dark:border-slate-700 dark:from-[#18222d] dark:via-[#121b25] dark:to-[#0f172a]">
+          <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-300">Trust • Informe de visita</p>
+              <h1 className="mt-3 text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">Informe técnico de visita #{visit.id}</h1>
+              <p className="mt-3 max-w-3xl text-sm text-slate-600 dark:text-slate-300">Resumen ejecutivo con datos de ejecución, evidencia multimedia y estado de dosificadores en una vista de tarjetas moderna.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Fecha</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{formattedDate}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Estado</p>
+                <p className="mt-1 text-sm font-semibold text-green-700 dark:text-green-300">{visit.status === "completed" ? "Finalizada" : "Programada"}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Evidencias</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{imageMedia.length + videoMedia.length}</p>
+              </div>
+            </div>
+          </div>
+        </article>
 
         <div className="grid gap-6 xl:grid-cols-3">
           <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-2">
