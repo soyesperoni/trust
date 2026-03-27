@@ -7,7 +7,6 @@ import DashboardHeader from "../../../../components/DashboardHeader";
 import { getSessionUserEmail } from "../../../../lib/session";
 
 type AuditMedia = { id: number; type: string; file: string | null };
-type MediaModal = { type: "image" | "video"; url: string } | null;
 type ExecutiveSection = {
   title: string;
   icon: string;
@@ -61,7 +60,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
   const [audit, setAudit] = useState<Audit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMedia, setSelectedMedia] = useState<MediaModal>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -415,44 +414,84 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
           </article>
 
           <article className="apple-card-enter rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3" style={{ animationDelay: "380ms" }}>
-            <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">Evidencias multimedia</h2>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
-              {photos.map((photo, index) => {
-                const photoUrl = toUrl(photo.file);
-                if (!photoUrl) return null;
-                return (
-                  <button key={photo.id} className="apple-card-enter group relative aspect-[9/16] w-full max-w-[170px] overflow-hidden rounded-lg border" onClick={() => setSelectedMedia({ type: "image", url: photoUrl })} style={{ animationDelay: `${440 + index * 50}ms` }} type="button">
-                    <img src={photoUrl} alt="Evidencia" className="h-full w-full object-contain bg-slate-100 dark:bg-slate-800" />
-                    <span className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">Ver</span>
-                  </button>
-                );
-              })}
+            <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+              <span className="material-symbols-outlined text-slate-400">photo_camera</span>
+              Evidencias fotográficas
+            </h2>
+            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              {photos.length > 0 ? (
+                photos.map((photo, index) => {
+                  const photoUrl = toUrl(photo.file);
+                  return (
+                    <button
+                      key={photo.id}
+                      className="apple-card-enter group relative aspect-[9/16] w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 text-left dark:border-slate-700"
+                      onClick={() => photoUrl && setSelectedImage(photoUrl)}
+                      style={{ animationDelay: `${440 + index * 50}ms` }}
+                      type="button"
+                    >
+                      {photoUrl ? (
+                        <img alt={`Evidencia ${index + 1}`} className="h-full w-full object-cover transition duration-200 group-hover:scale-105" src={photoUrl} />
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
+                          <span className="material-symbols-outlined text-4xl text-slate-400">image</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                        <p className="text-sm font-medium text-white">Evidencia #{index + 1}</p>
+                      </div>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="col-span-full rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400">
+                  No hay evidencias registradas.
+                </div>
+              )}
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {videos.map((video, index) => {
-                const videoUrl = toUrl(video.file);
-                if (!videoUrl) return null;
-                return (
-                  <button key={video.id} className="apple-card-enter relative aspect-[9/16] overflow-hidden rounded-lg border bg-black" onClick={() => setSelectedMedia({ type: "video", url: videoUrl })} style={{ animationDelay: `${500 + index * 60}ms` }} type="button">
-                    <video src={videoUrl} className="h-full w-full object-contain" />
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/25 text-white">▶</span>
-                  </button>
-                );
-              })}
-            </div>
+          </article>
+
+          <article className="apple-card-enter rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3" style={{ animationDelay: "440ms" }}>
+            <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+              <span className="material-symbols-outlined text-slate-400">videocam</span>
+              Evidencias en video
+            </h2>
+            {videos.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {videos.map((video, index) => {
+                  const videoUrl = toUrl(video.file);
+                  return (
+                    <div key={video.id} className="apple-card-enter overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900" style={{ animationDelay: `${500 + index * 60}ms` }}>
+                      {videoUrl ? (
+                        <video className="aspect-[9/16] w-full bg-black object-contain" controls preload="metadata" src={videoUrl} />
+                      ) : (
+                        <div className="flex aspect-[9/16] items-center justify-center">
+                          <span className="material-symbols-outlined text-4xl text-slate-400">movie</span>
+                        </div>
+                      )}
+                      <div className="border-t border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300">
+                        Video #{index + 1}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400">
+                No hay videos registrados.
+              </div>
+            )}
           </article>
         </div>
         </div>
       </section>
 
-      {selectedMedia ? (
+      {selectedImage ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true">
-          <button className="absolute right-4 top-4 rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-900" onClick={() => setSelectedMedia(null)} type="button">Cerrar</button>
-          {selectedMedia.type === "image" ? (
-            <img alt="Evidencia en pantalla completa" className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain" src={selectedMedia.url} />
-          ) : (
-            <video className="max-h-[90vh] max-w-[90vw] rounded-xl" controls autoPlay src={selectedMedia.url} />
-          )}
+          <button aria-label="Cerrar vista completa" className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white" onClick={() => setSelectedImage(null)} type="button">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+          <img alt="Evidencia en pantalla completa" className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain" src={selectedImage} />
         </div>
       ) : null}
     </>
