@@ -19,6 +19,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
   const candidateUrls = isPuppeteerReportRenderer()
     ? [
+        `${backendBaseUrl}/api/visits/${id}/report-puppeteer`,
         `${backendBaseUrl}/api/visits/${id}/report-puppeteer.pdf`,
         `${backendBaseUrl}/api/visits/${id}/report.pdf`,
         `${backendBaseUrl}/api/visits/${id}/report`,

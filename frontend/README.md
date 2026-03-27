@@ -39,5 +39,5 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 Los endpoints de descarga de informes en `/api/visits/:id/report` y `/api/audits/:id/report` ahora priorizan el renderizador Puppeteer del backend.
 
-- `REPORT_RENDERER=puppeteer` (default): intenta primero `.../report-puppeteer.pdf` y hace fallback a `.../report.pdf` / `.../report`.
+- `REPORT_RENDERER=puppeteer` (default): intenta primero `.../report-puppeteer` y `.../report-puppeteer.pdf`, y luego hace fallback a `.../report.pdf` / `.../report`.
 - Cualquier otro valor: usa directamente los endpoints PDF heredados (`.../report.pdf` / `.../report`).
