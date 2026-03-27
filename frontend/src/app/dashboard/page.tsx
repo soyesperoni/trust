@@ -317,12 +317,16 @@ export default function DashboardPage() {
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Visitas programadas</p>
-                    <p className="mt-2 text-3xl font-black leading-none text-slate-900 dark:text-white">{isLoading ? "..." : animatedPendingVisits}</p>
+                    <p className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent sm:text-5xl">
+                      {isLoading ? "..." : animatedPendingVisits}
+                    </p>
+                    <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Visitas programadas</p>
                   </article>
                   <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Auditorías pendientes</p>
-                    <p className="mt-2 text-3xl font-black leading-none text-slate-900 dark:text-white">{isLoading ? "..." : animatedScheduledAudits}</p>
+                    <p className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent sm:text-5xl">
+                      {isLoading ? "..." : animatedScheduledAudits}
+                    </p>
+                    <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Auditorías pendientes</p>
                   </article>
                 </div>
               </div>
