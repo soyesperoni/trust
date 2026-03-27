@@ -91,13 +91,13 @@ const typeStyles: Record<string, string> = {
 export default function AuditoriasPage() {
   const [audits, setAudits] = useState<AuditApi[]>([]);
   const [inspectors, setInspectors] = useState<User[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedInspector, setSelectedInspector] = useState("");
   const [activeFilter, setActiveFilter] = useState<(typeof mobileFilters)[number]["value"]>("finalizada");
+  const [animatedAverageScore, setAnimatedAverageScore] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -155,7 +155,6 @@ export default function AuditoriasPage() {
   );
 
   const filteredAudits = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
     return audits.filter((audit) => {
       const typeLabel = auditType(audit.status);
       const mappedFilter = typeLabel === "Programada" ? "programada" : "finalizada";
@@ -172,16 +171,9 @@ export default function AuditoriasPage() {
         ((!lowerBound || auditDate >= lowerBound) &&
           (!upperBound || auditDate <= upperBound));
 
-      const matchesQuery =
-        !query ||
-        [audit.client, audit.branch, audit.area, audit.form_name ?? "", audit.inspector, `#${audit.id}`]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-
-      return matchesFilter && matchesInspector && matchesClient && matchesBranch && matchesDateRange && matchesQuery;
+      return matchesFilter && matchesInspector && matchesClient && matchesBranch && matchesDateRange;
     });
-  }, [activeFilter, audits, endDate, searchTerm, selectedBranch, selectedClient, selectedInspector, startDate]);
+  }, [activeFilter, audits, endDate, selectedBranch, selectedClient, selectedInspector, startDate]);
 
   const stats = useMemo(() => {
     const completed = filteredAudits.filter((audit) => audit.status === "completed");
@@ -199,11 +191,35 @@ export default function AuditoriasPage() {
     return "No hay auditorías que coincidan con los filtros aplicados.";
   }, [error, isLoading]);
 
+  useEffect(() => {
+    if (isLoading) return;
+
+    let animationFrame = 0;
+    const duration = 1100;
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      setAnimatedAverageScore(Math.round(stats.average * easedProgress));
+
+      if (progress < 1) {
+        animationFrame = window.requestAnimationFrame(animate);
+      }
+    };
+
+    setAnimatedAverageScore(0);
+    animationFrame = window.requestAnimationFrame(animate);
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [isLoading, stats.average]);
+
   return (
     <>
       <DashboardHeader
         title="Historial de Auditorías"
-        description="Consulta auditorías realizadas y aplica filtros por inspector, estado, cliente, sucursal y rango de fechas. El score mostrado es generado por Trust AI según los filtros actuales."
+        description="Consulta auditorías realizadas y aplica filtros por inspector, estado, cliente, sucursal y rango de fechas."
       />
 
       <div className="md:hidden px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 dark:bg-[#161e27]/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
@@ -337,96 +353,88 @@ export default function AuditoriasPage() {
 
       <PageTransition className="hidden flex-1 flex-col overflow-y-auto md:flex">
         <div className="hidden shrink-0 px-4 pb-2 pt-6 md:block md:px-8">
-          <div className="mb-6">
-            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Score general de auditorías (Trust AI)</p>
-                <span className="text-xs text-slate-500">Basado en auditorías que puedes visualizar por permisos</span>
+          <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
+              <div className="flex w-full flex-col justify-center rounded-xl border border-slate-100 bg-gradient-to-b from-white to-slate-50 px-4 py-5 text-center dark:border-slate-700/60 dark:from-slate-900/60 dark:to-slate-900/30 xl:max-w-[290px]">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Score general</p>
+                <div className="mt-3 flex items-end justify-center gap-1">
+                  <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-6xl font-black leading-none text-transparent">
+                    {isLoading ? "..." : animatedAverageScore}
+                  </span>
+                  <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-1 text-2xl font-bold text-transparent">%</span>
+                </div>
+                <span className="mt-2 text-xs text-slate-500 dark:text-slate-400">Según auditorías visibles por tus permisos</span>
               </div>
-              <div className="mt-3"><ScoreGauge score={stats.average} /></div>
-            </div>
-          </div>
+              <div className="flex-1 rounded-xl border border-slate-100 p-3 dark:border-slate-700/60">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    onChange={(event) => setSelectedClient(event.target.value)}
+                    value={selectedClient}
+                  >
+                    <option value="">Todos los clientes</option>
+                    {clientOptions.map((client) => (
+                      <option key={client} value={client}>
+                        {client}
+                      </option>
+                    ))}
+                  </select>
 
-          <div className="mt-6 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
-            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-              <div className="relative w-full md:w-96">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">search</span>
-                <input
-                  className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Buscar auditoría..."
-                  type="text"
-                  value={searchTerm}
-                />
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    onChange={(event) => setSelectedBranch(event.target.value)}
+                    value={selectedBranch}
+                  >
+                    <option value="">Todas las sucursales</option>
+                    {branchOptions.map((branch) => (
+                      <option key={branch} value={branch}>
+                        {branch}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    onChange={(event) => setSelectedInspector(event.target.value)}
+                    value={selectedInspector}
+                  >
+                    <option value="">Todos los inspectores</option>
+                    {inspectors.map((inspector) => (
+                      <option key={inspector.id} value={inspector.full_name}>
+                        {inspector.full_name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    max={endDate || undefined}
+                    onChange={(event) => setStartDate(event.target.value)}
+                    type="date"
+                    value={startDate}
+                  />
+
+                  <input
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    min={startDate || undefined}
+                    onChange={(event) => setEndDate(event.target.value)}
+                    type="date"
+                    value={endDate}
+                  />
+
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm md:col-span-2 xl:col-span-5"
+                    onChange={(event) => setActiveFilter(event.target.value as (typeof mobileFilters)[number]["value"])}
+                    value={activeFilter}
+                  >
+                    {mobileFilters.map((filter) => (
+                      <option key={filter.value} value={filter.value}>
+                        {filter.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
-              <select
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                onChange={(event) => setSelectedClient(event.target.value)}
-                value={selectedClient}
-              >
-                <option value="">Todos los clientes</option>
-                {clientOptions.map((client) => (
-                  <option key={client} value={client}>
-                    {client}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                onChange={(event) => setSelectedBranch(event.target.value)}
-                value={selectedBranch}
-              >
-                <option value="">Todas las sucursales</option>
-                {branchOptions.map((branch) => (
-                  <option key={branch} value={branch}>
-                    {branch}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                onChange={(event) => setSelectedInspector(event.target.value)}
-                value={selectedInspector}
-              >
-                <option value="">Todos los inspectores</option>
-                {inspectors.map((inspector) => (
-                  <option key={inspector.id} value={inspector.full_name}>
-                    {inspector.full_name}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                max={endDate || undefined}
-                onChange={(event) => setStartDate(event.target.value)}
-                type="date"
-                value={startDate}
-              />
-
-              <input
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                min={startDate || undefined}
-                onChange={(event) => setEndDate(event.target.value)}
-                type="date"
-                value={endDate}
-              />
-
-              <select
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                onChange={(event) => setActiveFilter(event.target.value as (typeof mobileFilters)[number]["value"])}
-                value={activeFilter}
-              >
-                {mobileFilters.map((filter) => (
-                  <option key={filter.value} value={filter.value}>
-                    {filter.label}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
         </div>
