@@ -412,13 +412,13 @@ textarea {
 
 @keyframes ambient-lights-pulse {
   0% {
-    opacity: 0.42;
+    opacity: 0.38;
   }
   50% {
-    opacity: 0.68;
+    opacity: 0.6;
   }
   100% {
-    opacity: 0.44;
+    opacity: 0.4;
   }
 }
 
@@ -431,14 +431,92 @@ textarea {
 .login-lights-motion {
   animation:
     login-lights-intro 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards,
-    ambient-lights-glow 17s ease-in-out 900ms infinite,
-    ambient-lights-pulse 11s ease-in-out 900ms infinite;
+    ambient-lights-glow 18s ease-in-out 900ms infinite,
+    ambient-lights-pulse 12s ease-in-out 900ms infinite;
 }
 
 .dashboard-lights-motion {
   animation:
     ambient-lights-glow 18s ease-in-out infinite,
     ambient-lights-pulse 12s ease-in-out infinite;
+}
+
+.login-lights-layer {
+  background: radial-gradient(
+    circle at 50% 118%,
+    rgba(46, 49, 146, 0.42) 0%,
+    rgba(146, 185, 59, 0.34) 34%,
+    rgba(245, 247, 251, 0) 68%
+  );
+}
+
+.dark .login-lights-layer {
+  background: radial-gradient(
+    circle at 50% 118%,
+    rgba(46, 49, 146, 0.36) 0%,
+    rgba(146, 185, 59, 0.2) 38%,
+    rgba(10, 15, 20, 0) 68%
+  );
+}
+
+@media (max-width: 768px) {
+  .login-lights-layer {
+    background: radial-gradient(
+      circle at 50% 114%,
+      rgba(46, 49, 146, 0.48) 0%,
+      rgba(146, 185, 59, 0.38) 42%,
+      rgba(245, 247, 251, 0) 78%
+    );
+    transform-origin: 50% 100%;
+    transform: scale(1.08);
+  }
+
+  .dark .login-lights-layer {
+    background: radial-gradient(
+      circle at 50% 114%,
+      rgba(46, 49, 146, 0.4) 0%,
+      rgba(146, 185, 59, 0.24) 44%,
+      rgba(10, 15, 20, 0) 78%
+    );
+  }
+}
+
+.menu-lights-surface {
+  isolation: isolate;
+}
+
+@keyframes menu-lights-drift {
+  0% {
+    transform: translateX(-10px) scale(0.98);
+  }
+  50% {
+    transform: translateX(6px) scale(1.02);
+  }
+  100% {
+    transform: translateX(-8px) scale(0.99);
+  }
+}
+
+.menu-lights-motion {
+  background: radial-gradient(
+    90% 100% at 0% 50%,
+    rgba(46, 49, 146, 0.24) 0%,
+    rgba(146, 185, 59, 0.16) 42%,
+    rgba(255, 255, 255, 0) 78%
+  );
+  animation:
+    menu-lights-drift 20s ease-in-out infinite,
+    ambient-lights-pulse 14s ease-in-out infinite;
+  filter: saturate(1.05);
+}
+
+.dark .menu-lights-motion {
+  background: radial-gradient(
+    90% 100% at 0% 50%,
+    rgba(46, 49, 146, 0.26) 0%,
+    rgba(146, 185, 59, 0.16) 42%,
+    rgba(22, 30, 39, 0) 78%
+  );
 }
 
 .login-logo-intro {
@@ -489,6 +567,7 @@ textarea {
   .login-lights-intro,
   .login-lights-motion,
   .dashboard-lights-motion,
+  .menu-lights-motion,
   .login-logo-intro,
   .login-content-intro {
     animation: none;
