@@ -86,7 +86,7 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background-light font-display antialiased transition-colors duration-300 dark:bg-background-dark">
-      <div className="login-lights-intro pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.62)_0%,rgba(146,185,59,0.48)_36%,rgba(245,247,251,0)_68%)] dark:bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.5)_0%,rgba(146,185,59,0.32)_38%,rgba(10,15,20,0)_68%)]" />
+      <div className="login-lights-intro login-lights-motion pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.62)_0%,rgba(146,185,59,0.48)_36%,rgba(245,247,251,0)_68%)] dark:bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.5)_0%,rgba(146,185,59,0.32)_38%,rgba(10,15,20,0)_68%)]" />
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-4">
         <div className="flex w-full max-w-[322px] flex-col items-center gap-10">
           <BrandLogo size="xxl" className="login-logo-intro mb-4 scale-[1.56]" />
