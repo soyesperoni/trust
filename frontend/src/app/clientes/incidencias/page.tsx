@@ -62,12 +62,8 @@ const getInitials = (value: string) =>
     .join("");
 
 export default function IncidenciasPage() {
-  const { user, isLoading: isLoadingUser } = useCurrentUser();
+  const { user } = useCurrentUser();
   const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
-  const isInspector = user?.role === INSPECTOR_ROLE;
-  const canCreateIncident = !isInspector;
-  const canCreateIncidentsFromHeader =
-    !isLoadingUser && canCreateIncident && !isAccountAdmin;
   const canScheduleFromIncident = user?.role === GENERAL_ADMIN_ROLE || user?.role === INSPECTOR_ROLE;
 
   const [incidents, setIncidents] = useState<IncidentRow[]>([]);
@@ -246,30 +242,12 @@ export default function IncidenciasPage() {
           </div>
         ) : null}
 
-        {canCreateIncident ? (
-          <Link
-            aria-label="Crear incidencia"
-            className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-professional-green text-white shadow-lg transition-colors hover:bg-lime-600"
-            href="/clientes/incidencias/nueva"
-          >
-            <span className="material-symbols-outlined text-[28px]">add</span>
-          </Link>
-        ) : null}
       </section>
 
       <PageTransition className="hidden flex-1 flex-col overflow-y-auto md:flex">
         <div className="hidden shrink-0 px-4 pb-2 pt-6 md:block md:px-8">
           <div className="mt-6 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
             <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-              {canCreateIncidentsFromHeader ? (
-                <Link
-                  className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2"
-                  href="/clientes/incidencias/nueva"
-                >
-                  <span className="material-symbols-outlined text-[20px]">add</span>
-                  Nueva Incidencia
-                </Link>
-              ) : null}
               <div className="relative w-full md:w-96">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">
                   search
