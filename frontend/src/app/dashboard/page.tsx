@@ -390,7 +390,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="w-full rounded-xl border border-slate-200/80 bg-white/65 px-3 py-3 text-left xl:max-w-md dark:border-slate-700/70 dark:bg-slate-900/45">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
-                        Factores que influyen en el detalle
+                        Factores que influyen
                       </p>
                       <ul className="mt-2 space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
                         {scoreBreakdown.factors.map((factor) => (
