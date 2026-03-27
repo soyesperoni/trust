@@ -60,6 +60,8 @@ export default function ProductosPage() {
   const canDeleteProducts = !isLoadingUser && user?.role === GENERAL_ADMIN_ROLE;
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | ProductStatus>("");
+  const [modelFilter, setModelFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
@@ -145,21 +147,25 @@ export default function ProductosPage() {
       setDeletingProductId(null);
     }
   };
+  const uniqueModels = useMemo(
+    () => Array.from(new Set(products.map((product) => product.dispenserModel))).sort((a, b) => a.localeCompare(b)),
+    [products],
+  );
+
   const filteredProducts = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return products;
+    return products.filter((product) => {
+      const matchesQuery =
+        !query ||
+        [product.name, product.sku, product.description, product.dispenserCode, product.dispenserModel, product.status].some((value) =>
+          value.toLowerCase().includes(query),
+        );
+      const matchesStatus = !statusFilter || product.status === statusFilter;
+      const matchesModel = !modelFilter || product.dispenserModel === modelFilter;
 
-    return products.filter((product) =>
-      [
-        product.name,
-        product.sku,
-        product.description,
-        product.dispenserCode,
-        product.dispenserModel,
-        product.status,
-      ].some((value) => value.toLowerCase().includes(query)),
-    );
-  }, [products, searchTerm]);
+      return matchesQuery && matchesStatus && matchesModel;
+    });
+  }, [modelFilter, products, searchTerm, statusFilter]);
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando productos...";
@@ -181,7 +187,7 @@ export default function ProductosPage() {
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="bg-white dark:bg-[#161e27] rounded-xl shadow-card border border-slate-100 dark:border-slate-800 overflow-hidden h-full flex flex-col">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
             <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
               {canManageProducts ? (
                 <Link
@@ -204,6 +210,29 @@ export default function ProductosPage() {
                   onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={modelFilter}
+                onChange={(event) => setModelFilter(event.target.value)}
+              >
+                <option value="">Todos los modelos</option>
+                {uniqueModels.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as "" | ProductStatus)}
+              >
+                <option value="">Todos los estados</option>
+                <option value="Asignado">Asignado</option>
+                <option value="Sin asignar">Sin asignar</option>
+              </select>
             </div>
           </div>
           <div className="overflow-x-auto flex-1">
