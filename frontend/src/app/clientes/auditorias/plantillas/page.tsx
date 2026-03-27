@@ -103,17 +103,6 @@ export default function PlantillasAuditoriaPage() {
       <DashboardHeader
         title="Plantillas de Auditoría"
         description="Administra plantillas reutilizables por una o más áreas para ejecutar auditorías con el mismo estándar."
-        action={
-          canManage ? (
-            <Link
-              className="bg-professional-green text-white hover:bg-lime-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2"
-              href="/clientes/auditorias/plantillas/nueva"
-            >
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              Crear plantilla
-            </Link>
-          ) : undefined
-        }
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -128,6 +117,17 @@ export default function PlantillasAuditoriaPage() {
         </div>
 
         <div className="mt-6 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
+          {canManage ? (
+            <div className="mb-3 flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+              <Link
+                className="bg-professional-green text-white hover:bg-lime-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2 md:w-auto w-full justify-center md:justify-start"
+                href="/clientes/auditorias/plantillas/nueva"
+              >
+                <span className="material-symbols-outlined text-[20px]">add</span>
+                Crear plantilla
+              </Link>
+            </div>
+          ) : null}
           <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
             <div className="relative w-full md:w-96">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">search</span>
