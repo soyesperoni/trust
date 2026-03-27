@@ -91,6 +91,7 @@ const typeStyles: Record<string, string> = {
 export default function AuditoriasPage() {
   const [audits, setAudits] = useState<AuditApi[]>([]);
   const [inspectors, setInspectors] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -154,6 +155,7 @@ export default function AuditoriasPage() {
   );
 
   const filteredAudits = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
     return audits.filter((audit) => {
       const typeLabel = auditType(audit.status);
       const mappedFilter = typeLabel === "Programada" ? "programada" : "finalizada";
@@ -170,9 +172,16 @@ export default function AuditoriasPage() {
         ((!lowerBound || auditDate >= lowerBound) &&
           (!upperBound || auditDate <= upperBound));
 
-      return matchesFilter && matchesInspector && matchesClient && matchesBranch && matchesDateRange;
+      const matchesQuery =
+        !query ||
+        [audit.client, audit.branch, audit.area, audit.form_name ?? "", audit.inspector, `#${audit.id}`]
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
+
+      return matchesFilter && matchesInspector && matchesClient && matchesBranch && matchesDateRange && matchesQuery;
     });
-  }, [activeFilter, audits, endDate, selectedBranch, selectedClient, selectedInspector, startDate]);
+  }, [activeFilter, audits, endDate, searchTerm, selectedBranch, selectedClient, selectedInspector, startDate]);
 
   const stats = useMemo(() => {
     const completed = filteredAudits.filter((audit) => audit.status === "completed");
@@ -338,94 +347,86 @@ export default function AuditoriasPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27] lg:flex-row">
-            <div className="flex w-full flex-col gap-4 lg:flex-row">
-              <div className="relative w-full lg:w-72">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">business</span>
-                <select
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-8 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
-                  onChange={(event) => setSelectedClient(event.target.value)}
-                  value={selectedClient}
-                >
-                  <option value="">Todos los clientes</option>
-                  {clientOptions.map((client) => (
-                    <option key={client} value={client}>
-                      {client}
-                    </option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">expand_more</span>
-              </div>
-
-              <div className="relative w-full lg:w-56">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">store</span>
-                <select
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-8 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
-                  onChange={(event) => setSelectedBranch(event.target.value)}
-                  value={selectedBranch}
-                >
-                  <option value="">Todas las sucursales</option>
-                  {branchOptions.map((branch) => (
-                    <option key={branch} value={branch}>
-                      {branch}
-                    </option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">expand_more</span>
-              </div>
-
-              <div className="relative w-full lg:w-48">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">person_search</span>
-                <select
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-8 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
-                  onChange={(event) => setSelectedInspector(event.target.value)}
-                  value={selectedInspector}
-                >
-                  <option value="">Todos los inspectores</option>
-                  {inspectors.map((inspector) => (
-                    <option key={inspector.id} value={inspector.full_name}>
-                      {inspector.full_name}
-                    </option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">expand_more</span>
-              </div>
-
-              <div className="w-full lg:w-44">
+          <div className="mt-6 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+              <div className="relative w-full md:w-96">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">search</span>
                 <input
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
-                  max={endDate || undefined}
-                  onChange={(event) => setStartDate(event.target.value)}
-                  type="date"
-                  value={startDate}
+                  className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Buscar auditoría..."
+                  type="text"
+                  value={searchTerm}
                 />
               </div>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setSelectedClient(event.target.value)}
+                value={selectedClient}
+              >
+                <option value="">Todos los clientes</option>
+                {clientOptions.map((client) => (
+                  <option key={client} value={client}>
+                    {client}
+                  </option>
+                ))}
+              </select>
 
-              <div className="w-full lg:w-44">
-                <input
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
-                  min={startDate || undefined}
-                  onChange={(event) => setEndDate(event.target.value)}
-                  type="date"
-                  value={endDate}
-                />
-              </div>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setSelectedBranch(event.target.value)}
+                value={selectedBranch}
+              >
+                <option value="">Todas las sucursales</option>
+                {branchOptions.map((branch) => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                ))}
+              </select>
 
-              <div className="relative w-full lg:w-44">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">task_alt</span>
-                <select
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-8 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
-                  onChange={(event) => setActiveFilter(event.target.value as (typeof mobileFilters)[number]["value"])}
-                  value={activeFilter}
-                >
-                  {mobileFilters.map((filter) => (
-                    <option key={filter.value} value={filter.value}>
-                      {filter.label}
-                    </option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">expand_more</span>
-              </div>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setSelectedInspector(event.target.value)}
+                value={selectedInspector}
+              >
+                <option value="">Todos los inspectores</option>
+                {inspectors.map((inspector) => (
+                  <option key={inspector.id} value={inspector.full_name}>
+                    {inspector.full_name}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                max={endDate || undefined}
+                onChange={(event) => setStartDate(event.target.value)}
+                type="date"
+                value={startDate}
+              />
+
+              <input
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                min={startDate || undefined}
+                onChange={(event) => setEndDate(event.target.value)}
+                type="date"
+                value={endDate}
+              />
+
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setActiveFilter(event.target.value as (typeof mobileFilters)[number]["value"])}
+                value={activeFilter}
+              >
+                {mobileFilters.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -433,9 +434,9 @@ export default function AuditoriasPage() {
         <div className="hidden min-h-0 flex-1 overflow-y-auto p-4 pt-4 md:block md:p-8">
           <div className="flex h-full flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-card dark:border-slate-800 dark:bg-[#161e27]">
             <div className="custom-scrollbar flex-1 overflow-x-auto">
-              <table className="min-w-[1000px] w-full border-collapse text-left">
+              <table className="list-table min-w-[1000px]">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
+                  <tr className="list-table-head-row">
                     <th className="px-6 py-4">Fecha</th>
                     <th className="px-6 py-4">Cliente / Sucursal</th>
                     <th className="px-6 py-4">Área</th>
@@ -443,7 +444,7 @@ export default function AuditoriasPage() {
                     <th className="px-6 py-4">Inspector</th>
                     <th className="px-6 py-4">Puntaje</th>
                     <th className="px-6 py-4">Estado</th>
-                    <th className="px-6 py-4">Detalle</th>
+                    <th className="px-6 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
@@ -486,11 +487,17 @@ export default function AuditoriasPage() {
                         </td>
                         <td className="px-6 py-4">
                           {audit.status === "completed" ? (
-                            <Link className="text-sm font-semibold text-primary hover:underline" href={`/clientes/auditorias/${audit.id}/informe`}>
-                              Ver informe
-                            </Link>
+                            <div className="flex items-center justify-end gap-2">
+                              <Link className="list-action-btn hover:text-professional-green" href={`/clientes/auditorias/${audit.id}/informe`} title="Ver informe">
+                                <span className="material-symbols-outlined text-[20px]">visibility</span>
+                              </Link>
+                            </div>
                           ) : (
-                            <span className="text-xs text-slate-400">Pendiente</span>
+                            <div className="flex items-center justify-end">
+                              <button className="list-action-btn opacity-50 cursor-not-allowed" disabled title="Pendiente" type="button">
+                                <span className="material-symbols-outlined text-[20px]">hourglass_empty</span>
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>

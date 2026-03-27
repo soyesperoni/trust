@@ -33,6 +33,7 @@ export default function PlantillasAuditoriaPage() {
 
   const [templates, setTemplates] = useState<AuditFormApi[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -74,18 +75,28 @@ export default function PlantillasAuditoriaPage() {
     const query = searchTerm.trim().toLowerCase();
 
     return templates.filter((template) => {
+      const templateCategory = String(template.schema?.category || "General");
       const matchesFilter =
         activeFilter === "all" ||
         (activeFilter === "active" && template.is_active) ||
         (activeFilter === "inactive" && !template.is_active);
+      const matchesCategory = !categoryFilter || templateCategory === categoryFilter;
 
       const matchesQuery =
         !query ||
-        [template.name, template.schema?.category ?? "", String(template.id)].join(" ").toLowerCase().includes(query);
+        [template.name, templateCategory, String(template.id)].join(" ").toLowerCase().includes(query);
 
-      return matchesFilter && matchesQuery;
+      return matchesFilter && matchesQuery && matchesCategory;
     });
-  }, [activeFilter, searchTerm, templates]);
+  }, [activeFilter, categoryFilter, searchTerm, templates]);
+
+  const categoryOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(templates.map((template) => String(template.schema?.category || "General"))),
+      ).sort((a, b) => a.localeCompare(b, "es")),
+    [templates],
+  );
 
   return (
     <>
@@ -116,33 +127,45 @@ export default function PlantillasAuditoriaPage() {
           <StatCard label="Áreas asignadas" value={String(templates.reduce((acc, item) => acc + item.areas_count, 0))} />
         </div>
 
-        <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27] lg:flex-row">
-          <div className="flex w-full flex-col gap-4 lg:flex-row">
-            <div className="relative w-full lg:w-80">
+        <div className="mt-6 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
+          <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+            <div className="relative w-full md:w-96">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">search</span>
               <input
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+                className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Nombre o categoría..."
                 type="text"
                 value={searchTerm}
               />
             </div>
-
-            <div className="relative w-full lg:w-48">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">task_alt</span>
-              <select
-                className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-8 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
-                onChange={(event) => setActiveFilter(event.target.value as StatusFilter)}
-                value={activeFilter}
-              >
-                {statusFilters.map((filter) => (
-                  <option key={filter.value} value={filter.value}>
-                    {filter.label}
-                  </option>
-                ))}
-              </select>
-              <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">expand_more</span>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <select
+              className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              value={categoryFilter}
+            >
+              <option value="">Todas las categorías</option>
+              {categoryOptions.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+            <select
+              className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+              onChange={(event) => setActiveFilter(event.target.value as StatusFilter)}
+              value={activeFilter}
+            >
+              {statusFilters.map((filter) => (
+                <option key={filter.value} value={filter.value}>
+                  {filter.label}
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 px-1">
+              Mostrando {filteredTemplates.length} de {templates.length} plantillas
             </div>
           </div>
         </div>

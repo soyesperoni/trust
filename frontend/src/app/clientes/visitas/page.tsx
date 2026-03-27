@@ -40,6 +40,9 @@ export default function VisitasPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedClient, setSelectedClient] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [selectedArea, setSelectedArea] = useState("");
   const [selectedInspector, setSelectedInspector] = useState("");
   const [activeFilter, setActiveFilter] = useState<(typeof mobileFilters)[number]["value"]>("all");
 
@@ -181,13 +184,31 @@ export default function VisitasPage() {
       "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-900/60",
   };
 
+  const clientOptions = useMemo(
+    () => Array.from(new Set(visits.map((visit) => visit.client).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es")),
+    [visits],
+  );
+
+  const branchOptions = useMemo(
+    () => Array.from(new Set(visits.map((visit) => visit.branch).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es")),
+    [visits],
+  );
+
+  const areaOptions = useMemo(
+    () => Array.from(new Set(visits.map((visit) => visit.area).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es")),
+    [visits],
+  );
+
   const filteredVisits = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     return visits.filter((visit) => {
+      const matchesClient = !selectedClient || visit.client === selectedClient;
+      const matchesBranch = !selectedBranch || visit.branch === selectedBranch;
+      const matchesArea = !selectedArea || visit.area === selectedArea;
       const matchesInspector =
         selectedInspector.length === 0 ||
         visit.inspector.trim().toLowerCase() === selectedInspector.trim().toLowerCase();
-      if (!matchesInspector) return false;
+      if (!matchesInspector || !matchesClient || !matchesBranch || !matchesArea) return false;
 
       const typeLabel = visitType(visit.status);
       const mappedFilter = mapVisitTypeToFilter(typeLabel);
@@ -203,7 +224,7 @@ export default function VisitasPage() {
         `#${visit.id}`,
       ].some((value) => value.toLowerCase().includes(query));
     });
-  }, [activeFilter, searchTerm, selectedInspector, visits]);
+  }, [activeFilter, searchTerm, selectedArea, selectedBranch, selectedClient, selectedInspector, visits]);
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando historial...";
@@ -340,51 +361,81 @@ export default function VisitasPage() {
       <PageTransition className="hidden flex-1 flex-col overflow-y-auto md:flex">
 
         <div className="hidden shrink-0 px-4 pb-2 pt-6 md:block md:px-8">
-          <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27] lg:flex-row">
-            <div className="flex w-full flex-col gap-4 lg:flex-row">
-              <div className="relative w-full lg:w-64">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">
+          <div className="mt-6 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+              <div className="relative w-full md:w-96">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">
                   search
                 </span>
                 <input
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+                  className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Cliente o Sucursal..."
+                  placeholder="Buscar visita..."
                   type="text"
                   value={searchTerm}
                 />
               </div>
-              <div className="relative w-full lg:w-48">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">
-                  person_search
-                </span>
-                <select
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-8 text-sm text-slate-500 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
-                  onChange={(event) => setSelectedInspector(event.target.value)}
-                  value={selectedInspector}
-                >
-                  <option value="">Todos los Inspectores</option>
-                  {inspectors.map((inspector) => (
-                    <option key={inspector.id} value={inspector.full_name}>
-                      {inspector.full_name}
-                    </option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">
-                  expand_more
-                </span>
-              </div>
             </div>
-            <div className="flex w-full gap-2 lg:w-auto">
-              <button
-                type="button"
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-professional-green px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-yellow-700 lg:w-auto"
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setSelectedClient(event.target.value)}
+                value={selectedClient}
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  filter_list
-                </span>
-                Filtrar
-              </button>
+                <option value="">Todos los clientes</option>
+                {clientOptions.map((client) => (
+                  <option key={client} value={client}>
+                    {client}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setSelectedBranch(event.target.value)}
+                value={selectedBranch}
+              >
+                <option value="">Todas las sucursales</option>
+                {branchOptions.map((branch) => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setSelectedArea(event.target.value)}
+                value={selectedArea}
+              >
+                <option value="">Todas las áreas</option>
+                {areaOptions.map((area) => (
+                  <option key={area} value={area}>
+                    {area}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setSelectedInspector(event.target.value)}
+                value={selectedInspector}
+              >
+                <option value="">Todos los inspectores</option>
+                {inspectors.map((inspector) => (
+                  <option key={inspector.id} value={inspector.full_name}>
+                    {inspector.full_name}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                onChange={(event) => setActiveFilter(event.target.value as (typeof mobileFilters)[number]["value"])}
+                value={activeFilter}
+              >
+                {mobileFilters.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -392,23 +443,23 @@ export default function VisitasPage() {
         <div className="hidden min-h-0 flex-1 overflow-y-auto p-4 pt-4 md:block md:p-8">
           <div className="flex h-full flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-card dark:border-slate-800 dark:bg-[#161e27]">
             <div className="custom-scrollbar flex-1 overflow-x-auto">
-              <table className="min-w-[1000px] w-full border-collapse text-left">
+              <table className="list-table min-w-[1000px]">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
+                  <tr className="list-table-head-row">
                     <th className="px-6 py-4">Fecha</th>
                     <th className="px-6 py-4">Cliente / Sucursal</th>
                     <th className="px-6 py-4">Área</th>
                     <th className="px-6 py-4">Dosificador</th>
                     <th className="px-6 py-4">Inspector</th>
-                    <th className="px-6 py-4">Tipo</th>
-                    <th className="px-6 py-4">Ubicación</th>
-                    <th className="px-6 py-4">Informe</th>
+                    <th className="px-6 py-4">Estado</th>
+                    <th className="px-6 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
                   {filteredVisits.map((visit) => {
                     const formatted = formatDate(visit.visited_at);
                     const typeLabel = visitType(visit.status);
+                    const mapLink = buildOpenStreetMapLink(visit);
                     return (
                       <tr
                         key={visit.id}
@@ -450,60 +501,53 @@ export default function VisitasPage() {
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-6 py-4">
-                          {buildOpenStreetMapLink(visit) ? (
-                            <a
-                              className="text-primary font-semibold hover:underline"
-                              href={buildOpenStreetMapLink(visit) ?? "#"}
-                              rel="noreferrer"
-                              target="_blank"
-                            >
-                              Ver mapa OSM
-                            </a>
-                          ) : (
-                            <span className="text-slate-400">Sin ubicación</span>
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4">
-                          {typeLabel === "Finalizada" ? (
-                            <div className="flex items-center gap-2">
-                              <Link
-                                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                                href={`/clientes/visitas/${visit.id}/informe`}
-                              >
-                                Ver informe
-                              </Link>
-                              <button
-                                className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
-                                onClick={() => downloadVisitReport(visit.id)}
-                                type="button"
-                              >
-                                Descargar PDF
+                          <div className="flex justify-end items-center gap-2">
+                            {typeLabel === "Finalizada" ? (
+                              <>
+                                <Link className="list-action-btn hover:text-professional-green" href={`/clientes/visitas/${visit.id}/informe`} title="Ver informe">
+                                  <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                </Link>
+                                <button
+                                  className="list-action-btn hover:text-slate-700"
+                                  onClick={() => downloadVisitReport(visit.id)}
+                                  title="Descargar PDF"
+                                  type="button"
+                                >
+                                  <span className="material-symbols-outlined text-[20px]">download</span>
+                                </button>
+                              </>
+                            ) : null}
+                            {mapLink ? (
+                              <a className="list-action-btn hover:text-primary" href={mapLink} rel="noreferrer" target="_blank" title="Ver ubicación">
+                                <span className="material-symbols-outlined text-[20px]">location_on</span>
+                              </a>
+                            ) : (
+                              <button className="list-action-btn opacity-50 cursor-not-allowed" disabled title="Sin ubicación" type="button">
+                                <span className="material-symbols-outlined text-[20px]">location_off</span>
                               </button>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">No disponible</span>
-                          )}
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
                   {error && !isLoading && (
                     <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center text-red-500">
+                      <td colSpan={7} className="px-6 py-8 text-center text-red-500">
                         {error}
                       </td>
                     </tr>
                   )}
                   {isLoading && (
                     <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
+                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
                         Cargando visitas...
                       </td>
                     </tr>
                   )}
                   {!error && !isLoading && filteredVisits.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
+                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
                         No hay visitas que coincidan con los filtros aplicados.
                       </td>
                     </tr>
