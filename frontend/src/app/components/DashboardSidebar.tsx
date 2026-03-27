@@ -74,9 +74,10 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
   });
 
   return (
-    <aside className={`hidden shrink-0 flex-col border-r border-slate-200 bg-white transition-all duration-300 dark:border-slate-800 dark:bg-[#161e27] md:flex ${collapsed ? "w-16" : "w-48"}`}>
+    <aside className={`menu-lights-surface relative hidden shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-all duration-300 dark:border-slate-800 dark:bg-[#161e27] md:flex ${collapsed ? "w-16" : "w-48"}`}>
+      <div className="menu-lights-motion pointer-events-none absolute inset-y-0 -left-28 z-0 w-56" />
       <div
-        className={`relative flex h-16 items-center border-b border-slate-100 px-3 dark:border-slate-800 ${
+        className={`relative z-10 flex h-16 items-center border-b border-slate-100 px-3 dark:border-slate-800 ${
           collapsed ? "justify-center" : "justify-start"
         }`}
       >
@@ -90,7 +91,7 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
           <span className="material-symbols-outlined text-[18px]">{collapsed ? "chevron_right" : "chevron_left"}</span>
         </button>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto py-6">
+      <nav className="relative z-10 flex flex-1 flex-col gap-1 overflow-y-auto py-6">
         {visibleNavItems.map((item) => {
           const isActive = item.href === activePath;
           return (
