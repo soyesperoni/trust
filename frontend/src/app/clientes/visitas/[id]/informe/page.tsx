@@ -570,14 +570,14 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
               <span className="material-symbols-outlined text-slate-400">photo_camera</span>
               Evidencias fotográficas
             </h2>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
               {imageMedia.length > 0 ? (
                 imageMedia.map((entry, index) => {
                   const imageUrl = toAbsoluteMediaUrl(entry.file);
                   return (
                     <button
                       key={entry.id}
-                      className="apple-card-enter group relative aspect-[9/16] w-full max-w-[170px] overflow-hidden rounded-xl border border-slate-200 bg-slate-100 text-left dark:border-slate-700"
+                      className="apple-card-enter group relative aspect-[9/16] w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 text-left dark:border-slate-700"
                       onClick={() => setSelectedImage(imageUrl)}
                       style={{ animationDelay: `${400 + index * 50}ms` }}
                       type="button"
