@@ -53,6 +53,8 @@ export default function DashboardPage() {
   const [animatedComplianceScore, setAnimatedComplianceScore] = useState(0);
   const [animatedOverdueVisits, setAnimatedOverdueVisits] = useState(0);
   const [animatedOverdueAudits, setAnimatedOverdueAudits] = useState(0);
+  const [animatedPendingVisits, setAnimatedPendingVisits] = useState(0);
+  const [animatedScheduledAudits, setAnimatedScheduledAudits] = useState(0);
   const [animatedIncidents, setAnimatedIncidents] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,6 +144,8 @@ export default function DashboardPage() {
   const complianceScore = useMemo(() => Math.round(stats?.compliance_score ?? stats?.audit_score ?? 0), [stats?.audit_score, stats?.compliance_score]);
   const overdueVisitsTotal = useMemo(() => stats?.overdue_visits ?? 0, [stats?.overdue_visits]);
   const overdueAuditsTotal = useMemo(() => stats?.overdue_audits ?? 0, [stats?.overdue_audits]);
+  const pendingVisitsTotal = useMemo(() => stats?.pending_visits ?? 0, [stats?.pending_visits]);
+  const scheduledAuditsTotal = useMemo(() => stats?.scheduled_audits ?? 0, [stats?.scheduled_audits]);
   const incidentsTotal = useMemo(() => stats?.incidents ?? 0, [stats?.incidents]);
   const scoreBreakdown = useMemo(() => {
     const completedVisits = stats?.completed_visits ?? 0;
@@ -343,6 +347,8 @@ export default function DashboardPage() {
       setAnimatedComplianceScore(Math.round(complianceScore * easedProgress));
       setAnimatedOverdueVisits(Math.round(overdueVisitsTotal * easedProgress));
       setAnimatedOverdueAudits(Math.round(overdueAuditsTotal * easedProgress));
+      setAnimatedPendingVisits(Math.round(pendingVisitsTotal * easedProgress));
+      setAnimatedScheduledAudits(Math.round(scheduledAuditsTotal * easedProgress));
       setAnimatedIncidents(Math.round(incidentsTotal * easedProgress));
 
       if (progress < 1) {
@@ -353,11 +359,13 @@ export default function DashboardPage() {
     setAnimatedComplianceScore(0);
     setAnimatedOverdueVisits(0);
     setAnimatedOverdueAudits(0);
+    setAnimatedPendingVisits(0);
+    setAnimatedScheduledAudits(0);
     setAnimatedIncidents(0);
     animationFrame = window.requestAnimationFrame(animate);
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [complianceScore, incidentsTotal, isLoading, overdueAuditsTotal, overdueVisitsTotal]);
+  }, [complianceScore, incidentsTotal, isLoading, overdueAuditsTotal, overdueVisitsTotal, pendingVisitsTotal, scheduledAuditsTotal]);
 
   return (
     <>
@@ -391,36 +399,58 @@ export default function DashboardPage() {
                     </div>
                     <div className="grid w-full grid-cols-1 gap-3 xl:max-w-sm">
                       <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
-                        <p className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent sm:text-5xl">
-                          {isLoading ? "..." : animatedOverdueVisits}
-                        </p>
-                        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Visitas vencidas</p>
-                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                          Programadas con fecha/hora ya vencida.
+                        <p className="flex items-baseline gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent">
+                          <span className="text-4xl font-black leading-none sm:text-5xl">
+                            {isLoading ? "..." : animatedOverdueVisits}
+                          </span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.08em]">visitas vencidas</span>
                         </p>
                         <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
                           Impacto: {factorImpacts.overdueVisits.toFixed(2)}%
                         </p>
                       </article>
                       <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
-                        <p className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent sm:text-5xl">
-                          {isLoading ? "..." : animatedOverdueAudits}
-                        </p>
-                        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Auditorías vencidas</p>
-                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                          Programadas con fecha/hora ya vencida.
+                        <p className="flex items-baseline gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent">
+                          <span className="text-4xl font-black leading-none sm:text-5xl">
+                            {isLoading ? "..." : animatedOverdueAudits}
+                          </span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.08em]">auditorías vencidas</span>
                         </p>
                         <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
                           Impacto: {factorImpacts.overdueAudits.toFixed(2)}%
                         </p>
                       </article>
                       <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
-                        <p className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent sm:text-5xl">
-                          {isLoading ? "..." : animatedIncidents}
+                        <p className="flex items-baseline gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent">
+                          <span className="text-4xl font-black leading-none sm:text-5xl">
+                            {isLoading ? "..." : animatedIncidents}
+                          </span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.08em]">incidencias activas</span>
                         </p>
-                        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Incidencias existentes</p>
                         <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
                           Impacto: {factorImpacts.incidents.toFixed(2)}%
+                        </p>
+                      </article>
+                      <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
+                        <p className="flex items-baseline gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent">
+                          <span className="text-4xl font-black leading-none sm:text-5xl">
+                            {isLoading ? "..." : animatedPendingVisits}
+                          </span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.08em]">visitas programadas</span>
+                        </p>
+                        <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                          Pendientes por realizar.
+                        </p>
+                      </article>
+                      <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
+                        <p className="flex items-baseline gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent">
+                          <span className="text-4xl font-black leading-none sm:text-5xl">
+                            {isLoading ? "..." : animatedScheduledAudits}
+                          </span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.08em]">auditorías pendientes</span>
+                        </p>
+                        <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                          Programadas por ejecutar.
                         </p>
                       </article>
                     </div>
