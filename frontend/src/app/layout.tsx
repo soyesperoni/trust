@@ -7,7 +7,9 @@ export const metadata: Metadata = {
   title: "Trust - Inicio de Sesión",
   description: "Inicia sesión para gestionar tus mantenimientos.",
   icons: {
-    icon: "/icon.svg",
+    icon: "/icono_app.png",
+    shortcut: "/icono_app.png",
+    apple: "/icono_app.png",
   },
 };
 
