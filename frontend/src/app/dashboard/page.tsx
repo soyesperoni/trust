@@ -375,7 +375,7 @@ export default function DashboardPage() {
           )}
 
           <div className="grid grid-cols-12 gap-4 xl:gap-5">
-            <article className="col-span-12 xl:col-span-8 2xl:col-span-9 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
+            <article className="col-span-12 xl:col-span-4 2xl:col-span-3 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex h-full min-h-[18rem] flex-col rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-4 text-center sm:min-h-[22rem] sm:p-6 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
                 <div className="flex flex-1 flex-col items-center justify-center">
                   <div className="mt-4 flex w-full flex-col items-center justify-center gap-3 xl:flex-row xl:items-start xl:justify-between xl:gap-6">
@@ -428,7 +428,7 @@ export default function DashboardPage() {
               </div>
             </article>
 
-            <article className="col-span-12 xl:col-span-4 2xl:col-span-3 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
+            <article className="col-span-12 xl:col-span-8 2xl:col-span-9 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-bold text-slate-900 sm:text-lg dark:text-white">Tendencia diaria de cumplimiento</h3>
