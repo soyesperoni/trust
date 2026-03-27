@@ -435,9 +435,9 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { value: "month", label: "Últimos 6 meses" },
-                    { value: "week", label: "Últimas 6 semanas" },
-                    { value: "last6days", label: "Últimos 6 días" },
+                    { value: "month", label: "6 meses" },
+                    { value: "week", label: "6 semanas" },
+                    { value: "last6days", label: "6 días" },
                   ].map((option) => (
                     <button
                       key={option.value}
