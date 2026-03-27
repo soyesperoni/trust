@@ -37,6 +37,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, Incident, IncidentMedia, Nozzle, Product, User, Visit, VisitMedia
+from .report_templates import build_audit_report_html, build_visit_report_html
 
 
 try:
@@ -3552,6 +3553,48 @@ def visit_report_public_detail(request, token: str):
     if visit is None:
         return JsonResponse({"error": "El enlace público del informe es inválido o expiró."}, status=404)
     return JsonResponse(_serialize_visit(visit))
+
+
+@require_GET
+def audit_report_puppeteer(request, audit_id: int):
+    current_user = _get_current_user(request)
+    if not current_user:
+        return JsonResponse({"error": "Usuario no autenticado."}, status=401)
+
+    scope = _build_access_scope(current_user)
+    queryset = Audit.objects.select_related(
+        "area__branch__client", "inspector", "form"
+    ).prefetch_related("media")
+    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
+    audit = queryset.filter(pk=audit_id).first()
+    if audit is None:
+        return JsonResponse({"error": "Auditoría no encontrada."}, status=404)
+    if audit.status != Audit.Status.COMPLETED:
+        return JsonResponse({"error": "Solo puedes generar informe de auditorías finalizadas."}, status=400)
+
+    html = build_audit_report_html(_serialize_audit(audit))
+    return HttpResponse(html, content_type="text/html; charset=utf-8")
+
+
+@require_GET
+def visit_report_puppeteer(request, visit_id: int):
+    current_user = _get_current_user(request)
+    if not current_user:
+        return JsonResponse({"error": "Usuario no autenticado."}, status=401)
+
+    scope = _build_access_scope(current_user)
+    queryset = Visit.objects.select_related(
+        "area__branch__client", "inspector", "dispenser"
+    ).prefetch_related("media")
+    queryset = _filter_queryset_by_scope(queryset, scope, area_lookup="area_id")
+    visit = queryset.filter(pk=visit_id).first()
+    if visit is None:
+        return JsonResponse({"error": "Visita no encontrada."}, status=404)
+    if visit.status != Visit.Status.COMPLETED:
+        return JsonResponse({"error": "Solo puedes generar informe de visitas finalizadas."}, status=400)
+
+    html = build_visit_report_html(_serialize_visit(visit))
+    return HttpResponse(html, content_type="text/html; charset=utf-8")
 
 
 @require_GET

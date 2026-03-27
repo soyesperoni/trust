@@ -35,9 +35,13 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-## Reportes PDF (visitas y auditorías)
+## Reportes HTML para Puppeteer (visitas y auditorías)
 
-Los endpoints de descarga de informes en `/api/visits/:id/report` y `/api/audits/:id/report` ahora priorizan el renderizador Puppeteer del backend.
+Los endpoints backend de informes se unificaron para renderizar HTML corporativo (tipografía **Poppins** y portada ejecutiva) pensado para ser convertido a PDF con Puppeteer:
 
-- `REPORT_RENDERER=puppeteer` (default): intenta primero `.../report-puppeteer` y `.../report-puppeteer.pdf`, y luego hace fallback a `.../report.pdf` / `.../report`.
-- Cualquier otro valor: usa directamente los endpoints PDF heredados (`.../report.pdf` / `.../report`).
+- `GET /api/visits/:id/report-puppeteer`
+- `GET /api/visits/:id/report-puppeteer.pdf`
+- `GET /api/audits/:id/report-puppeteer`
+- `GET /api/audits/:id/report-puppeteer.pdf`
+
+Los endpoints heredados `/report` y `/report.pdf` de visita/auditoría fueron retirados.
