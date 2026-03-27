@@ -108,7 +108,9 @@ export default function IncidentDetailPage() {
     <>
       <DashboardHeader title="Detalle de la incidencia" description="Información general y evidencias adjuntas." />
 
-      <main className="w-full flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8">
+      <main className="relative w-full flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8">
+        <div className="dashboard-lights-motion pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.42)_0%,rgba(146,185,59,0.33)_34%,rgba(255,255,255,0)_68%)] dark:bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.36)_0%,rgba(146,185,59,0.2)_38%,rgba(10,15,20,0)_68%)]" />
+        <div className="relative z-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-[#1a232e] dark:text-slate-200"
@@ -124,7 +126,7 @@ export default function IncidentDetailPage() {
 
         {incident ? (
           <>
-            <article className="mb-6 overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-6 shadow-card dark:border-slate-700 dark:from-[#18222d] dark:via-[#121b25] dark:to-[#0f172a]">
+            <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-6 shadow-card dark:border-slate-700 dark:from-[#18222d] dark:via-[#121b25] dark:to-[#0f172a]">
               <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-300">Trust • Incidencias</p>
@@ -134,15 +136,15 @@ export default function IncidentDetailPage() {
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                  <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+                  <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "80ms" }}>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Fecha</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{createdAt}</p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+                  <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "140ms" }}>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Fotos</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{photos.length}</p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+                  <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "200ms" }}>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Videos</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{videos.length}</p>
                   </div>
@@ -151,7 +153,7 @@ export default function IncidentDetailPage() {
             </article>
 
             <div className="grid gap-6 xl:grid-cols-3">
-              <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3">
+              <article className="apple-card-enter rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3" style={{ animationDelay: "120ms" }}>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Información general</h2>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]">
@@ -181,7 +183,7 @@ export default function IncidentDetailPage() {
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3">
+              <article className="apple-card-enter rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3" style={{ animationDelay: "200ms" }}>
                 <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
                   <span className="material-symbols-outlined text-slate-400">photo_camera</span>
                   Evidencias fotográficas
@@ -193,8 +195,9 @@ export default function IncidentDetailPage() {
                       return (
                         <button
                           key={entry.id}
-                          className="group relative h-56 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 text-left dark:border-slate-700"
+                          className="apple-card-enter group relative aspect-[9/16] overflow-hidden rounded-xl border border-slate-200 bg-slate-100 text-left dark:border-slate-700"
                           onClick={() => setSelectedImage(imageUrl)}
+                          style={{ animationDelay: `${240 + index * 50}ms` }}
                           type="button"
                         >
                           {imageUrl ? (
@@ -218,21 +221,21 @@ export default function IncidentDetailPage() {
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3">
+              <article className="apple-card-enter rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3" style={{ animationDelay: "280ms" }}>
                 <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
                   <span className="material-symbols-outlined text-slate-400">videocam</span>
                   Evidencias en video
                 </h2>
                 {videos.length > 0 ? (
-                  <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {videos.map((entry, index) => {
                       const videoUrl = toAbsoluteMediaUrl(entry.file);
                       return (
-                        <div key={entry.id} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900">
+                        <div key={entry.id} className="apple-card-enter overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900" style={{ animationDelay: `${320 + index * 60}ms` }}>
                           {videoUrl ? (
-                            <video className="max-h-[32rem] w-full bg-black object-contain" controls preload="metadata" src={videoUrl} />
+                            <video className="aspect-[9/16] w-full bg-black object-contain" controls preload="metadata" src={videoUrl} />
                           ) : (
-                            <div className="flex h-64 items-center justify-center">
+                            <div className="flex aspect-[9/16] items-center justify-center">
                               <span className="material-symbols-outlined text-4xl text-slate-400">movie</span>
                             </div>
                           )}
@@ -252,6 +255,7 @@ export default function IncidentDetailPage() {
             </div>
           </>
         ) : null}
+        </div>
       </main>
 
       {selectedImage ? (

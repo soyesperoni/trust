@@ -238,7 +238,9 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
     <>
       <DashboardHeader title="Informe de auditoría" description="Detalle visual y técnico de la auditoría registrada." />
 
-      <section className="w-full flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8">
+      <section className="relative w-full flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8">
+        <div className="dashboard-lights-motion pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.42)_0%,rgba(146,185,59,0.33)_34%,rgba(255,255,255,0)_68%)] dark:bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.36)_0%,rgba(146,185,59,0.2)_38%,rgba(10,15,20,0)_68%)]" />
+        <div className="relative z-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-[#1a232e] dark:text-slate-200"
@@ -253,7 +255,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
           </button>
         </div>
 
-        <article className="mb-6 overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-6 shadow-card dark:border-slate-700 dark:from-[#18222d] dark:via-[#121b25] dark:to-[#0f172a]">
+        <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-6 shadow-card dark:border-slate-700 dark:from-[#18222d] dark:via-[#121b25] dark:to-[#0f172a]">
           <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-300">Trust • Informe corporativo</p>
@@ -261,15 +263,15 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
               <p className="mt-3 max-w-3xl text-sm text-slate-600 dark:text-slate-300">Vista ejecutiva con indicadores, riesgos y plan de acción en diseño de tarjetas, alineado al estilo del dashboard.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+              <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "80ms" }}>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Fecha</p>
                 <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{formattedDate}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+              <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "140ms" }}>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Riesgo</p>
                 <p className="mt-1 text-sm font-semibold" style={{ color: scoreColor }}>{scoreLabel}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+              <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "200ms" }}>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Evidencias</p>
                 <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{photos.length + videos.length}</p>
               </div>
@@ -288,7 +290,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
         </article>
 
         <div className="grid gap-6 xl:grid-cols-3">
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-2">
+          <article className="apple-card-enter rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-2" style={{ animationDelay: "120ms" }}>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Informe de Auditoría</h1>
             <p className="mt-1 text-sm text-slate-500">Generado el {formattedDate}</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -303,7 +305,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27]">
+          <article className="apple-card-enter rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27]" style={{ animationDelay: "180ms" }}>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Responsable del área</h2>
             <p className="mt-2 text-sm text-slate-500">Nombre registrado</p>
             <p className="text-base font-semibold text-slate-900 dark:text-white">{audit.audit_report?.responsible_name ?? "No registrado"}</p>
@@ -312,7 +314,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3">
+          <article className="apple-card-enter rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3" style={{ animationDelay: "240ms" }}>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Análisis Trust AI</h2>
             <p className="mt-2 text-sm text-slate-500">Este análisis y puntuación son generados por Trust AI para interpretar el contexto de preguntas, respuestas e impacto en el negocio.</p>
             <div className="mt-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 dark:border-slate-700 dark:from-[#0b1220] dark:to-[#111827]">
@@ -406,33 +408,33 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-2">
+          <article className="apple-card-enter rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-2" style={{ animationDelay: "320ms" }}>
             <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">Ubicación de la auditoría</h2>
             <div className="relative min-h-64 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-[#0f172a]">
               {mapUrl ? <iframe className="h-full min-h-64 w-full" loading="lazy" src={mapUrl} title="Mapa de ubicación de auditoría" /> : <div className="flex h-full min-h-64 items-center justify-center text-sm text-slate-500 dark:text-slate-400">No hay coordenadas para mostrar el mapa.</div>}
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3">
+          <article className="apple-card-enter rounded-2xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-[#161e27] xl:col-span-3" style={{ animationDelay: "380ms" }}>
             <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">Evidencias multimedia</h2>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {photos.map((photo) => {
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
+              {photos.map((photo, index) => {
                 const photoUrl = toUrl(photo.file);
                 if (!photoUrl) return null;
                 return (
-                  <button key={photo.id} className="group relative aspect-video overflow-hidden rounded-lg border" onClick={() => setSelectedMedia({ type: "image", url: photoUrl })} type="button">
+                  <button key={photo.id} className="apple-card-enter group relative aspect-[9/16] overflow-hidden rounded-lg border" onClick={() => setSelectedMedia({ type: "image", url: photoUrl })} style={{ animationDelay: `${440 + index * 50}ms` }} type="button">
                     <img src={photoUrl} alt="Evidencia" className="h-full w-full object-contain bg-slate-100 dark:bg-slate-800" />
                     <span className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-1 text-[10px] font-semibold text-white">Ver</span>
                   </button>
                 );
               })}
             </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {videos.map((video) => {
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {videos.map((video, index) => {
                 const videoUrl = toUrl(video.file);
                 if (!videoUrl) return null;
                 return (
-                  <button key={video.id} className="relative aspect-video overflow-hidden rounded-lg border bg-black" onClick={() => setSelectedMedia({ type: "video", url: videoUrl })} type="button">
+                  <button key={video.id} className="apple-card-enter relative aspect-[9/16] overflow-hidden rounded-lg border bg-black" onClick={() => setSelectedMedia({ type: "video", url: videoUrl })} style={{ animationDelay: `${500 + index * 60}ms` }} type="button">
                     <video src={videoUrl} className="h-full w-full object-contain" />
                     <span className="absolute inset-0 flex items-center justify-center bg-black/25 text-white">▶</span>
                   </button>
@@ -440,6 +442,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
               })}
             </div>
           </article>
+        </div>
         </div>
       </section>
 
