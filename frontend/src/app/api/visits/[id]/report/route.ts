@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBackendBaseUrl } from "../../../../lib/backend";
-import { isPuppeteerReportRenderer } from "../../../../lib/reportRenderer";
 
 const backendBaseUrl = getBackendBaseUrl();
 
@@ -17,17 +16,10 @@ export async function GET(request: NextRequest, { params }: Params) {
     Accept: "application/pdf",
   };
 
-  const candidateUrls = isPuppeteerReportRenderer()
-    ? [
-        `${backendBaseUrl}/api/visits/${id}/report-puppeteer`,
-        `${backendBaseUrl}/api/visits/${id}/report-puppeteer.pdf`,
-        `${backendBaseUrl}/api/visits/${id}/report.pdf`,
-        `${backendBaseUrl}/api/visits/${id}/report`,
-      ]
-    : [
-        `${backendBaseUrl}/api/visits/${id}/report.pdf`,
-        `${backendBaseUrl}/api/visits/${id}/report`,
-      ];
+  const candidateUrls = [
+    `${backendBaseUrl}/api/visits/${id}/report-puppeteer`,
+    `${backendBaseUrl}/api/visits/${id}/report-puppeteer.pdf`,
+  ];
 
   let response: Response | null = null;
   for (const candidateUrl of candidateUrls) {
@@ -43,7 +35,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
   if (!response) {
     return NextResponse.json(
-      { error: "No se pudo generar el informe." },
+      { error: "No se pudo generar el informe con el nuevo motor PDF." },
       { status: 500 },
     );
   }
@@ -51,7 +43,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   if (!response.ok) {
     const payload = await response
       .json()
-      .catch(() => ({ error: "No se pudo generar el informe." }));
+      .catch(() => ({ error: "No se pudo generar el informe con el nuevo motor PDF." }));
     return NextResponse.json(payload, { status: response.status });
   }
 
