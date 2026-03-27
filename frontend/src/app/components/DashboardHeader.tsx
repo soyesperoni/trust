@@ -83,7 +83,7 @@ export default function DashboardHeader({
 
   return (
     <>
-      <header className="h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
+      <header className="topbar-entrance h-16 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:hidden">
         <BrandLogo size="xl" className="scale-[1.3]" />
         <div className="flex items-center gap-1">
           <ThemeToggleButton />
@@ -110,7 +110,7 @@ export default function DashboardHeader({
         </div>
       </header>
 
-      <header className="h-20 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 hidden md:flex items-center justify-between px-8">
+      <header className="topbar-entrance h-20 bg-white dark:bg-[#161e27] border-b border-slate-200 dark:border-slate-800 hidden md:flex items-center justify-between px-8">
         <div>
           <h2 className="text-xl font-bold text-slate-800 dark:text-white">
             {title}
