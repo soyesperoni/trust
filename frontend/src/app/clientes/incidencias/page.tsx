@@ -74,6 +74,9 @@ export default function IncidenciasPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
+  const [areaFilter, setAreaFilter] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -128,6 +131,10 @@ export default function IncidenciasPage() {
   const filteredIncidents = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     return incidents.filter((incident) => {
+      const matchesClient = !clientFilter || incident.client === clientFilter;
+      const matchesBranch = !branchFilter || incident.branch === branchFilter;
+      const matchesArea = !areaFilter || incident.area === areaFilter;
+      if (!matchesClient || !matchesBranch || !matchesArea) return false;
       if (!query) return true;
       return [
         incident.client,
@@ -137,7 +144,20 @@ export default function IncidenciasPage() {
         `#${incident.id}`,
       ].some((item) => item.toLowerCase().includes(query));
     });
-  }, [incidents, searchTerm]);
+  }, [areaFilter, branchFilter, clientFilter, incidents, searchTerm]);
+
+  const uniqueClients = useMemo(
+    () => Array.from(new Set(incidents.map((incident) => incident.client))).sort((a, b) => a.localeCompare(b)),
+    [incidents],
+  );
+  const uniqueBranches = useMemo(
+    () => Array.from(new Set(incidents.map((incident) => incident.branch))).sort((a, b) => a.localeCompare(b)),
+    [incidents],
+  );
+  const uniqueAreas = useMemo(
+    () => Array.from(new Set(incidents.map((incident) => incident.area))).sort((a, b) => a.localeCompare(b)),
+    [incidents],
+  );
 
   return (
     <>
@@ -239,29 +259,67 @@ export default function IncidenciasPage() {
 
       <PageTransition className="hidden flex-1 flex-col overflow-y-auto md:flex">
         <div className="hidden shrink-0 px-4 pb-2 pt-6 md:block md:px-8">
-          <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27] lg:flex-row">
-            <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center">
+          <div className="mt-6 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
               {canCreateIncidentsFromHeader ? (
                 <Link
-                  className="bg-professional-green text-white hover:bg-lime-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2 shadow-sm"
+                  className="bg-professional-green text-white hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2"
                   href="/clientes/incidencias/nueva"
                 >
                   <span className="material-symbols-outlined text-[20px]">add</span>
                   Nueva Incidencia
                 </Link>
               ) : null}
-              <div className="relative w-full lg:w-80">
+              <div className="relative w-full md:w-96">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">
                   search
                 </span>
                 <input
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+                  className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Cliente, sucursal o dosificador..."
                   type="text"
                   value={searchTerm}
                 />
               </div>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={clientFilter}
+                onChange={(event) => setClientFilter(event.target.value)}
+              >
+                <option value="">Todos los clientes</option>
+                {uniqueClients.map((client) => (
+                  <option key={client} value={client}>
+                    {client}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={branchFilter}
+                onChange={(event) => setBranchFilter(event.target.value)}
+              >
+                <option value="">Todas las sucursales</option>
+                {uniqueBranches.map((branch) => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                value={areaFilter}
+                onChange={(event) => setAreaFilter(event.target.value)}
+              >
+                <option value="">Todas las áreas</option>
+                {uniqueAreas.map((area) => (
+                  <option key={area} value={area}>
+                    {area}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
