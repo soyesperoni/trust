@@ -381,8 +381,8 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-12 gap-4">
-            <article className="col-span-12 lg:col-span-4 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
+          <div className="grid grid-cols-12 gap-4 xl:gap-5">
+            <article className="col-span-12 xl:col-span-5 2xl:col-span-4 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex h-full min-h-[18rem] flex-col rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-4 text-center sm:min-h-[22rem] sm:p-6 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
                 <div className="flex flex-1 flex-col items-center justify-center">
                 <div className="mt-4 flex w-full flex-col items-center justify-center gap-3 lg:flex-row lg:items-end lg:gap-4">
@@ -445,7 +445,7 @@ export default function DashboardPage() {
               </div>
             </article>
 
-            <article className="col-span-12 lg:col-span-8 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
+            <article className="col-span-12 xl:col-span-7 2xl:col-span-8 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-bold text-slate-900 sm:text-lg dark:text-white">Tendencia diaria de cumplimiento</h3>
@@ -476,8 +476,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="mt-5 overflow-x-auto bg-gradient-to-b from-white to-slate-50 p-2 sm:p-3 dark:from-slate-900/55 dark:to-slate-900/35">
-                <div className="relative h-72 min-w-[560px] w-full sm:min-w-0">
+              <div className="mt-5 overflow-x-auto rounded-2xl bg-gradient-to-b from-white to-slate-50 p-2 sm:p-3 dark:from-slate-900/55 dark:to-slate-900/35">
+                <div className="relative h-64 w-full min-w-[460px] max-w-4xl sm:h-72 sm:min-w-[520px] lg:min-w-0 lg:max-w-3xl xl:max-w-4xl mx-auto">
                   <div className="absolute inset-0">
                     {[100, 75, 50, 25, 0].map((tick) => (
                       <div key={tick} className="absolute inset-x-0" style={{ bottom: `${tick}%` }}>
@@ -487,7 +487,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
 
-                  <div key={scoreChartAnimationKey} className="relative z-10 flex h-full items-end gap-1 px-4 pb-1 sm:gap-2 sm:px-6">
+                  <div key={scoreChartAnimationKey} className="relative z-10 flex h-full items-end gap-1.5 px-4 pb-1 sm:gap-2 sm:px-6">
                     {scoreBars.map((item, index) => (
                       <div key={`${item.label}-${index}`} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
                         <span className={`mb-1 text-[10px] font-bold ${item.isPlaceholder ? "text-slate-400 dark:text-slate-500" : "text-slate-600 dark:text-slate-200"}`}>
@@ -510,7 +510,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 </div>
-                <div className={`mt-2 min-w-[560px] gap-2 ${scoreRange === "month" || scoreRange === "week" ? "grid grid-cols-6" : "grid grid-cols-6"}`}>
+                <div className="mt-2 grid min-w-[460px] max-w-4xl grid-cols-6 gap-2 sm:min-w-[520px] lg:min-w-0 lg:max-w-3xl xl:max-w-4xl mx-auto">
                   {scoreBars.map((item, index) => (
                     <span key={`${item.label}-${index}`} className="truncate text-center text-[11px] font-semibold text-slate-500 dark:text-slate-300">
                       {item.label}
@@ -521,12 +521,12 @@ export default function DashboardPage() {
             </article>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+          <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8">
             {statsCards.map((item, index) => (
               <Link
                 key={item.label}
                 href={cardRoutes[item.label as keyof typeof cardRoutes] ?? "/dashboard"}
-                className="apple-card-enter group relative overflow-hidden rounded-xl border border-white/65 bg-white/72 px-3 py-3.5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55"
+                className="apple-card-enter group relative overflow-hidden rounded-xl border border-white/65 bg-white/72 px-3 py-3.5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-900/55"
                 style={{ animationDelay: `${index * 70}ms` }}
               >
                 {isLoading ? (
@@ -537,10 +537,10 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <p className="text-[22px] font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
                         <h3 className="truncate text-left text-sm font-semibold text-slate-500 dark:text-slate-400">{item.label}</h3>
+                        <p className="mt-1 text-[24px] font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
                       </div>
                       <div className={`inline-flex rounded-lg p-2 ${item.iconStyle}`}>
                         <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
