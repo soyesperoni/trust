@@ -187,7 +187,7 @@ export default function IncidentDetailPage() {
                   <span className="material-symbols-outlined text-slate-400">photo_camera</span>
                   Evidencias fotográficas
                 </h2>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,170px))] gap-2">
                   {photos.length > 0 ? (
                     photos.map((entry, index) => {
                       const imageUrl = toAbsoluteMediaUrl(entry.file);
