@@ -385,24 +385,31 @@ export default function DashboardPage() {
             <article className="col-span-12 lg:col-span-4 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex h-full min-h-[18rem] flex-col rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-4 text-center sm:min-h-[22rem] sm:p-6 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
                 <div className="flex flex-1 flex-col items-center justify-center">
-                <div className="mt-4 flex items-end gap-1">
-                  <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[5.6rem] font-black leading-none text-transparent min-[420px]:text-[7rem] md:text-[9rem] xl:text-[12.6rem]">
-                    {isLoading ? "..." : animatedComplianceScore}
-                  </span>
-                  <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-2 text-[2.1rem] font-bold text-transparent min-[420px]:pb-3 min-[420px]:text-[2.8rem] md:pb-4 md:text-[3.4rem] xl:pb-5 xl:text-[4.5rem]">%</span>
+                <div className="mt-4 flex w-full flex-col items-center justify-center gap-3 lg:flex-row lg:items-end lg:gap-4">
+                  <div className="flex items-end gap-1">
+                    <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[5.6rem] font-black leading-none text-transparent min-[420px]:text-[7rem] md:text-[9rem] xl:text-[12.6rem]">
+                      {isLoading ? "..." : animatedComplianceScore}
+                    </span>
+                    <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-2 text-[2.1rem] font-bold text-transparent min-[420px]:pb-3 min-[420px]:text-[2.8rem] md:pb-4 md:text-[3.4rem] xl:pb-5 xl:text-[4.5rem]">%</span>
+                  </div>
+                  <div className="w-full rounded-xl border border-slate-200/80 bg-white/65 px-3 py-3 text-left lg:max-w-sm dark:border-slate-700/70 dark:bg-slate-900/45">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
+                      Detalle del porcentaje actual
+                    </p>
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                      Diferencia contra 100%: <span className="font-semibold">{scoreBreakdown.gapFromHundred.toFixed(2)}%</span> (eventos no conformes:
+                      {" "}
+                      <span className="font-semibold">{scoreBreakdown.nonCompliantTotal}</span> de
+                      {" "}
+                      <span className="font-semibold">{scoreBreakdown.totalEvents}</span>).
+                    </p>
+                  </div>
                 </div>
                 <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:mt-6 sm:text-base sm:tracking-[0.28em] dark:text-slate-300">Score de cumplimiento</p>
                 </div>
                 <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/65 px-3 py-3 text-left dark:border-slate-700/70 dark:bg-slate-900/45">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
-                    Detalle del porcentaje actual
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                    Diferencia contra 100%: <span className="font-semibold">{scoreBreakdown.gapFromHundred.toFixed(2)}%</span> (eventos no conformes:
-                    {" "}
-                    <span className="font-semibold">{scoreBreakdown.nonCompliantTotal}</span> de
-                    {" "}
-                    <span className="font-semibold">{scoreBreakdown.totalEvents}</span>).
+                    Factores que influyen en el detalle
                   </p>
                   <ul className="mt-2 space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
                     {scoreBreakdown.factors.map((factor) => (
