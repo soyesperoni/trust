@@ -1814,45 +1814,80 @@ def dashboard(request):
     incidents = _filter_queryset_by_scope(incidents, scope, area_lookup="area_id")
     audits = _filter_queryset_by_scope(audits, scope, area_lookup="area_id")
 
+    completed_visits = visits.filter(status=Visit.Status.COMPLETED)
     completed_audits = audits.filter(status=Audit.Status.COMPLETED)
-    completed_with_score: list[tuple[Audit, int]] = []
+    scheduled_visits_queryset = visits.filter(status=Visit.Status.SCHEDULED)
+    overdue_visits_queryset = scheduled_visits_queryset.filter(visited_at__lt=now)
+    pending_visits_queryset = scheduled_visits_queryset.filter(visited_at__gte=now).order_by(
+        "visited_at"
+    )
+    scheduled_audits_queryset = audits.filter(status=Audit.Status.SCHEDULED)
+    overdue_audits_queryset = scheduled_audits_queryset.filter(audited_at__lt=now)
+    upcoming_scheduled_audits_queryset = scheduled_audits_queryset.filter(
+        status=Audit.Status.SCHEDULED, audited_at__gte=now
+    ).order_by("audited_at")
+    incident_count = incidents.count()
+
+    compliant_events_total = completed_visits.count() + completed_audits.count()
+    non_compliant_events_total = (
+        overdue_visits_queryset.count() + overdue_audits_queryset.count() + incident_count
+    )
+    compliance_total = compliant_events_total + non_compliant_events_total
+    compliance_score_average = (
+        round((compliant_events_total / compliance_total) * 100, 2)
+        if compliance_total > 0
+        else 100.0
+    )
+
+    daily_completed_counts: dict[str, int] = {}
+    for visit in completed_visits:
+        if visit.completed_at is None and visit.visited_at is None:
+            continue
+        reference_date = visit.completed_at or visit.visited_at
+        if reference_date is None:
+            continue
+        bucket_key = timezone.localtime(reference_date).date().isoformat()
+        daily_completed_counts[bucket_key] = daily_completed_counts.get(bucket_key, 0) + 1
+
     for audit in completed_audits:
-        score = _resolve_audit_score(audit)
-        if score is not None:
-            completed_with_score.append((audit, score))
-
-    audit_score_average = 0.0
-    if completed_with_score:
-        audit_score_average = round(
-            sum(score for _, score in completed_with_score) / len(completed_with_score), 2
-        )
-
-    daily_score_bucket: dict[str, list[int]] = {}
-    for audit, score in completed_with_score:
+        if audit.completed_at is None and audit.audited_at is None:
+            continue
         reference_date = audit.completed_at or audit.audited_at
         if reference_date is None:
             continue
         bucket_key = timezone.localtime(reference_date).date().isoformat()
-        daily_score_bucket.setdefault(bucket_key, []).append(score)
+        daily_completed_counts[bucket_key] = daily_completed_counts.get(bucket_key, 0) + 1
 
+    daily_non_compliance_counts: dict[str, int] = {}
+    for visit in overdue_visits_queryset:
+        bucket_key = timezone.localtime(visit.visited_at).date().isoformat()
+        daily_non_compliance_counts[bucket_key] = daily_non_compliance_counts.get(bucket_key, 0) + 1
+
+    for audit in overdue_audits_queryset:
+        bucket_key = timezone.localtime(audit.audited_at).date().isoformat()
+        daily_non_compliance_counts[bucket_key] = daily_non_compliance_counts.get(bucket_key, 0) + 1
+
+    for incident in incidents:
+        bucket_key = timezone.localtime(incident.created_at).date().isoformat()
+        daily_non_compliance_counts[bucket_key] = daily_non_compliance_counts.get(bucket_key, 0) + 1
+
+    all_daily_keys = sorted(
+        set(daily_completed_counts.keys()) | set(daily_non_compliance_counts.keys())
+    )
     daily_score_history: list[dict[str, Any]] = []
-    for bucket_key in sorted(daily_score_bucket):
-        bucket_scores = daily_score_bucket[bucket_key]
+    for bucket_key in all_daily_keys:
+        completed_total = daily_completed_counts.get(bucket_key, 0)
+        non_compliant_total = daily_non_compliance_counts.get(bucket_key, 0)
+        daily_total = completed_total + non_compliant_total
+        score = round((completed_total / daily_total) * 100, 2) if daily_total > 0 else 100.0
         daily_score_history.append(
             {
                 "date": bucket_key,
-                "score": round(sum(bucket_scores) / len(bucket_scores), 2),
-                "audits": len(bucket_scores),
+                "score": score,
+                "completed": completed_total,
+                "non_compliant": non_compliant_total,
             }
         )
-
-    scheduled_visits_queryset = visits.filter(status=Visit.Status.SCHEDULED)
-    pending_visits_queryset = scheduled_visits_queryset.filter(visited_at__gte=now).order_by(
-        "visited_at"
-    )
-    scheduled_audits_queryset = audits.filter(
-        status=Audit.Status.SCHEDULED, audited_at__gte=now
-    ).order_by("audited_at")
 
     pending_visit_buckets: dict[str, dict[str, Any]] = {}
     for visit in pending_visits_queryset:
@@ -1869,7 +1904,7 @@ def dashboard(request):
         current_bucket["last_time"] = visit_time
 
     scheduled_audit_buckets: dict[str, dict[str, Any]] = {}
-    for audit in scheduled_audits_queryset:
+    for audit in upcoming_scheduled_audits_queryset:
         audit_local_dt = timezone.localtime(audit.audited_at)
         bucket_key = audit_local_dt.date().isoformat()
         current_bucket = scheduled_audit_buckets.setdefault(
@@ -1898,11 +1933,14 @@ def dashboard(request):
         "products": products.count(),
         "visits": visits.count(),
         "pending_visits": scheduled_visits_queryset.count(),
+        "overdue_visits": overdue_visits_queryset.count(),
         "incidents": incidents.count(),
         "audits": audits.count(),
         "completed_audits": completed_audits.count(),
         "scheduled_audits": scheduled_audits_queryset.count(),
-        "audit_score": audit_score_average,
+        "overdue_audits": overdue_audits_queryset.count(),
+        "compliance_score": compliance_score_average,
+        "audit_score": compliance_score_average,
     }
     recent_visits = (
         visits.select_related("area__branch__client", "inspector")

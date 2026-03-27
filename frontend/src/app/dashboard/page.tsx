@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import DashboardHeader from "../components/DashboardHeader";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -17,9 +18,12 @@ type DashboardStats = {
   visits: number;
   incidents: number;
   pending_visits: number;
+  overdue_visits: number;
   audits: number;
   completed_audits: number;
   scheduled_audits: number;
+  overdue_audits: number;
+  compliance_score: number;
   audit_score: number;
 };
 
@@ -47,13 +51,14 @@ const getScoreColor = (score: number) => {
 export default function DashboardPage() {
   const { user } = useCurrentUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [dailyAuditScoreHistory, setDailyAuditScoreHistory] = useState<DailyAuditScore[]>([]);
+  const [dailyComplianceScoreHistory, setDailyComplianceScoreHistory] = useState<DailyAuditScore[]>([]);
   const [scoreRange, setScoreRange] = useState<ScoreRange>("fortnight");
   const [barAnimationProgress, setBarAnimationProgress] = useState(0);
   const [scoreChartAnimationKey, setScoreChartAnimationKey] = useState(0);
-  const [animatedAuditScore, setAnimatedAuditScore] = useState(0);
+  const [animatedComplianceScore, setAnimatedComplianceScore] = useState(0);
   const [animatedPendingVisits, setAnimatedPendingVisits] = useState(0);
   const [animatedScheduledAudits, setAnimatedScheduledAudits] = useState(0);
+  const [animatedIncidents, setAnimatedIncidents] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,7 +81,7 @@ export default function DashboardPage() {
         if (!isMounted) return;
 
         setStats(dashboardData.stats);
-        setDailyAuditScoreHistory(dashboardData.daily_audit_score_history ?? []);
+        setDailyComplianceScoreHistory(dashboardData.daily_audit_score_history ?? []);
         setError(null);
       } catch (fetchError) {
         if (!isMounted) return;
@@ -96,6 +101,20 @@ export default function DashboardPage() {
       isMounted = false;
     };
   }, []);
+
+  const cardRoutes = useMemo(
+    () => ({
+      Clientes: "/clientes",
+      Sucursales: "/clientes/sucursales",
+      "Áreas": "/clientes/areas",
+      Dosificadores: "/clientes/dispensadores",
+      Productos: "/clientes/productos",
+      Visitas: "/clientes/visitas",
+      Auditorías: "/clientes/auditorias",
+      Incidencias: "/clientes/incidencias",
+    }),
+    [],
+  );
 
   const statsCards = useMemo(
     () => {
@@ -125,13 +144,14 @@ export default function DashboardPage() {
     [stats, user?.role],
   );
 
-  const auditScore = useMemo(() => Math.round(stats?.audit_score ?? 0), [stats?.audit_score]);
-  const auditScoreColor = useMemo(() => getScoreColor(auditScore), [auditScore]);
+  const complianceScore = useMemo(() => Math.round(stats?.compliance_score ?? stats?.audit_score ?? 0), [stats?.audit_score, stats?.compliance_score]);
+  const complianceScoreColor = useMemo(() => getScoreColor(complianceScore), [complianceScore]);
   const pendingVisitsTotal = useMemo(() => stats?.pending_visits ?? 0, [stats?.pending_visits]);
   const scheduledAuditsTotal = useMemo(() => stats?.scheduled_audits ?? 0, [stats?.scheduled_audits]);
+  const incidentsTotal = useMemo(() => stats?.incidents ?? 0, [stats?.incidents]);
 
   const scoreBars = useMemo(() => {
-    const sanitized = dailyAuditScoreHistory
+    const sanitized = dailyComplianceScoreHistory
       .map((entry) => {
         const date = new Date(`${entry.date}T00:00:00`);
         if (Number.isNaN(date.getTime())) return null;
@@ -247,7 +267,7 @@ export default function DashboardPage() {
     });
 
     return values;
-  }, [dailyAuditScoreHistory, scoreRange]);
+  }, [dailyComplianceScoreHistory, scoreRange]);
 
   useEffect(() => {
     setScoreChartAnimationKey((current) => current + 1);
@@ -270,22 +290,24 @@ export default function DashboardPage() {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const easedProgress = 1 - Math.pow(1 - progress, 3);
-      setAnimatedAuditScore(Math.round(auditScore * easedProgress));
+      setAnimatedComplianceScore(Math.round(complianceScore * easedProgress));
       setAnimatedPendingVisits(Math.round(pendingVisitsTotal * easedProgress));
       setAnimatedScheduledAudits(Math.round(scheduledAuditsTotal * easedProgress));
+      setAnimatedIncidents(Math.round(incidentsTotal * easedProgress));
 
       if (progress < 1) {
         animationFrame = window.requestAnimationFrame(animate);
       }
     };
 
-    setAnimatedAuditScore(0);
+    setAnimatedComplianceScore(0);
     setAnimatedPendingVisits(0);
     setAnimatedScheduledAudits(0);
+    setAnimatedIncidents(0);
     animationFrame = window.requestAnimationFrame(animate);
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [auditScore, isLoading, pendingVisitsTotal, scheduledAuditsTotal]);
+  }, [complianceScore, incidentsTotal, isLoading, pendingVisitsTotal, scheduledAuditsTotal]);
 
   return (
     <>
@@ -309,13 +331,13 @@ export default function DashboardPage() {
                 <div className="flex flex-1 flex-col items-center justify-center">
                 <div className="mt-4 flex items-end gap-1">
                   <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[5.6rem] font-black leading-none text-transparent min-[420px]:text-[7rem] md:text-[9rem] xl:text-[12.6rem]">
-                    {isLoading ? "..." : animatedAuditScore}
+                    {isLoading ? "..." : animatedComplianceScore}
                   </span>
                   <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-2 text-[2.1rem] font-bold text-transparent min-[420px]:pb-3 min-[420px]:text-[2.8rem] md:pb-4 md:text-[3.4rem] xl:pb-5 xl:text-[4.5rem]">%</span>
                 </div>
-                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:mt-6 sm:text-base sm:tracking-[0.28em] dark:text-slate-300">Score actual</p>
+                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:mt-6 sm:text-base sm:tracking-[0.28em] dark:text-slate-300">Score de cumplimiento</p>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="mt-4 grid grid-cols-1 gap-3 min-[500px]:grid-cols-3">
                   <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
                     <p className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent sm:text-5xl">
                       {isLoading ? "..." : animatedPendingVisits}
@@ -328,6 +350,12 @@ export default function DashboardPage() {
                     </p>
                     <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Auditorías pendientes</p>
                   </article>
+                  <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
+                    <p className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent sm:text-5xl">
+                      {isLoading ? "..." : animatedIncidents}
+                    </p>
+                    <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">Incidencias existentes</p>
+                  </article>
                 </div>
               </div>
             </article>
@@ -335,10 +363,10 @@ export default function DashboardPage() {
             <article className="col-span-12 lg:col-span-8 rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 dark:border-slate-700/70 dark:bg-slate-900/55">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-slate-900 sm:text-lg dark:text-white">Tendencia diaria de score</h3>
+                  <h3 className="text-base font-bold text-slate-900 sm:text-lg dark:text-white">Tendencia diaria de cumplimiento</h3>
                   {!isLoading && (
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${auditScoreColor.badge}`}>
-                      Score: {auditScore}%
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${complianceScoreColor.badge}`}>
+                      Cumplimiento: {complianceScore}%
                     </span>
                   )}
                 </div>
@@ -410,8 +438,9 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
             {statsCards.map((item, index) => (
-              <article
+              <Link
                 key={item.label}
+                href={cardRoutes[item.label as keyof typeof cardRoutes] ?? "/dashboard"}
                 className="apple-card-enter group relative overflow-hidden rounded-xl border border-white/65 bg-white/72 px-3 py-3.5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55"
                 style={{ animationDelay: `${index * 70}ms` }}
               >
@@ -434,7 +463,7 @@ export default function DashboardPage() {
                     </div>
                   </>
                 )}
-              </article>
+              </Link>
             ))}
           </div>
 
