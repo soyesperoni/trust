@@ -253,37 +253,10 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
           </button>
         </div>
 
-        <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-[linear-gradient(140deg,rgba(255,255,255,0.94)_0%,rgba(59,130,246,0.08)_40%,rgba(16,185,129,0.1)_100%)] p-6 shadow-[0_22px_55px_-26px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-slate-700 dark:bg-[linear-gradient(140deg,rgba(15,23,42,0.95)_0%,rgba(37,99,235,0.26)_45%,rgba(16,185,129,0.22)_100%)]">
-          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-300">Trust • Informe corporativo</p>
-              <h1 className="mt-3 text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">Informe de Auditoría #{audit.id}</h1>
-              <p className="mt-3 max-w-3xl text-sm text-slate-600 dark:text-slate-300">Vista ejecutiva con indicadores, riesgos y plan de acción en diseño de tarjetas, alineado al estilo del dashboard.</p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "80ms" }}>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Fecha</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{formattedDate}</p>
-              </div>
-              <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "140ms" }}>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Riesgo</p>
-                <p className="mt-1 text-sm font-semibold" style={{ color: scoreColor }}>{scoreLabel}</p>
-              </div>
-              <div className="apple-card-enter rounded-2xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70" style={{ animationDelay: "200ms" }}>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Evidencias</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{photos.length + videos.length}</p>
-              </div>
-            </div>
-          </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Cumplimiento general</p>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"><span className="block h-full rounded-full transition-all" style={{ width: `${score ?? 0}%`, backgroundColor: scoreColor }} /></div>
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Avance de plan de acción</p>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"><span className="block h-full rounded-full bg-professional-green transition-all" style={{ width: `${Math.min(100, Math.max(10, nextSteps.length * 20))}%` }} /></div>
-            </div>
+        <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(14,165,233,0.06)_48%,rgba(16,185,129,0.08)_100%)] p-6 shadow-[0_22px_55px_-26px_rgba(15,23,42,0.35)] backdrop-blur-sm dark:border-slate-700/80 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.94)_0%,rgba(37,99,235,0.14)_50%,rgba(16,185,129,0.14)_100%)] md:p-7">
+          <div className="flex w-full flex-col items-start gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-300">Trust • Informe corporativo</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">Informe de Auditoría #{audit.id}</h1>
           </div>
         </article>
 
