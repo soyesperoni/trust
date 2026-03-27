@@ -327,67 +327,67 @@ export default function DashboardPage() {
           )}
 
           <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch xl:gap-5">
-            <article className="w-full rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 xl:w-auto xl:flex-shrink-0 dark:border-slate-700/70 dark:bg-slate-900/55">
-              <div className="flex h-full min-h-[18rem] flex-col rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-4 text-center sm:min-h-[22rem] sm:p-6 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
+            <article className="w-full rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-5 xl:w-auto xl:flex-shrink-0 dark:border-slate-700/70 dark:bg-slate-900/55">
+              <div className="flex h-full flex-col rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-4 text-center sm:p-5 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
                 <div className="flex flex-1 flex-col items-center justify-center">
-                  <div className="mt-4 grid w-full grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] xl:items-stretch xl:gap-6">
+                  <div className="mt-2 grid w-full grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:items-stretch xl:gap-4">
                     <div className="flex h-full flex-col">
-                      <div className="flex flex-1 flex-col items-center justify-center">
+                      <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-slate-200/80 bg-white/70 px-3 py-4 dark:border-slate-700/70 dark:bg-slate-900/45">
                         <div className="flex items-end gap-1">
-                          <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[5.6rem] font-black leading-none text-transparent min-[420px]:text-[7rem] md:text-[9rem] xl:text-[11rem] 2xl:text-[12rem]">
+                          <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[4.2rem] font-black leading-none text-transparent min-[420px]:text-[5.2rem] md:text-[6rem] xl:text-[6.4rem]">
                             {isLoading ? "..." : animatedComplianceScore}
                           </span>
-                          <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-2 text-[2.1rem] font-bold text-transparent min-[420px]:pb-3 min-[420px]:text-[2.8rem] md:pb-4 md:text-[3.4rem] xl:pb-5 xl:text-[4.3rem]">%</span>
+                          <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-1 text-[1.9rem] font-bold text-transparent min-[420px]:text-[2.5rem] md:pb-2 md:text-[2.9rem] xl:text-[3.1rem]">%</span>
                         </div>
-                        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:mt-6 sm:text-base sm:tracking-[0.28em] dark:text-slate-300">Score de cumplimiento</p>
+                        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-sm sm:tracking-[0.22em] dark:text-slate-300">Score de cumplimiento</p>
                       </div>
                       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
+                        <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
                           <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                            <span className="text-4xl font-black leading-none sm:text-5xl">
+                            <span className="text-3xl font-black leading-none sm:text-4xl">
                               {isLoading ? "..." : animatedPendingVisits}
                             </span>
-                            <span className="text-4xl font-black leading-none sm:text-5xl">visitas</span>
-                            <span className="text-4xl font-black leading-none sm:text-5xl">programadas</span>
+                            <span className="text-3xl font-black leading-none sm:text-4xl">visitas</span>
+                            <span className="text-3xl font-black leading-none sm:text-4xl">programadas</span>
                           </div>
                         </article>
-                        <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
+                        <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
                           <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                            <span className="text-4xl font-black leading-none sm:text-5xl">
+                            <span className="text-3xl font-black leading-none sm:text-4xl">
                               {isLoading ? "..." : animatedScheduledAudits}
                             </span>
-                            <span className="text-4xl font-black leading-none sm:text-5xl">auditorías</span>
-                            <span className="text-4xl font-black leading-none sm:text-5xl">pendientes</span>
+                            <span className="text-3xl font-black leading-none sm:text-4xl">auditorías</span>
+                            <span className="text-3xl font-black leading-none sm:text-4xl">pendientes</span>
                           </div>
                         </article>
                       </div>
                     </div>
                     <div className="grid w-full grid-cols-1 gap-3">
-                      <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
+                      <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
                         <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                          <span className="text-4xl font-black leading-none sm:text-5xl">
+                          <span className="text-3xl font-black leading-none sm:text-4xl">
                             {isLoading ? "..." : animatedOverdueVisits}
                           </span>
-                          <span className="text-4xl font-black leading-none sm:text-5xl">visitas</span>
-                          <span className="text-4xl font-black leading-none sm:text-5xl">vencidas</span>
+                          <span className="text-3xl font-black leading-none sm:text-4xl">visitas</span>
+                          <span className="text-3xl font-black leading-none sm:text-4xl">vencidas</span>
                         </div>
                       </article>
-                      <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
+                      <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
                         <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                          <span className="text-4xl font-black leading-none sm:text-5xl">
+                          <span className="text-3xl font-black leading-none sm:text-4xl">
                             {isLoading ? "..." : animatedOverdueAudits}
                           </span>
-                          <span className="text-4xl font-black leading-none sm:text-5xl">auditorías</span>
-                          <span className="text-4xl font-black leading-none sm:text-5xl">vencidas</span>
+                          <span className="text-3xl font-black leading-none sm:text-4xl">auditorías</span>
+                          <span className="text-3xl font-black leading-none sm:text-4xl">vencidas</span>
                         </div>
                       </article>
-                      <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
+                      <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
                         <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                          <span className="text-4xl font-black leading-none sm:text-5xl">
+                          <span className="text-3xl font-black leading-none sm:text-4xl">
                             {isLoading ? "..." : animatedIncidents}
                           </span>
-                          <span className="text-4xl font-black leading-none sm:text-5xl">incidencias</span>
-                          <span className="text-4xl font-black leading-none sm:text-5xl">activas</span>
+                          <span className="text-3xl font-black leading-none sm:text-4xl">incidencias</span>
+                          <span className="text-3xl font-black leading-none sm:text-4xl">activas</span>
                         </div>
                       </article>
                     </div>
