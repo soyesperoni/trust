@@ -16,6 +16,7 @@ type DashboardStats = {
   dispensers: number;
   products: number;
   visits: number;
+  completed_visits: number;
   incidents: number;
   pending_visits: number;
   overdue_visits: number;
@@ -33,7 +34,7 @@ type DailyAuditScore = {
   audits: number;
 };
 
-type ScoreRange = "month" | "week" | "fortnight";
+type ScoreRange = "month" | "week" | "last6days";
 
 const getLocalDateKey = (date: Date) => {
   const year = date.getFullYear();
@@ -52,7 +53,7 @@ export default function DashboardPage() {
   const { user } = useCurrentUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [dailyComplianceScoreHistory, setDailyComplianceScoreHistory] = useState<DailyAuditScore[]>([]);
-  const [scoreRange, setScoreRange] = useState<ScoreRange>("fortnight");
+  const [scoreRange, setScoreRange] = useState<ScoreRange>("last6days");
   const [barAnimationProgress, setBarAnimationProgress] = useState(0);
   const [scoreChartAnimationKey, setScoreChartAnimationKey] = useState(0);
   const [animatedComplianceScore, setAnimatedComplianceScore] = useState(0);
@@ -149,6 +150,61 @@ export default function DashboardPage() {
   const pendingVisitsTotal = useMemo(() => stats?.pending_visits ?? 0, [stats?.pending_visits]);
   const scheduledAuditsTotal = useMemo(() => stats?.scheduled_audits ?? 0, [stats?.scheduled_audits]);
   const incidentsTotal = useMemo(() => stats?.incidents ?? 0, [stats?.incidents]);
+  const scoreBreakdown = useMemo(() => {
+    const completedVisits = stats?.completed_visits ?? 0;
+    const completedAudits = stats?.completed_audits ?? 0;
+    const overdueVisits = stats?.overdue_visits ?? 0;
+    const overdueAudits = stats?.overdue_audits ?? 0;
+    const openIncidents = stats?.incidents ?? 0;
+
+    const compliantTotal = completedVisits + completedAudits;
+    const nonCompliantTotal = overdueVisits + overdueAudits + openIncidents;
+    const totalEvents = compliantTotal + nonCompliantTotal;
+    const gapFromHundred = Math.max(0, Number((100 - complianceScore).toFixed(2)));
+
+    const factors = [
+      {
+        key: "overdue_visits",
+        label: "Visitas vencidas",
+        count: overdueVisits,
+        condition: "Resta cuando la visita sigue programada y ya pasó su fecha/hora.",
+      },
+      {
+        key: "overdue_audits",
+        label: "Auditorías vencidas",
+        count: overdueAudits,
+        condition: "Resta cuando la auditoría está programada y no se completa en fecha.",
+      },
+      {
+        key: "incidents",
+        label: "Incidencias abiertas",
+        count: openIncidents,
+        condition: "Resta por cada incidencia activa registrada en la operación.",
+      },
+    ].map((factor) => {
+      const impactOnTotal = totalEvents > 0 ? Number(((factor.count / totalEvents) * 100).toFixed(2)) : 0;
+      const shareOfGap = nonCompliantTotal > 0 ? Number(((factor.count / nonCompliantTotal) * gapFromHundred).toFixed(2)) : 0;
+      return {
+        ...factor,
+        impactOnTotal,
+        shareOfGap,
+      };
+    });
+
+    return {
+      nonCompliantTotal,
+      totalEvents,
+      gapFromHundred,
+      factors,
+    };
+  }, [
+    complianceScore,
+    stats?.completed_audits,
+    stats?.completed_visits,
+    stats?.incidents,
+    stats?.overdue_audits,
+    stats?.overdue_visits,
+  ]);
 
   const scoreBars = useMemo(() => {
     const sanitized = dailyComplianceScoreHistory
@@ -225,7 +281,7 @@ export default function DashboardPage() {
       return weekBuckets;
     }
 
-    const dayCount = 15;
+    const dayCount = 6;
     const byDate = new Map<string, number>();
     sanitized.forEach((entry) => {
       byDate.set(getLocalDateKey(entry.date), entry.score);
@@ -337,6 +393,28 @@ export default function DashboardPage() {
                 </div>
                 <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:mt-6 sm:text-base sm:tracking-[0.28em] dark:text-slate-300">Score de cumplimiento</p>
                 </div>
+                <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/65 px-3 py-3 text-left dark:border-slate-700/70 dark:bg-slate-900/45">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
+                    Detalle del porcentaje actual
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                    Diferencia contra 100%: <span className="font-semibold">{scoreBreakdown.gapFromHundred.toFixed(2)}%</span> (eventos no conformes:
+                    {" "}
+                    <span className="font-semibold">{scoreBreakdown.nonCompliantTotal}</span> de
+                    {" "}
+                    <span className="font-semibold">{scoreBreakdown.totalEvents}</span>).
+                  </p>
+                  <ul className="mt-2 space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
+                    {scoreBreakdown.factors.map((factor) => (
+                      <li key={factor.key} className="rounded-lg border border-slate-200/80 bg-white/70 px-2 py-1.5 dark:border-slate-700/70 dark:bg-slate-900/35">
+                        <p className="font-semibold text-slate-700 dark:text-slate-200">
+                          {factor.label}: {factor.count} · impacto {factor.impactOnTotal.toFixed(2)}% · descuento estimado {factor.shareOfGap.toFixed(2)}%
+                        </p>
+                        <p>{factor.condition}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
                 <div className="mt-4 grid grid-cols-1 gap-3 min-[500px]:grid-cols-3">
                   <article className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-900/45">
                     <p className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent sm:text-5xl">
@@ -374,7 +452,7 @@ export default function DashboardPage() {
                   {[
                     { value: "month", label: "Últimos 6 meses" },
                     { value: "week", label: "Últimas 6 semanas" },
-                    { value: "fortnight", label: "15 días" },
+                    { value: "last6days", label: "Últimos 6 días" },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -425,7 +503,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 </div>
-                <div className={`mt-2 min-w-[560px] gap-2 ${scoreRange === "month" || scoreRange === "week" ? "grid grid-cols-6" : "grid grid-cols-5 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-[repeat(15,minmax(0,1fr))]"}`}>
+                <div className={`mt-2 min-w-[560px] gap-2 ${scoreRange === "month" || scoreRange === "week" ? "grid grid-cols-6" : "grid grid-cols-6"}`}>
                   {scoreBars.map((item, index) => (
                     <span key={`${item.label}-${index}`} className="truncate text-center text-[11px] font-semibold text-slate-500 dark:text-slate-300">
                       {item.label}
