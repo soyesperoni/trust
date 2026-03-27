@@ -238,7 +238,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
     <>
       <DashboardHeader title="Informe de auditoría" description="Detalle visual y técnico de la auditoría registrada." />
 
-      <section className="mx-auto w-full max-w-[1400px] flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8">
+      <section className="mx-auto w-full max-w-[1400px] flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8 report-mode">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-[#1a232e] dark:text-slate-200"
@@ -251,6 +251,50 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
             <span className="material-symbols-outlined text-[18px]">download</span>
             Descargar PDF
           </button>
+        </div>
+
+        <article className="report-sheet report-cover mb-6 flex flex-col justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-slate-200">Trust · Informe Corporativo</p>
+            <h1 className="mt-6 text-5xl font-semibold leading-tight">Informe de Auditoría</h1>
+            <p className="mt-6 max-w-xl text-base text-slate-100">Documento ejecutivo con indicadores de cumplimiento, riesgos y plan de acción.</p>
+          </div>
+          <div className="space-y-2 text-sm text-slate-100">
+            <p><span className="font-semibold">Cliente:</span> {audit.client || "Sin cliente"}</p>
+            <p><span className="font-semibold">Sucursal:</span> {audit.branch}</p>
+            <p><span className="font-semibold">Fecha:</span> {formattedDate}</p>
+            <p><span className="font-semibold">Inspector:</span> {audit.inspector || "Sin inspector"}</p>
+          </div>
+        </article>
+
+        <div className="report-sheet report-page-break mb-6">
+          <div className="report-divider pt-4">
+            <h2 className="text-xl font-semibold">Panel ejecutivo</h2>
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="border border-slate-300 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Score IA</p>
+                <p className="mt-1 text-lg font-semibold">{score == null ? "Sin score" : `${score}%`}</p>
+              </div>
+              <div className="border border-slate-300 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Nivel de riesgo</p>
+                <p className="mt-1 text-lg font-semibold">{scoreLabel}</p>
+              </div>
+              <div className="border border-slate-300 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Evidencias</p>
+                <p className="mt-1 text-lg font-semibold">{photos.length + videos.length}</p>
+              </div>
+            </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Cumplimiento general</p>
+                <div className="report-chart-bar"><span style={{ width: `${score ?? 0}%` }} /></div>
+              </div>
+              <div>
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Avance de plan de acción</p>
+                <div className="report-chart-bar"><span style={{ width: `${Math.min(100, Math.max(10, nextSteps.length * 20))}%` }} /></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-3">

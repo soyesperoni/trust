@@ -52,6 +52,66 @@ body {
   font-family: "Poppins", sans-serif;
 }
 
+@page {
+  size: Letter;
+  margin: 0.5in;
+}
+
+.report-mode {
+  font-family: "Poppins", sans-serif;
+  font-variation-settings: "wght" 400;
+}
+
+.report-mode [class*="rounded-"] {
+  border-radius: 0 !important;
+}
+
+.report-sheet {
+  width: min(100%, 8.5in);
+  min-height: 11in;
+  margin-inline: auto;
+  background: white;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  padding: 0.45in;
+}
+
+.report-cover {
+  background: linear-gradient(160deg, #0f172a 0%, #1e3a8a 62%, #334155 100%);
+  color: #f8fafc;
+  border-color: #0f172a;
+}
+
+.report-divider {
+  border-top: 3px solid #1e293b;
+}
+
+.report-chart-bar {
+  height: 10px;
+  background: #e2e8f0;
+}
+
+.report-chart-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 100%);
+}
+
+@media print {
+  .report-sheet {
+    border: none;
+    margin: 0;
+    width: 100%;
+    min-height: auto;
+    padding: 0;
+  }
+
+  .report-page-break {
+    break-before: page;
+    page-break-before: always;
+  }
+}
+
 button,
 input,
 select,
