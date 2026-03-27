@@ -29,7 +29,11 @@ export default function BrandLogo({
       <Image
         src={compact ? "/icono_app.png" : "/trust_logo_s.svg"}
         alt="Trust"
-        className={compact ? `${styles.icon} object-contain` : `${styles.logo} w-auto`}
+        className={
+          compact
+            ? `${styles.icon} object-contain`
+            : `${styles.logo} w-auto scale-[1.05] origin-left`
+        }
         width={compact ? 80 : 512}
         height={compact ? 80 : 128}
         priority
