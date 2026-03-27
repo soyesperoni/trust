@@ -42,7 +42,7 @@ const navItems: NavItem[] = [
 ];
 
 const linkClassName = (isActive: boolean, collapsed: boolean) =>
-  `flex items-center ${collapsed ? "justify-center" : "gap-2.5"} px-4 py-3 text-sm text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer ${
+  `flex items-center ${collapsed ? "justify-center" : "gap-2"} px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer ${
     isActive ? "bg-yellow-50 text-slate-900 border-r-4 border-primary font-semibold" : ""
   }`;
 
@@ -72,9 +72,9 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
   });
 
   return (
-    <aside className={`hidden shrink-0 flex-col border-r border-slate-200 bg-white transition-all duration-300 dark:border-slate-800 dark:bg-[#161e27] md:flex ${collapsed ? "w-20" : "w-56"}`}>
+    <aside className={`hidden shrink-0 flex-col border-r border-slate-200 bg-white transition-all duration-300 dark:border-slate-800 dark:bg-[#161e27] md:flex ${collapsed ? "w-16" : "w-48"}`}>
       <div
-        className={`relative flex h-20 items-center border-b border-slate-100 px-4 dark:border-slate-800 ${
+        className={`relative flex h-16 items-center border-b border-slate-100 px-3 dark:border-slate-800 ${
           collapsed ? "justify-center" : "justify-start"
         }`}
       >
