@@ -36,10 +36,10 @@ export default function MobileBottomNav({ activePath }: MobileBottomNavProps) {
                   : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               }`}
             >
-              <span className={`material-symbols-outlined text-[20px] ${isActive ? "filled" : ""}`}>
+              <span className={`material-symbols-outlined text-[23px] ${isActive ? "filled" : ""}`}>
                 {item.icon}
               </span>
-              <span className="mt-1 text-[11px] font-medium leading-none">{item.label}</span>
+              <span className="mt-1 text-[12.5px] font-medium leading-none">{item.label}</span>
             </Link>
           );
         })}
