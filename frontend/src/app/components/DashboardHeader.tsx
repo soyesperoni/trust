@@ -49,8 +49,9 @@ export default function DashboardHeader({
   const [unreadCount, setUnreadCount] = useState(0);
 
   const userInitials = useMemo(() => {
-    if (!user?.full_name) return "?";
-    return getInitials(user.full_name);
+    if (user?.full_name) return getInitials(user.full_name);
+    if (user?.email) return getInitials(user.email);
+    return "US";
   }, [user]);
 
   const handleLogout = () => {

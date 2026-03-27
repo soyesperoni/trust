@@ -15,6 +15,28 @@ export type CurrentUser = {
 
 export const SESSION_USER_KEY = "trust.currentUser";
 
+const getSessionUserSnapshot = (): CurrentUser | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const sessionUserRaw = window.localStorage.getItem(SESSION_USER_KEY);
+    if (!sessionUserRaw) return null;
+    const parsed = JSON.parse(sessionUserRaw) as Partial<CurrentUser> | null;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (!parsed.full_name && !parsed.email) return null;
+
+    return {
+      id: typeof parsed.id === "number" ? parsed.id : 0,
+      full_name: parsed.full_name?.trim() || parsed.email?.trim() || "Usuario",
+      email: parsed.email?.trim(),
+      role: parsed.role ?? "",
+      role_label: parsed.role_label ?? "",
+      is_active: parsed.is_active ?? true,
+    };
+  } catch {
+    return null;
+  }
+};
+
 const subscribeToSessionChanges = (callback: () => void) => {
   if (typeof window === "undefined") return () => undefined;
   const handleChange = () => callback();
@@ -39,8 +61,8 @@ const getSessionEmailSnapshot = () => {
 };
 
 export function useCurrentUser() {
-  const [user, setUser] = useState<CurrentUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<CurrentUser | null>(() => getSessionUserSnapshot());
+  const [isLoading, setIsLoading] = useState(() => !getSessionUserSnapshot());
   const sessionEmail = useSyncExternalStore(
     subscribeToSessionChanges,
     getSessionEmailSnapshot,
