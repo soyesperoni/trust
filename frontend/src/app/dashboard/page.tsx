@@ -116,13 +116,13 @@ export default function DashboardPage() {
   const statsCards = useMemo(
     () => {
       const cards = [
-      { label: "Sucursales", value: stats?.branches ?? 0, icon: "storefront", iconStyle: "bg-professional-green/15 text-professional-green" },
-      { label: "Áreas", value: stats?.areas ?? 0, icon: "map", iconStyle: "bg-primary/15 text-professional-green" },
-      { label: "Dosificadores", value: stats?.dispensers ?? 0, icon: "water_drop", iconStyle: "bg-professional-green/10 text-professional-green" },
-      { label: "Productos", value: stats?.products ?? 0, icon: "inventory_2", iconStyle: "bg-primary/15 text-primary" },
-      { label: "Visitas", value: stats?.visits ?? 0, icon: "history", iconStyle: "bg-professional-green/10 text-professional-green" },
-      { label: "Auditorías", value: stats?.audits ?? 0, icon: "assignment_turned_in", iconStyle: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200" },
-      { label: "Incidencias", value: stats?.incidents ?? 0, icon: "report_problem", iconStyle: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300" },
+        { label: "Sucursales", value: stats?.branches ?? 0, icon: "storefront" },
+        { label: "Áreas", value: stats?.areas ?? 0, icon: "map" },
+        { label: "Dosificadores", value: stats?.dispensers ?? 0, icon: "water_drop" },
+        { label: "Productos", value: stats?.products ?? 0, icon: "inventory_2" },
+        { label: "Visitas", value: stats?.visits ?? 0, icon: "history" },
+        { label: "Auditorías", value: stats?.audits ?? 0, icon: "assignment_turned_in" },
+        { label: "Incidencias", value: stats?.incidents ?? 0, icon: "report_problem" },
       ];
 
       if (user?.role === ACCOUNT_ADMIN_ROLE) {
@@ -133,10 +133,7 @@ export default function DashboardPage() {
         return cards.filter((card) => card.label !== "Sucursales");
       }
 
-      return [
-        { label: "Clientes", value: stats?.clients ?? 0, icon: "apartment", iconStyle: "bg-primary/20 text-primary" },
-        ...cards,
-      ];
+      return [{ label: "Clientes", value: stats?.clients ?? 0, icon: "apartment" }, ...cards];
     },
     [stats, user?.role],
   );
@@ -454,39 +451,33 @@ export default function DashboardPage() {
                     </span>
                   ))}
                 </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4 xl:grid-cols-8">
+                  {statsCards.map((item, index) => (
+                    <Link
+                      key={item.label}
+                      href={cardRoutes[item.label as keyof typeof cardRoutes] ?? "/dashboard"}
+                      className="apple-card-enter group relative overflow-hidden rounded-xl border border-primary/20 bg-white/85 px-2 py-2.5 shadow-[0_16px_35px_-30px_rgba(46,49,146,0.75)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-primary/30 dark:bg-slate-900/65"
+                      style={{ animationDelay: `${index * 70}ms` }}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="h-6 w-6 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+                          <div className="h-5 w-8 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className="material-symbols-outlined bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[22px] text-transparent">{item.icon}</span>
+                          <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-xl font-black leading-none text-transparent">
+                            {item.value}
+                          </span>
+                        </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </article>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8">
-            {statsCards.map((item, index) => (
-              <Link
-                key={item.label}
-                href={cardRoutes[item.label as keyof typeof cardRoutes] ?? "/dashboard"}
-                className="apple-card-enter group relative overflow-hidden rounded-xl border border-white/65 bg-white/72 px-3 py-3.5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-900/55"
-                style={{ animationDelay: `${index * 70}ms` }}
-              >
-                {isLoading ? (
-                  <div className="space-y-2">
-                    <div className="h-7 w-7 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
-                    <div className="h-3 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-                    <div className="h-6 w-12 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="truncate text-left text-sm font-semibold text-slate-500 dark:text-slate-400">{item.label}</h3>
-                        <p className="mt-1 text-[24px] font-black leading-none text-slate-900 dark:text-white">{item.value}</p>
-                      </div>
-                      <div className={`inline-flex rounded-lg p-2 ${item.iconStyle}`}>
-                        <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </Link>
-            ))}
           </div>
 
         </section>
