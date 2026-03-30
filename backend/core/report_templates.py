@@ -159,13 +159,16 @@ def _visit_report_styles() -> str:
       body { margin: 0; font-family: 'Poppins', sans-serif; color: #191c1d; background: #f8f9fa; }
       .canvas { width: 100%; max-width: 1100px; margin: 0 auto; }
       .page { padding: 34px; }
-      .headline { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 38px; }
-      .brand-block { padding-top: 10px; }
+      .headline { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 38px; }
+      .brand-block { padding-top: 30px; }
       .eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: #64748b; }
       .title { font-size: 52px; line-height: 1; margin: 8px 0 0; color: #2E3192; font-weight: 700; }
       .editorial-gradient { background: linear-gradient(135deg, #2E3192 0%, #92B936 100%); }
       .visit-chip { color: #fff; font-size: 12px; letter-spacing: .12em; font-weight: 700; border-radius: 999px; padding: 5px 14px; display: inline-block; }
       .date-text { margin-top: 8px; font-size: 14px; color: #464652; }
+      .top-right-panel { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+      .top-right-panel .verify { width: 170px; padding: 10px; }
+      .top-right-panel .verify img { width: 112px; height: 112px; padding: 6px; }
       .section { margin-top: 34px; }
       .section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
       .section-head h2 { margin: 0; font-size: 26px; color: #2E3192; font-weight: 600; }
@@ -192,7 +195,7 @@ def _visit_report_styles() -> str:
       .obs { background: #f3f4f5; border-left: 4px solid #92B936; border-radius: 14px; padding: 16px; font-style: italic; }
       .verify { border: 1px solid rgba(119,118,131,.2); border-radius: 14px; padding: 14px; text-align: center; background: #fff; box-shadow: 0 12px 28px rgba(46,49,146,.05); }
       .verify img { width: 132px; height: 132px; object-fit: contain; border-radius: 8px; border: 1px solid #e1e3e4; background: #fff; padding: 8px; }
-      .verify-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: stretch; margin-top: 10px; }
+      .verify-grid { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: stretch; margin-top: 10px; }
       .verify-signature { border: 1px solid rgba(119,118,131,.2); border-radius: 14px; padding: 14px; background: #fff; box-shadow: 0 12px 28px rgba(46,49,146,.05); display: flex; flex-direction: column; justify-content: center; }
       .verify-signature .title { font-size: 13px; margin: 0; color: #2E3192; }
       .verify-signature img { max-width: 100%; max-height: 70px; object-fit: contain; margin: 10px auto 0; display: block; }
@@ -287,13 +290,16 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
   <main class="canvas page">
     <header class="headline">
       <div class="brand-block">
-        <img src="{logo_uri}" alt="Logo Trust" style="height:30px;width:auto;display:block;margin:8px 0 10px;"/>
+        <img src="{logo_uri}" alt="Logo Trust" style="height:30px;width:auto;display:block;margin:22px 0 10px;"/>
         <div class="eyebrow">SUPPLYMAX Technical Services</div>
         <h1 class="title">Informe de visita técnica</h1>
       </div>
-      <div style="text-align:right;">
-        <div class="visit-chip editorial-gradient">VISITA #{visit['id']}</div>
-        <div class="date-text">{visited_at_long}</div>
+      <div class="top-right-panel">
+        <div class="verify">{qr_html}<p class="tag" style="margin-top:10px;">Acceso web verificado</p><p style="font-size:11px;color:#64748b;">Escanee para ver el reporte interactivo</p></div>
+        <div style="text-align:right;">
+          <div class="visit-chip editorial-gradient">VISITA #{visit['id']}</div>
+          <div class="date-text">{visited_at_long}</div>
+        </div>
       </div>
     </header>
 
@@ -330,7 +336,6 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
         <div class="obs">"{comments}"<p style="margin-top:10px;font-style:normal;font-size:12px;color:#475569;">Inspector que realizó la visita: {inspector_name}</p><p style="margin-top:4px;font-style:normal;font-size:12px;color:#475569;">Generado: {generated}</p></div>
       </div>
       <div class="verify-grid">
-        <div class="verify">{qr_html}<p class="tag" style="margin-top:10px;">Acceso web verificado</p><p style="font-size:11px;color:#64748b;">Escanee para ver el reporte interactivo</p></div>
         <div class="verify-signature"><p class="title">Representante de área</p>{signature_near_qr_html}<p class="name">{responsible_name}</p></div>
       </div>
     </section>
