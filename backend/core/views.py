@@ -1792,6 +1792,7 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         pdf.drawString(margin_x + 126, y, str(value)[:120])
         y -= line_h
 
+    y -= 8
     _section_title("Observaciones generales")
     comments = str(report.get("comments") or visit.notes or "Sin observaciones registradas.")
     wrapped = _split_text_to_lines(pdf, comments, page_width - (margin_x * 2))
