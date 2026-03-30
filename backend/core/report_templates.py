@@ -15,17 +15,19 @@ from reportlab.graphics.shapes import Drawing
 @lru_cache(maxsize=1)
 def _logo_data_uri() -> str:
     logo_paths = [
+        Path(__file__).resolve().parents[2] / "frontend/public/trust_logo_s.png",
         Path(__file__).resolve().parents[2] / "frontend/public/trust_logo_s.svg",
         Path(__file__).resolve().parents[2] / "frontend/public/trust_logo.svg",
     ]
     for path in logo_paths:
         try:
-            svg_content = path.read_bytes()
+            content = path.read_bytes()
         except OSError:
             continue
-        encoded = base64.b64encode(svg_content).decode("ascii")
-        return f"data:image/svg+xml;base64,{encoded}"
-    return "https://trust.supplymax.net/trust_logo_s.svg"
+        encoded = base64.b64encode(content).decode("ascii")
+        mime = "image/png" if path.suffix.lower() == ".png" else "image/svg+xml"
+        return f"data:{mime};base64,{encoded}"
+    return "https://trust.supplymax.net/trust_logo_s.png"
 
 
 def _qr_data_uri(url: str) -> str:
@@ -151,8 +153,6 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
         if qr_url
         else '<div class="signature-placeholder">No hay enlace web disponible</div>'
     )
-    web_access_link_html = f'<p class="link">{escape(web_access_url)}</p>' if web_access_url else ""
-
     return f"""<!doctype html>
 <html lang=\"es\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>
 <title>Informe de visita #{visit['id']}</title><style>{_base_styles()}</style></head><body>
@@ -182,7 +182,7 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
   </div>
   <div class=\"grid-2\">
     <article class=\"panel\"><h3>Responsable del área</h3><div class=\"signature-box\">{signature_html}<p class=\"small\">Nombre: {escape(str(report.get('responsible_name') or 'No registrado'))}</p></div></article>
-    <article class=\"panel\"><h3>Acceso web por QR</h3><div class=\"qr-wrap\">{qr_html}<p class=\"small\">Escanea para abrir el informe web</p>{web_access_link_html}</div></article>
+    <article class=\"panel\"><h3>QR de verificación web</h3><div class=\"qr-wrap\">{qr_html}<p class=\"small\">Escanea para abrir y verificar el informe web</p></div></article>
   </div>
 </section>
 </body></html>"""
