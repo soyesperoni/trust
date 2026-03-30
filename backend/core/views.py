@@ -54,7 +54,10 @@ REPORT_PUBLIC_LINK_SALT = "visit-report-public-link"
 REPORT_PUBLIC_LINK_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 REPORT_PAGE_PADDING = 36
 REPORT_CARD_RADIUS = 14
-REPORT_AUDIT_LOGO_URL = "https://trust.supplymax.net/trust_logo_s.svg"
+REPORT_AUDIT_LOGO_URLS = [
+    "https://trust.supplymax.net/trust_logo_s.png",
+    "https://trust.supplymax.net/trust_logo_s.svg",
+]
 REPORT_LOGO_PATHS = [
     Path(__file__).resolve().parents[2] / "frontend/public/trust_logo_s.png",
     Path(__file__).resolve().parents[2] / "frontend/public/trust_logo_s.svg",
@@ -89,6 +92,41 @@ def _initialize_report_fonts():
         ("TrustSans", "TrustSans-Bold", "TrustSans-Italic", Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"), Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"), Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf")),
         ("TrustSans", "TrustSans-Bold", "TrustSans-Italic", Path("/usr/share/fonts/dejavu/DejaVuSans.ttf"), Path("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"), Path("/usr/share/fonts/dejavu/DejaVuSans-Oblique.ttf")),
     ]
+
+    remote_font_dir = Path("/tmp/trust-report-fonts")
+    remote_font_dir.mkdir(parents=True, exist_ok=True)
+    remote_font_urls = {
+        "Poppins-Regular": "https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Regular.ttf",
+        "Poppins-Bold": "https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Bold.ttf",
+        "Poppins-Italic": "https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Italic.ttf",
+    }
+    remote_font_paths: dict[str, Path] = {}
+    for font_name, font_url in remote_font_urls.items():
+        font_path = remote_font_dir / f"{font_name}.ttf"
+        if not font_path.exists():
+            try:
+                request = Request(font_url, headers={"User-Agent": "trust-report-generator/1.0"})
+                with urlopen(request, timeout=10) as response:
+                    payload = response.read()
+                    if payload:
+                        font_path.write_bytes(payload)
+            except Exception:
+                continue
+        if font_path.exists():
+            remote_font_paths[font_name] = font_path
+
+    if all(name in remote_font_paths for name in ("Poppins-Regular", "Poppins-Bold", "Poppins-Italic")):
+        font_candidates.insert(
+            0,
+            (
+                "Poppins",
+                "Poppins-Bold",
+                "Poppins-Italic",
+                remote_font_paths["Poppins-Regular"],
+                remote_font_paths["Poppins-Bold"],
+                remote_font_paths["Poppins-Italic"],
+            ),
+        )
     for regular_name, bold_name, italic_name, regular_path, bold_path, italic_path in font_candidates:
         if not (regular_path.exists() and bold_path.exists() and italic_path.exists()):
             continue
@@ -1240,17 +1278,19 @@ def _get_audit_logo() -> ImageReader | Drawing | None:
         except Exception:
             continue
 
-    try:
-        request = Request(REPORT_AUDIT_LOGO_URL, headers={"User-Agent": "trust-report-generator/1.0"})
-        with urlopen(request, timeout=8) as response:
-            raw = response.read()
-            if svg2rlg and b"<svg" in raw[:500].lower():
-                drawing = svg2rlg(BytesIO(raw))
-                if drawing:
-                    return drawing
-            return ImageReader(BytesIO(raw))
-    except Exception:
-        return None
+    for logo_url in REPORT_AUDIT_LOGO_URLS:
+        try:
+            request = Request(logo_url, headers={"User-Agent": "trust-report-generator/1.0"})
+            with urlopen(request, timeout=8) as response:
+                raw = response.read()
+                if svg2rlg and b"<svg" in raw[:500].lower():
+                    drawing = svg2rlg(BytesIO(raw))
+                    if drawing:
+                        return drawing
+                return ImageReader(BytesIO(raw))
+        except Exception:
+            continue
+    return None
 
 
 def _draw_report_logo(pdf: canvas.Canvas, x: float, y: float, width: float, height: float) -> bool:
