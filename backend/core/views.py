@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+from django.conf import settings
 from django.core import signing
 from django.core.signing import BadSignature, SignatureExpired
 from django.core.files.storage import default_storage
@@ -1614,35 +1615,218 @@ def _draw_report_footer(pdf: canvas.Canvas, generated_at: datetime):
     pdf.drawCentredString(page_width / 2, footer_y, footer_text)
 
 
+def _collect_visit_dispensers_snapshot(visit: Visit) -> list[dict[str, Any]]:
+    report_by_dispenser = {entry["dispenser_id"]: entry for entry in _normalize_dispenser_report_entries(visit)}
+    dispensers = (
+        Dispenser.objects.filter(area_id=visit.area_id, is_active=True)
+        .select_related("model")
+        .prefetch_related("product_assignments__product", "product_assignments__nozzle")
+        .order_by("identifier")
+    )
+
+    snapshot: list[dict[str, Any]] = []
+    for dispenser in dispensers:
+        assignment_rows = []
+        for assignment in dispenser.product_assignments.all():
+            assignment_rows.append(
+                {
+                    "product": assignment.product.name if assignment.product_id else "Producto no disponible",
+                    "nozzle": assignment.nozzle.name if assignment.nozzle_id else "Sin boquilla",
+                }
+            )
+        report_entry = report_by_dispenser.get(dispenser.id) or {}
+        snapshot.append(
+            {
+                "id": dispenser.id,
+                "identifier": dispenser.identifier,
+                "model": dispenser.model.name if dispenser.model_id else "Modelo no disponible",
+                "products": assignment_rows,
+                "comment": str(report_entry.get("comment") or "").strip(),
+                "photos": [str(item).strip() for item in (report_entry.get("photos") or []) if str(item).strip()],
+            }
+        )
+    return snapshot
+
+
+def _load_report_image(reference: str) -> ImageReader | None:
+    ref = str(reference or "").strip()
+    if not ref:
+        return None
+
+    if ref.startswith("data:image") and "," in ref:
+        try:
+            encoded = ref.split(",", 1)[1]
+            return ImageReader(BytesIO(base64.b64decode(encoded)))
+        except Exception:
+            return None
+
+    if ref.startswith("/media/"):
+        media_root = Path(getattr(settings, "MEDIA_ROOT", "")).resolve()
+        candidate = (media_root / ref.replace("/media/", "", 1)).resolve()
+        if candidate.is_file() and str(candidate).startswith(str(media_root)):
+            try:
+                return ImageReader(str(candidate))
+            except Exception:
+                return None
+
+    if ref.startswith("http://") or ref.startswith("https://"):
+        try:
+            request = Request(ref, headers={"User-Agent": "trust-report-generator/1.0"})
+            with urlopen(request, timeout=2.0) as response:
+                return ImageReader(BytesIO(response.read()))
+        except Exception:
+            return None
+
+    return None
+
+
 def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> bytes:
     _initialize_report_fonts()
     output = BytesIO()
     pdf = canvas.Canvas(output, pagesize=LETTER)
     generated_at = timezone.localtime()
 
-    _draw_report_header(pdf, visit, generated_at)
-    y = 676
-    y = _draw_summary_grid(pdf, visit, y)
-    y = _draw_observations(pdf, visit, y)
-    y = _draw_report_qr(pdf, public_report_url, y)
-    _draw_signoff(pdf, visit, y)
+    page_width, page_height = LETTER
+    margin_x = 44
+    y = page_height - 54
+    line_h = 14
+    section_gap = 20
+    label_color = colors.HexColor("#475569")
+    text_color = colors.HexColor("#0f172a")
+    report = _get_visit_report_data(visit)
 
-    _draw_report_footer(pdf, generated_at)
-    pdf.showPage()
+    def _new_page() -> None:
+        nonlocal y
+        _draw_report_footer(pdf, generated_at)
+        pdf.showPage()
+        y = page_height - 54
 
-    _draw_page_background(pdf)
-    pdf.setFillColor(colors.HexColor("#0f172a"))
+    def _ensure_space(required: float) -> None:
+        nonlocal y
+        if y - required < 56:
+            _new_page()
+
+    def _section_title(title: str) -> None:
+        nonlocal y
+        _ensure_space(30)
+        pdf.setFont(REPORT_FONT_BOLD, 13)
+        pdf.setFillColor(text_color)
+        pdf.drawString(margin_x, y, title)
+        y -= 8
+        pdf.setStrokeColor(colors.HexColor("#cbd5e1"))
+        pdf.setLineWidth(0.8)
+        pdf.line(margin_x, y, page_width - margin_x, y)
+        y -= 16
+
     pdf.setFont(REPORT_FONT_BOLD, 18)
-    pdf.drawString(REPORT_PAGE_PADDING, 742, "Anexos de visita")
-    pdf.setFillColor(colors.HexColor("#64748b"))
+    pdf.setFillColor(text_color)
+    pdf.drawString(margin_x, y, "Informe de visita técnica")
+    y -= 20
     pdf.setFont(REPORT_FONT, 10)
-    pdf.drawString(REPORT_PAGE_PADDING, 726, f"Visita #{visit.id} · Evidencia geolocalizada y fotográfica")
-    y = 700
-    y = _draw_location_map(pdf, visit, y)
-    _draw_report_images(pdf, visit, y)
-    _draw_report_footer(pdf, generated_at)
-    pdf.showPage()
+    pdf.setFillColor(label_color)
+    pdf.drawString(margin_x, y, f"Visita #{visit.id} · Generado: {generated_at.strftime('%d/%m/%Y %H:%M')}")
+    y -= 24
 
+    _section_title("Datos generales")
+    summary_rows = [
+        ("Cliente", visit.area.branch.client.name),
+        ("Sucursal", visit.area.branch.name),
+        ("Área", visit.area.name),
+        ("Inspector", (visit.inspector.get_full_name() or visit.inspector.username) if visit.inspector else "Sin asignar"),
+        ("Estado", visit.get_status_display()),
+        ("Fecha programada", timezone.localtime(visit.visited_at).strftime("%d/%m/%Y %H:%M")),
+        ("Inicio", timezone.localtime(visit.started_at).strftime("%d/%m/%Y %H:%M") if visit.started_at else "No registrado"),
+        ("Finalización", timezone.localtime(visit.completed_at).strftime("%d/%m/%Y %H:%M") if visit.completed_at else "No registrado"),
+        ("Ubicación inicio", f"{visit.start_latitude}, {visit.start_longitude}" if visit.start_latitude and visit.start_longitude else "No registrada"),
+        ("Ubicación fin", f"{visit.end_latitude}, {visit.end_longitude}" if visit.end_latitude and visit.end_longitude else "No registrada"),
+    ]
+    for label, value in summary_rows:
+        _ensure_space(line_h + 2)
+        pdf.setFont(REPORT_FONT_BOLD, 10)
+        pdf.setFillColor(label_color)
+        pdf.drawString(margin_x, y, f"{label}:")
+        pdf.setFont(REPORT_FONT, 10)
+        pdf.setFillColor(text_color)
+        pdf.drawString(margin_x + 126, y, str(value)[:120])
+        y -= line_h
+
+    _section_title("Observaciones generales")
+    comments = str(report.get("comments") or visit.notes or "Sin observaciones registradas.")
+    wrapped = _split_text_to_lines(pdf, comments, page_width - (margin_x * 2))
+    for line in wrapped[:16]:
+        _ensure_space(line_h)
+        pdf.setFont(REPORT_FONT, 10)
+        pdf.setFillColor(text_color)
+        pdf.drawString(margin_x, y, line)
+        y -= line_h
+    y -= section_gap
+
+    dispensers = _collect_visit_dispensers_snapshot(visit)
+    _section_title("Detalle por dosificador")
+    if not dispensers:
+        _ensure_space(line_h)
+        pdf.setFont(REPORT_FONT, 10)
+        pdf.drawString(margin_x, y, "No hay dosificadores asociados al área para esta visita.")
+        y -= line_h
+
+    for dispenser in dispensers:
+        _ensure_space(120)
+        pdf.setFont(REPORT_FONT_BOLD, 11)
+        pdf.setFillColor(text_color)
+        pdf.drawString(margin_x, y, f"Dosificador: {dispenser['identifier']} · Modelo: {dispenser['model']}")
+        y -= 16
+
+        products = dispenser["products"] or [{"product": "Sin productos registrados", "nozzle": "-"}]
+        for product_row in products[:8]:
+            _ensure_space(line_h)
+            pdf.setFont(REPORT_FONT, 10)
+            pdf.setFillColor(colors.HexColor("#1e293b"))
+            pdf.drawString(margin_x + 8, y, f"• {product_row['product']} (Boquilla: {product_row['nozzle']})")
+            y -= line_h
+
+        _ensure_space(line_h * 2)
+        pdf.setFont(REPORT_FONT_BOLD, 10)
+        pdf.setFillColor(label_color)
+        pdf.drawString(margin_x + 8, y, "Comentario:")
+        y -= line_h
+        comment_text = dispenser["comment"] or "Sin comentario registrado."
+        for line in _split_text_to_lines(pdf, comment_text, page_width - (margin_x * 2) - 8)[:6]:
+            _ensure_space(line_h)
+            pdf.setFont(REPORT_FONT, 10)
+            pdf.setFillColor(text_color)
+            pdf.drawString(margin_x + 8, y, line)
+            y -= line_h
+
+        photos = dispenser["photos"][:2]
+        if photos:
+            _ensure_space(120)
+            photo_x = margin_x + 8
+            for photo_ref in photos:
+                photo = _load_report_image(photo_ref)
+                if photo is None:
+                    continue
+                try:
+                    pdf.drawImage(photo, photo_x, y - 90, width=110, height=90, preserveAspectRatio=True, mask="auto")
+                    photo_x += 122
+                except Exception:
+                    continue
+            y -= 98
+
+        y -= 10
+        pdf.setStrokeColor(colors.HexColor("#e2e8f0"))
+        pdf.setLineWidth(0.6)
+        pdf.line(margin_x, y, page_width - margin_x, y)
+        y -= 16
+
+    if public_report_url:
+        _section_title("Acceso web")
+        _ensure_space(line_h)
+        pdf.setFont(REPORT_FONT, 9)
+        pdf.setFillColor(label_color)
+        pdf.drawString(margin_x, y, f"URL de verificación: {public_report_url[:140]}")
+        y -= line_h
+
+    _draw_report_footer(pdf, generated_at)
     pdf.save()
     output.seek(0)
     return output.getvalue()
