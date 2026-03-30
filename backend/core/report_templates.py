@@ -105,6 +105,12 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
         else ""
     )
     generated = datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
+    qr_html = (
+        f'<img src="{escape(qr_url)}" alt="Código QR de acceso web"/>'
+        if qr_url
+        else '<div class="signature-placeholder">No hay enlace web disponible</div>'
+    )
+    web_access_link_html = f'<p class="link">{escape(web_access_url)}</p>' if web_access_url else ""
 
     return f"""<!doctype html>
 <html lang=\"es\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>
@@ -135,7 +141,7 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
   </div>
   <div class=\"grid-2\">
     <article class=\"panel\"><h3>Responsable del área</h3><div class=\"signature-box\">{signature_html}<p class=\"small\">Nombre: {escape(str(report.get('responsible_name') or 'No registrado'))}</p></div></article>
-    <article class=\"panel\"><h3>Acceso web por QR</h3><div class=\"qr-wrap\">{"<img src=\"" + escape(qr_url) + "\" alt=\"Código QR de acceso web\"/>" if qr_url else "<div class=\"signature-placeholder\">No hay enlace web disponible</div>"}<p class=\"small\">Escanea para abrir el informe web</p>{f"<p class=\"link\">{escape(web_access_url)}</p>" if web_access_url else ""}</div></article>
+    <article class=\"panel\"><h3>Acceso web por QR</h3><div class=\"qr-wrap\">{qr_html}<p class=\"small\">Escanea para abrir el informe web</p>{web_access_link_html}</div></article>
   </div>
 </section>
 </body></html>"""
