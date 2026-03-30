@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from html import escape
 from typing import Any
+from urllib.parse import quote_plus
 
 
 def _format_datetime(raw: str | None) -> str:
@@ -46,6 +47,7 @@ def _base_styles() -> str:
         background: radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 55%);
       }
       .brand { font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; opacity: .9; }
+      .cover-logo { height: 34px; width: auto; display: block; margin-bottom: 14px; }
       .title { font-size: 44px; line-height: 1.08; margin: 18px 0 8px; font-weight: 800; max-width: 70%; }
       .subtitle { margin: 0; opacity: .88; max-width: 64%; line-height: 1.6; }
       .cover-meta {
@@ -71,6 +73,12 @@ def _base_styles() -> str:
       .list li { margin-bottom: 8px; line-height: 1.5; }
       .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .small { font-size: 12px; color: #475569; }
+      .signature-box { border: 1px dashed #cbd5e1; border-radius: 10px; padding: 10px; background: #f8fafc; }
+      .signature-box img { max-width: 100%; max-height: 70px; object-fit: contain; display: block; margin: 0 auto 8px; }
+      .signature-placeholder { height: 56px; display: grid; place-items: center; color: #94a3b8; font-size: 12px; }
+      .qr-wrap { text-align: center; }
+      .qr-wrap img { width: 140px; height: 140px; object-fit: contain; border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px; background: #fff; }
+      .link { font-size: 11px; color: #2563eb; word-break: break-all; margin-top: 8px; }
     """
 
 
@@ -84,12 +92,25 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
     ) or "<li>Sin checklist registrado.</li>"
 
     comments = escape(str(report.get("comments") or visit.get("notes") or "Sin observaciones."))
+    signature_data = str(report.get("responsible_signature") or "").strip()
+    signature_html = (
+        f"<img src=\"{escape(signature_data)}\" alt=\"Firma del responsable del área\"/>"
+        if signature_data.startswith("data:image")
+        else "<div class=\"signature-placeholder\">Firma no registrada</div>"
+    )
+    web_access_url = str(visit.get("public_report_url") or visit.get("web_access_url") or "").strip()
+    qr_url = (
+        f"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={quote_plus(web_access_url)}"
+        if web_access_url
+        else ""
+    )
     generated = datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
 
     return f"""<!doctype html>
 <html lang=\"es\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>
 <title>Informe de visita #{visit['id']}</title><style>{_base_styles()}</style></head><body>
 <section class=\"page cover\">
+  <img class=\"cover-logo\" src=\"https://trust.supplymax.net/trust_logo_s.svg\" alt=\"Logo Trust\"/>
   <div class=\"brand\">Trust · Reportes Corporativos</div>
   <h1 class=\"title\">Informe Ejecutivo de Visita</h1>
   <p class=\"subtitle\">Documento diseñado para renderizarse con Puppeteer y exportarse a PDF con identidad corporativa.</p>
@@ -110,7 +131,11 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
   </div>
   <div class=\"grid-2\">
     <article class=\"panel\"><h3>Checklist operativo</h3><ul class=\"list\">{checklist_items}</ul></article>
-    <article class=\"panel\"><h3>Observaciones y cierre</h3><p>{comments}</p><p class=\"small\">Responsable: {escape(str(report.get('responsible_name') or 'No registrado'))}</p><p class=\"small\">Generado: {generated}</p></article>
+    <article class=\"panel\"><h3>Observaciones y cierre</h3><p>{comments}</p><p class=\"small\">Inspector que realizó la visita: {escape(str(visit.get('inspector') or 'Sin inspector'))}</p><p class=\"small\">Generado: {generated}</p></article>
+  </div>
+  <div class=\"grid-2\">
+    <article class=\"panel\"><h3>Responsable del área</h3><div class=\"signature-box\">{signature_html}<p class=\"small\">Nombre: {escape(str(report.get('responsible_name') or 'No registrado'))}</p></div></article>
+    <article class=\"panel\"><h3>Acceso web por QR</h3><div class=\"qr-wrap\">{"<img src=\"" + escape(qr_url) + "\" alt=\"Código QR de acceso web\"/>" if qr_url else "<div class=\"signature-placeholder\">No hay enlace web disponible</div>"}<p class=\"small\">Escanea para abrir el informe web</p>{f"<p class=\"link\">{escape(web_access_url)}</p>" if web_access_url else ""}</div></article>
   </div>
 </section>
 </body></html>"""

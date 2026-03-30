@@ -3832,7 +3832,9 @@ def visit_report_puppeteer(request, visit_id: int):
     if visit.status != Visit.Status.COMPLETED:
         return JsonResponse({"error": "Solo puedes generar informe de visitas finalizadas."}, status=400)
 
-    html = build_visit_report_html(_serialize_visit(visit))
+    visit_payload = _serialize_visit(visit)
+    visit_payload["public_report_url"] = _build_public_report_url(request, visit)
+    html = build_visit_report_html(visit_payload)
     return HttpResponse(html, content_type="text/html; charset=utf-8")
 
 
