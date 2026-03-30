@@ -54,6 +54,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   ];
 
   const puppeteerResponse = await fetchBackendReport(puppeteerUrls, requestHeaders);
+  let puppeteerRenderError: Error | null = null;
 
   if (puppeteerResponse?.ok) {
     const contentType = puppeteerResponse.headers.get("content-type") ?? "";
@@ -87,16 +88,23 @@ export async function GET(request: NextRequest, { params }: Params) {
       });
     }
 
-    const html = await puppeteerResponse.text();
-    const pdf = await renderPdfFromHtml({ html });
+    try {
+      const html = await puppeteerResponse.text();
+      const pdf = await renderPdfFromHtml({ html });
 
-    return new NextResponse(Buffer.from(pdf), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=visita-${id}-informe.pdf`,
-      },
-    });
+      return new NextResponse(Buffer.from(pdf), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename=visita-${id}-informe.pdf`,
+        },
+      });
+    } catch (error) {
+      puppeteerRenderError =
+        error instanceof Error
+          ? error
+          : new Error("No se pudo renderizar el informe HTML a PDF.");
+    }
   }
 
   if (puppeteerResponse && !puppeteerResponse.ok && puppeteerResponse.status !== 404) {
@@ -112,8 +120,11 @@ export async function GET(request: NextRequest, { params }: Params) {
   });
 
   if (!fallbackResponse) {
+    const fallbackErrorMessage = puppeteerRenderError
+      ? ` No se pudo renderizar el HTML del informe: ${puppeteerRenderError.message}`
+      : "";
     return NextResponse.json(
-      { error: "No se pudo generar el informe con el nuevo motor PDF." },
+      { error: `No se pudo generar el informe con el nuevo motor PDF.${fallbackErrorMessage}` },
       { status: 500 },
     );
   }
