@@ -16,9 +16,11 @@ type CatalogResponse = {
   results?: Array<{ id: number; name: string; photo?: string | null; branch?: { name: string } }>;
 };
 
+type Nozzle = { id: number; name: string };
+
 type CreateDispenserResponse = {
   id?: number;
-  available_nozzles?: Array<{ id: number; name: string }>;
+  available_nozzles?: Nozzle[];
   error?: string;
 };
 
@@ -30,7 +32,7 @@ export default function NuevoDosificadorPage() {
   const [models, setModels] = useState<Array<{ id: number; name: string }>>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [products, setProducts] = useState<Array<{ id: number; name: string; photo: string | null }>>([]);
-  const [availableNozzles, setAvailableNozzles] = useState<Array<{ id: number; name: string }>>([]);
+  const [availableNozzles, setAvailableNozzles] = useState<Nozzle[]>([]);
 
   const [selectedModelId, setSelectedModelId] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -54,25 +56,27 @@ export default function NuevoDosificadorPage() {
     const loadOptions = async () => {
       try {
         const currentUserEmail = getSessionUserEmail();
-        const [clientsResponse, branchesResponse, modelsResponse, areasResponse, productsResponse] = await Promise.all([
+        const [clientsResponse, branchesResponse, modelsResponse, areasResponse, productsResponse, nozzlesResponse] = await Promise.all([
           fetch("/api/clients/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
           fetch("/api/branches/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
           fetch("/api/dispenser-models/", { cache: "no-store" }),
           fetch("/api/areas/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
           fetch("/api/products/", { cache: "no-store", headers: { "x-current-user-email": currentUserEmail } }),
+          fetch("/api/nozzles/", { cache: "no-store" }),
         ]);
 
-        if (!clientsResponse.ok || !branchesResponse.ok || !modelsResponse.ok || !areasResponse.ok || !productsResponse.ok) {
+        if (!clientsResponse.ok || !branchesResponse.ok || !modelsResponse.ok || !areasResponse.ok || !productsResponse.ok || !nozzlesResponse.ok) {
           throw new Error("No se pudieron cargar los catálogos del formulario.");
         }
 
-        const [clientsData, branchesData, modelsData, areasData, productsData] = (await Promise.all([
+        const [clientsData, branchesData, modelsData, areasData, productsData, nozzlesData] = (await Promise.all([
           clientsResponse.json(),
           branchesResponse.json(),
           modelsResponse.json(),
           areasResponse.json(),
           productsResponse.json(),
-        ])) as [CatalogResponse, CatalogResponse, CatalogResponse, CatalogResponse, CatalogResponse];
+          nozzlesResponse.json(),
+        ])) as [CatalogResponse, CatalogResponse, CatalogResponse, CatalogResponse, CatalogResponse, CatalogResponse];
 
         if (!isMounted) return;
 
@@ -81,6 +85,7 @@ export default function NuevoDosificadorPage() {
         setModels((modelsData.results ?? []) as Array<{ id: number; name: string }>);
         setAreas((areasData.results ?? []) as Area[]);
         setProducts((productsData.results ?? []).map((product) => ({ id: product.id, name: product.name, photo: product.photo ?? null })));
+        setAvailableNozzles((nozzlesData.results ?? []) as Nozzle[]);
       } catch (loadError) {
         if (!isMounted) return;
         setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los catálogos del formulario.");
@@ -132,7 +137,6 @@ export default function NuevoDosificadorPage() {
         throw new Error(payload.error || "No se confirmó la creación del dosificador. Intenta nuevamente.");
       }
 
-      setAvailableNozzles(payload.available_nozzles ?? []);
       router.push("/clientes/dispensadores");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "No se pudo crear el dosificador.");

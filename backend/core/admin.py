@@ -221,9 +221,23 @@ class ProductAdmin(SafeDeleteAdminMixin, admin.ModelAdmin):
 
 @admin.register(Nozzle)
 class NozzleAdmin(admin.ModelAdmin):
-    list_display = ("name", "description", "linked_dispensers")
+    list_display = (
+        "name",
+        "ml_per_liter_approx",
+        "percentage_approx",
+        "dilution_ratio_approx",
+        "is_ultra_lean_tip",
+        "linked_dispensers",
+    )
     search_fields = ("name", "dispensers__identifier")
     filter_horizontal = ("dispensers",)
+    readonly_fields = ("name", "description", "ml_per_liter_approx", "percentage_approx", "dilution_ratio_approx", "is_ultra_lean_tip")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
     @admin.display(description="Dosificadores")
     def linked_dispensers(self, obj):
