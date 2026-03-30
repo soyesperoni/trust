@@ -345,8 +345,20 @@ def _serialize_area(area: Area) -> dict:
     }
 
 
-def _get_available_nozzles_for_dispenser(dispenser: Dispenser):
-    return Nozzle.objects.filter(Q(dispensers=dispenser) | Q(dispensers__isnull=True)).distinct()
+def _get_available_nozzles():
+    return Nozzle.objects.all()
+
+
+def _serialize_nozzle(nozzle: Nozzle) -> dict:
+    return {
+        "id": nozzle.id,
+        "name": nozzle.name,
+        "description": nozzle.description,
+        "ml_per_liter_approx": float(nozzle.ml_per_liter_approx) if nozzle.ml_per_liter_approx is not None else None,
+        "percentage_approx": float(nozzle.percentage_approx) if nozzle.percentage_approx is not None else None,
+        "dilution_ratio_approx": nozzle.dilution_ratio_approx or None,
+        "is_ultra_lean_tip": nozzle.is_ultra_lean_tip,
+    }
 
 
 def _serialize_dispenser(dispenser: Dispenser) -> dict:
@@ -387,11 +399,8 @@ def _serialize_dispenser(dispenser: Dispenser) -> dict:
             for product in dispenser.products.all()
         ],
         "available_nozzles": [
-            {
-                "id": nozzle.id,
-                "name": nozzle.name,
-            }
-            for nozzle in _get_available_nozzles_for_dispenser(dispenser)
+            _serialize_nozzle(nozzle)
+            for nozzle in _get_available_nozzles()
         ],
         "is_active": dispenser.is_active,
     }
@@ -498,11 +507,11 @@ def _apply_dispenser_product_assignments(dispenser: Dispenser, assignments_data)
     if len(nozzles_by_id) != len(set(nozzle_ids)):
         return JsonResponse({"error": "Una o más boquillas seleccionadas no existen."}, status=404)
 
-    allowed_nozzles = set(_get_available_nozzles_for_dispenser(dispenser).values_list("id", flat=True))
+    allowed_nozzles = set(_get_available_nozzles().values_list("id", flat=True))
     for item in assignments_data:
         nozzle_id = item["nozzle_id"]
         if nozzle_id is not None and nozzle_id not in allowed_nozzles:
-            return JsonResponse({"error": "La boquilla seleccionada no está asociada al dosificador."}, status=400)
+            return JsonResponse({"error": "La boquilla seleccionada no está disponible."}, status=400)
 
     DispenserProductAssignment.objects.filter(dispenser=dispenser).exclude(
         product_id__in=product_ids
@@ -2410,6 +2419,13 @@ def dispensers(request):
 def dispenser_models(request):
     queryset = DispenserModel.objects.all()
     payload = [_serialize_dispenser_model(model) for model in queryset]
+    return JsonResponse({"results": payload})
+
+
+@require_GET
+def nozzles(request):
+    queryset = _get_available_nozzles()
+    payload = [_serialize_nozzle(nozzle) for nozzle in queryset]
     return JsonResponse({"results": payload})
 
 

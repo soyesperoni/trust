@@ -101,6 +101,10 @@ class Product(models.Model):
 class Nozzle(models.Model):
     name = models.CharField(max_length=120)
     description = models.TextField(blank=True)
+    ml_per_liter_approx = models.DecimalField(max_digits=6, decimal_places=1, blank=True, null=True)
+    percentage_approx = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+    dilution_ratio_approx = models.CharField(max_length=32, blank=True)
+    is_ultra_lean_tip = models.BooleanField(default=False)
     dispensers = models.ManyToManyField(Dispenser, related_name="available_nozzles", blank=True)
 
     class Meta:
