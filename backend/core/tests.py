@@ -17,6 +17,7 @@ from django.utils import timezone
 from config import settings_prod
 from .admin import DispenserAdmin, ProductAdmin
 from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, DispenserProductAssignment, Incident, Product, User, Visit
+from .report_templates import build_visit_report_html
 from .views import _fallback_audit_ai_analysis
 
 
@@ -586,6 +587,35 @@ class VisitReportRouteTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
+
+
+class VisitPuppeteerTemplateTests(TestCase):
+    def test_visit_template_includes_logo_qr_and_signatures_block(self):
+        html = build_visit_report_html(
+            {
+                "id": 55,
+                "client": "Cliente Demo",
+                "branch": "Sucursal Demo",
+                "area": "Área Cocina",
+                "inspector": "Inspector QA",
+                "status_label": "Completada",
+                "visited_at": timezone.now().isoformat(),
+                "started_at": timezone.now().isoformat(),
+                "completed_at": timezone.now().isoformat(),
+                "public_report_url": "https://demo.example.com/visits/report/public/token-demo",
+                "visit_report": {
+                    "comments": "Todo conforme",
+                    "responsible_name": "María Supervisor",
+                    "responsible_signature": "data:image/png;base64,abc123",
+                },
+            }
+        )
+
+        self.assertIn("Logo Trust", html)
+        self.assertIn("Código QR de acceso web", html)
+        self.assertIn("Responsable del área", html)
+        self.assertIn("Inspector que realizó la visita", html)
+        self.assertIn("data:image/png;base64,abc123", html)
 
 
 class VisitPublicReportRouteTests(TestCase):
