@@ -5,6 +5,14 @@ import { renderPdfFromHtml } from "../../../../lib/pdf";
 const backendBaseUrl = getBackendBaseUrl();
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const noStoreHeaders = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  Pragma: "no-cache",
+  Expires: "0",
+};
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -19,6 +27,7 @@ async function fetchBackendReport(
       const response = await fetch(url, {
         method: "GET",
         headers,
+        cache: "no-store",
       });
       if (response.ok || response.status !== 404) {
         return response;
@@ -65,6 +74,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         return new NextResponse(html, {
           status: 200,
           headers: {
+            ...noStoreHeaders,
             "Content-Type": "text/html; charset=utf-8",
             "Content-Disposition": `attachment; filename=visita-${id}-informe.html`,
           },
@@ -82,6 +92,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       return new NextResponse(bytes, {
         status: 200,
         headers: {
+          ...noStoreHeaders,
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename=visita-${id}-informe.pdf`,
         },
@@ -95,6 +106,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       return new NextResponse(Buffer.from(pdf), {
         status: 200,
         headers: {
+          ...noStoreHeaders,
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename=visita-${id}-informe.pdf`,
         },
@@ -140,6 +152,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   return new NextResponse(bytes, {
     status: 200,
     headers: {
+      ...noStoreHeaders,
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=visita-${id}-informe.pdf`,
     },
