@@ -15,10 +15,15 @@ export async function renderPdfFromHtml({ html }: RenderPdfOptions): Promise<Uin
     await page.setContent(html, {
       waitUntil: ["domcontentloaded", "networkidle0"],
     });
+    await page.emulateMediaType("screen");
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+    });
 
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
+      preferCSSPageSize: true,
       margin: {
         top: "16px",
         right: "16px",
