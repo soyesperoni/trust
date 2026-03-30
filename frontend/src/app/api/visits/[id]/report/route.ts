@@ -1,11 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBackendBaseUrl } from "../../../../lib/backend";
+import { renderPdfFromHtml } from "../../../../lib/pdf";
 
 const backendBaseUrl = getBackendBaseUrl();
+
+export const runtime = "nodejs";
 
 type Params = {
   params: Promise<{ id: string }>;
 };
+
+async function fetchBackendReport(
+  urls: string[],
+  headers: HeadersInit,
+): Promise<Response | null> {
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+      });
+      if (response.ok || response.status !== 404) {
+        return response;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
 
 export async function GET(request: NextRequest, { params }: Params) {
   const { id } = await params;
@@ -13,48 +37,75 @@ export async function GET(request: NextRequest, { params }: Params) {
 
   const requestHeaders = {
     "X-Current-User-Email": currentUserEmail,
-    Accept: "application/pdf",
+    Accept: "text/html,application/pdf",
   };
 
-  const candidateUrls = [
+  const puppeteerUrls = [
     `${backendBaseUrl}/api/visits/${id}/report-puppeteer`,
     `${backendBaseUrl}/api/visits/${id}/report-puppeteer.pdf`,
+  ];
+
+  const fallbackPdfUrls = [
     `${backendBaseUrl}/api/visits/${id}/report`,
     `${backendBaseUrl}/api/visits/${id}/report/`,
     `${backendBaseUrl}/api/visits/${id}/report.pdf`,
   ];
 
-  let response: Response | null = null;
-  for (const candidateUrl of candidateUrls) {
-    try {
-      const candidateResponse = await fetch(candidateUrl, {
-        method: "GET",
-        headers: requestHeaders,
+  const puppeteerResponse = await fetchBackendReport(puppeteerUrls, requestHeaders);
+
+  if (puppeteerResponse?.ok) {
+    const contentType = puppeteerResponse.headers.get("content-type") ?? "";
+
+    if (contentType.includes("application/pdf")) {
+      const bytes = await puppeteerResponse.arrayBuffer();
+      return new NextResponse(bytes, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename=visita-${id}-informe.pdf`,
+        },
       });
-      response = candidateResponse;
-      if (candidateResponse.ok || candidateResponse.status !== 404) {
-        break;
-      }
-    } catch {
-      continue;
     }
+
+    const html = await puppeteerResponse.text();
+    const pdf = await renderPdfFromHtml({ html });
+
+    return new NextResponse(Buffer.from(pdf), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename=visita-${id}-informe.pdf`,
+      },
+    });
   }
 
-  if (!response) {
+  if (puppeteerResponse && !puppeteerResponse.ok && puppeteerResponse.status !== 404) {
+    const payload = await puppeteerResponse
+      .json()
+      .catch(() => ({ error: "No se pudo generar el informe con Puppeteer." }));
+    return NextResponse.json(payload, { status: puppeteerResponse.status });
+  }
+
+  const fallbackResponse = await fetchBackendReport(fallbackPdfUrls, {
+    ...requestHeaders,
+    Accept: "application/pdf",
+  });
+
+  if (!fallbackResponse) {
     return NextResponse.json(
       { error: "No se pudo generar el informe con el nuevo motor PDF." },
       { status: 500 },
     );
   }
 
-  if (!response.ok) {
-    const payload = await response
+  if (!fallbackResponse.ok) {
+    const payload = await fallbackResponse
       .json()
       .catch(() => ({ error: "No se pudo generar el informe con el nuevo motor PDF." }));
-    return NextResponse.json(payload, { status: response.status });
+    return NextResponse.json(payload, { status: fallbackResponse.status });
   }
 
-  const bytes = await response.arrayBuffer();
+  const bytes = await fallbackResponse.arrayBuffer();
   return new NextResponse(bytes, {
     status: 200,
     headers: {
