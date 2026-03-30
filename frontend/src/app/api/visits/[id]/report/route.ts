@@ -33,6 +33,8 @@ async function fetchBackendReport(
 
 export async function GET(request: NextRequest, { params }: Params) {
   const { id } = await params;
+  const requestedFormat = request.nextUrl.searchParams.get("format");
+  const wantsHtml = requestedFormat === "html";
   const currentUserEmail = request.headers.get("x-current-user-email") ?? "";
 
   const requestHeaders = {
@@ -55,6 +57,24 @@ export async function GET(request: NextRequest, { params }: Params) {
 
   if (puppeteerResponse?.ok) {
     const contentType = puppeteerResponse.headers.get("content-type") ?? "";
+
+    if (wantsHtml) {
+      if (contentType.includes("text/html")) {
+        const html = await puppeteerResponse.text();
+        return new NextResponse(html, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Content-Disposition": `attachment; filename=visita-${id}-informe.html`,
+          },
+        });
+      }
+
+      return NextResponse.json(
+        { error: "El backend no devolvió HTML para este informe." },
+        { status: 406 },
+      );
+    }
 
     if (contentType.includes("application/pdf")) {
       const bytes = await puppeteerResponse.arrayBuffer();
