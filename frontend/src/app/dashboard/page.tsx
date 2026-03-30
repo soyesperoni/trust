@@ -340,43 +340,43 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex items-center justify-between gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-3xl font-black leading-none sm:text-4xl">
+                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
+                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
                           {isLoading ? "..." : animatedPendingVisits}
                         </span>
-                        <span className="text-base font-black uppercase leading-none sm:text-lg">visitas programadas</span>
+                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">visitas programadas</span>
                       </div>
                     </article>
                     <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex items-center justify-between gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-3xl font-black leading-none sm:text-4xl">
+                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
+                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
                           {isLoading ? "..." : animatedScheduledAudits}
                         </span>
-                        <span className="text-base font-black uppercase leading-none sm:text-lg">auditorías pendientes</span>
+                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">auditorías pendientes</span>
                       </div>
                     </article>
                     <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex items-center justify-between gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-3xl font-black leading-none sm:text-4xl">
+                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
+                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
                           {isLoading ? "..." : animatedOverdueVisits}
                         </span>
-                        <span className="text-base font-black uppercase leading-none sm:text-lg">visitas vencidas</span>
+                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">visitas vencidas</span>
                       </div>
                     </article>
                     <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex items-center justify-between gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-3xl font-black leading-none sm:text-4xl">
+                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
+                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
                           {isLoading ? "..." : animatedOverdueAudits}
                         </span>
-                        <span className="text-base font-black uppercase leading-none sm:text-lg">auditorías vencidas</span>
+                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">auditorías vencidas</span>
                       </div>
                     </article>
                     <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex items-center justify-between gap-2 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-3xl font-black leading-none sm:text-4xl">
+                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
+                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
                           {isLoading ? "..." : animatedIncidents}
                         </span>
-                        <span className="text-base font-black uppercase leading-none sm:text-lg">incidencias activas</span>
+                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">incidencias activas</span>
                       </div>
                     </article>
                   </div>
@@ -457,19 +457,25 @@ export default function DashboardPage() {
                     <Link
                       key={item.label}
                       href={cardRoutes[item.label as keyof typeof cardRoutes] ?? "/dashboard"}
-                      className="apple-card-enter group relative overflow-hidden rounded-xl border border-primary/20 bg-white/85 px-2 py-2.5 shadow-[0_16px_35px_-30px_rgba(46,49,146,0.75)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-primary/30 dark:bg-slate-900/65"
+                      className="apple-card-enter group relative overflow-hidden rounded-xl border border-primary/20 bg-white/85 px-2 py-2 shadow-[0_16px_35px_-30px_rgba(46,49,146,0.75)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-professional-green/40 min-[480px]:px-2.5 min-[480px]:py-2.5 dark:border-primary/30 dark:bg-slate-900/65"
                       style={{ animationDelay: `${index * 70}ms` }}
                     >
                       {isLoading ? (
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex flex-col items-center justify-center gap-1.5">
                           <div className="h-6 w-6 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
                           <div className="h-5 w-8 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                          <div className="h-3 w-14 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span className="material-symbols-outlined bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[22px] text-transparent">{item.icon}</span>
-                          <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-xl font-black leading-none text-transparent">
-                            {item.value}
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span className="material-symbols-outlined bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[20px] text-transparent min-[480px]:text-[22px]">{item.icon}</span>
+                            <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-lg font-black leading-none text-transparent min-[480px]:text-xl">
+                              {item.value}
+                            </span>
+                          </div>
+                          <span className="w-full truncate text-center text-[10px] font-bold uppercase tracking-[0.06em] text-slate-600 min-[480px]:text-[11px] dark:text-slate-200">
+                            {item.label}
                           </span>
                         </div>
                       )}
