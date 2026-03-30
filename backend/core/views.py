@@ -1781,8 +1781,6 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         ("Fecha programada", timezone.localtime(visit.visited_at).strftime("%d/%m/%Y %H:%M")),
         ("Inicio", timezone.localtime(visit.started_at).strftime("%d/%m/%Y %H:%M") if visit.started_at else "No registrado"),
         ("Finalización", timezone.localtime(visit.completed_at).strftime("%d/%m/%Y %H:%M") if visit.completed_at else "No registrado"),
-        ("Ubicación inicio", f"{visit.start_latitude}, {visit.start_longitude}" if visit.start_latitude and visit.start_longitude else "No registrada"),
-        ("Ubicación fin", f"{visit.end_latitude}, {visit.end_longitude}" if visit.end_latitude and visit.end_longitude else "No registrada"),
     ]
     for label, value in summary_rows:
         _ensure_space(line_h + 2)
@@ -1804,6 +1802,12 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         pdf.drawString(margin_x, y, line)
         y -= line_h
     y -= section_gap
+
+    if public_report_url:
+        _section_title("Acceso web")
+        _ensure_space(150)
+        y = _draw_report_qr(pdf, public_report_url, y)
+        y -= 6
 
     dispensers = _collect_visit_dispensers_snapshot(visit)
     _section_title("Detalle por dosificador")
@@ -1841,31 +1845,77 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
             pdf.drawString(margin_x + 8, y, line)
             y -= line_h
 
-        photos = dispenser["photos"][:2]
-        if photos:
-            _ensure_space(120)
-            photo_x = margin_x + 8
-            for photo_ref in photos:
-                photo = _load_report_image(photo_ref)
-                if photo is None:
-                    continue
-                try:
-                    pdf.drawImage(photo, photo_x, y - 90, width=110, height=90, preserveAspectRatio=True, mask="auto")
-                    photo_x += 122
-                except Exception:
-                    continue
-            y -= 98
-
         y -= 10
         pdf.setStrokeColor(colors.HexColor("#e2e8f0"))
         pdf.setLineWidth(0.6)
         pdf.line(margin_x, y, page_width - margin_x, y)
         y -= 16
 
-    if public_report_url:
-        _section_title("Acceso web")
-        _ensure_space(170)
-        y = _draw_report_qr(pdf, public_report_url, y)
+    _new_page()
+    _draw_page_background(pdf)
+    if _draw_report_logo(pdf, margin_x, y - 2, 130, 36):
+        y -= 42
+
+    pdf.setFont(REPORT_FONT_BOLD, 18)
+    pdf.setFillColor(text_color)
+    pdf.drawString(margin_x, y, "Anexos")
+    y -= 18
+    pdf.setFont(REPORT_FONT, 10)
+    pdf.setFillColor(label_color)
+    pdf.drawString(margin_x, y, f"Evidencia fotográfica de la visita #{visit.id}")
+    y -= 24
+
+    gallery_width = page_width - (margin_x * 2)
+    card_gap_x = 16
+    card_gap_y = 14
+    image_w = (gallery_width - card_gap_x) / 2
+    image_h = 120
+
+    def _draw_annex_title(title: str) -> None:
+        nonlocal y
+        _ensure_space(28)
+        pdf.setFont(REPORT_FONT_BOLD, 12)
+        pdf.setFillColor(text_color)
+        pdf.drawString(margin_x, y, title)
+        y -= 14
+
+    def _draw_photo_grid(photos: list[str]) -> None:
+        nonlocal y
+        valid_photos: list[ImageReader] = []
+        for photo_ref in photos:
+            photo = _load_report_image(photo_ref)
+            if photo is not None:
+                valid_photos.append(photo)
+
+        if not valid_photos:
+            _ensure_space(24)
+            pdf.setFont(REPORT_FONT, 10)
+            pdf.setFillColor(label_color)
+            pdf.drawString(margin_x + 4, y, "Sin evidencia fotográfica registrada.")
+            y -= 22
+            return
+
+        for idx, photo in enumerate(valid_photos):
+            if idx % 2 == 0:
+                _ensure_space(image_h + 16)
+            x = margin_x if idx % 2 == 0 else margin_x + image_w + card_gap_x
+            y_image = y - image_h
+            try:
+                pdf.drawImage(photo, x, y_image, width=image_w, height=image_h, preserveAspectRatio=True, mask="auto")
+            except Exception:
+                pdf.setFillColor(colors.HexColor("#e2e8f0"))
+                pdf.rect(x, y_image, image_w, image_h, fill=1, stroke=0)
+            if idx % 2 == 1 or idx == len(valid_photos) - 1:
+                y -= image_h + card_gap_y
+
+    dispenser_annexes = [item for item in dispensers if item["photos"]]
+    for dispenser in dispenser_annexes:
+        _draw_annex_title(f"Dosificador {dispenser['identifier']}")
+        _draw_photo_grid(dispenser["photos"][:6])
+
+    _draw_annex_title("Evidencias generales")
+    general_photos = [str(item.file).strip() for item in visit.media.filter(type="image").order_by("id") if item.file]
+    _draw_photo_grid(general_photos[:8])
 
     _draw_report_footer(pdf, generated_at)
     pdf.save()
