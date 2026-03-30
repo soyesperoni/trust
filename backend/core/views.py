@@ -1727,6 +1727,7 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
     generated_at = timezone.localtime()
 
     page_width, page_height = LETTER
+    _draw_page_background(pdf)
     margin_x = 44
     y = page_height - 54
     line_h = 14
@@ -1757,6 +1758,9 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         pdf.setLineWidth(0.8)
         pdf.line(margin_x, y, page_width - margin_x, y)
         y -= 16
+
+    if _draw_report_logo(pdf, margin_x, y - 2, 150, 42):
+        y -= 50
 
     pdf.setFont(REPORT_FONT_BOLD, 18)
     pdf.setFillColor(text_color)
@@ -1860,11 +1864,8 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
 
     if public_report_url:
         _section_title("Acceso web")
-        _ensure_space(line_h)
-        pdf.setFont(REPORT_FONT, 9)
-        pdf.setFillColor(label_color)
-        pdf.drawString(margin_x, y, f"URL de verificación: {public_report_url[:140]}")
-        y -= line_h
+        _ensure_space(170)
+        y = _draw_report_qr(pdf, public_report_url, y)
 
     _draw_report_footer(pdf, generated_at)
     pdf.save()
