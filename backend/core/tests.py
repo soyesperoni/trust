@@ -590,7 +590,7 @@ class VisitReportRouteTests(TestCase):
 
 
 class VisitPuppeteerTemplateTests(TestCase):
-    def test_visit_template_includes_logo_qr_and_signatures_block(self):
+    def test_visit_template_moves_web_access_to_end_and_hides_status(self):
         html = build_visit_report_html(
             {
                 "id": 55,
@@ -613,8 +613,11 @@ class VisitPuppeteerTemplateTests(TestCase):
 
         self.assertIn("Logo Trust", html)
         self.assertIn("Código QR de acceso web", html)
+        self.assertIn("<h2>Acceso web</h2>", html)
         self.assertIn("Responsable del área", html)
         self.assertIn("Inspector que realizó la visita", html)
+        self.assertIn("Anexos por dosificador", html)
+        self.assertNotIn("Estado de visita", html)
         self.assertIn("data:image/png;base64,abc123", html)
 
 

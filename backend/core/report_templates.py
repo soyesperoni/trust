@@ -167,8 +167,6 @@ def _visit_report_styles() -> str:
       .visit-chip { color: #fff; font-size: 12px; letter-spacing: .12em; font-weight: 700; border-radius: 999px; padding: 5px 14px; display: inline-block; }
       .date-text { margin-top: 8px; font-size: 14px; color: #464652; }
       .top-right-panel { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
-      .top-right-panel .verify { width: 170px; padding: 10px; }
-      .top-right-panel .verify img { width: 112px; height: 112px; padding: 6px; }
       .section { margin-top: 34px; }
       .section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
       .section-head h2 { margin: 0; font-size: 26px; color: #2E3192; font-weight: 600; }
@@ -176,9 +174,6 @@ def _visit_report_styles() -> str:
       .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 24px; }
       .label { font-size: 11px; font-weight: 600; color: #464652; text-transform: uppercase; letter-spacing: .06em; }
       .value { font-size: 18px; font-weight: 600; color: #2E3192; margin-top: 4px; }
-      .status-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-      .dot { width: 8px; height: 8px; border-radius: 50%; background: #92B936; display: inline-block; }
-      .status { font-size: 18px; font-weight: 600; color: #92B936; }
       .visit-times { margin-top: 20px; background: #f3f4f5; border-radius: 12px; padding: 16px 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 18px; }
       .divider-x { border-left: 1px solid rgba(119,118,131,.25); padding-left: 18px; }
       .dispenser-card { border-radius: 16px; background: #fff; border: 1px solid #e7e8e9; margin-bottom: 16px; box-shadow: 0 12px 28px rgba(46,49,146,.06); overflow: hidden; }
@@ -189,8 +184,8 @@ def _visit_report_styles() -> str:
       .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
       .tag { font-size: 12px; color: #464652; text-transform: uppercase; font-weight: 600; }
       .comment-box { background: #edeeef; border-radius: 10px; padding: 10px 12px; margin-top: 10px; font-size: 13px; }
-      .photos { margin-top: 12px; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
-      .photo { aspect-ratio: 1 / 1; border-radius: 10px; background: #f3f4f5; border: 1px dashed #c7c5d4; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+      .photos { margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+      .photo { aspect-ratio: 4 / 3; min-height: 180px; border-radius: 18px; background: #f3f4f5; border: 1px dashed #c7c5d4; display: flex; align-items: center; justify-content: center; overflow: hidden; }
       .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
       .obs { background: #f3f4f5; border-left: 4px solid #92B936; border-radius: 14px; padding: 16px; font-style: italic; }
       .verify { border: 1px solid rgba(119,118,131,.2); border-radius: 14px; padding: 14px; text-align: center; background: #fff; box-shadow: 0 12px 28px rgba(46,49,146,.05); }
@@ -201,6 +196,11 @@ def _visit_report_styles() -> str:
       .verify-signature img { max-width: 100%; max-height: 70px; object-fit: contain; margin: 10px auto 0; display: block; }
       .verify-signature .name { margin: 10px 0 0; text-align: center; font-size: 13px; color: #464652; font-weight: 600; }
       .verify-signature .empty { margin: 10px 0 0; text-align: center; font-size: 12px; color: #777683; }
+      .annex-item { margin-bottom: 20px; }
+      .annex-title { margin: 0 0 10px; font-size: 18px; color: #2E3192; font-weight: 700; }
+      .annex-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+      .annex-photo { aspect-ratio: 4 / 3; min-height: 260px; border-radius: 22px; background:#f3f4f5; border: 1px dashed #c7c5d4; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+      .annex-photo img { width:100%; height:100%; object-fit:cover; display:block; }
       .signature { margin-top: 40px; text-align: right; }
       .sig-line { height: 2px; opacity: .4; }
       .sig-name { margin-top: 14px; font-size: 14px; color: #464652; }
@@ -214,7 +214,6 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
     comments = escape(str(report.get("comments") or visit.get("notes") or "Sin observaciones."))
     responsible_name = escape(str(report.get("responsible_name") or "No registrado"))
     inspector_name = escape(str(visit.get("inspector") or "Sin inspector"))
-    visit_status = escape(str(visit.get("status_label") or "Sin estado"))
 
     visited_at = _format_datetime(visit.get("visited_at"))
     visited_at_long = _format_long_spanish_date(visit.get("visited_at"))
@@ -282,6 +281,23 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
     while len(general_photo_slots) < 4:
         general_photo_slots.append('<div class="photo" style="aspect-ratio:16 / 9;"><span style="font-size:12px;color:#777683">Sin evidencia</span></div>')
 
+    annex_items: list[str] = []
+    for index, raw in enumerate(dispenser_reports, start=1):
+        if not isinstance(raw, dict):
+            continue
+        photos = raw.get("photos") if isinstance(raw.get("photos"), list) else []
+        valid_sources = [escape(str(photo).strip()) for photo in photos if str(photo).strip()]
+        if not valid_sources:
+            continue
+        identifier = escape(str(raw.get("identifier") or f"DOS{int(index):03d}"))
+        photo_html = "".join(
+            f'<div class="annex-photo"><img alt="Anexo del dosificador {identifier}" src="{src}"/></div>'
+            for src in valid_sources[:4]
+        )
+        annex_items.append(f'<article class="annex-item"><h3 class="annex-title">Dosificador {identifier}</h3><div class="annex-grid">{photo_html}</div></article>')
+
+    annex_html = "".join(annex_items) if annex_items else '<div class="photo"><span style="font-size:12px;color:#777683">No hay imágenes por dosificador registradas.</span></div>'
+
     qr_html = f'<img alt="Código QR de acceso web" src="{escape(qr_url)}"/>' if qr_url else '<div class="photo" style="width:132px;height:132px;margin:0 auto;">N/A</div>'
 
     return f'''<!doctype html>
@@ -295,7 +311,6 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
         <h1 class="title">Informe de visita técnica</h1>
       </div>
       <div class="top-right-panel">
-        <div class="verify">{qr_html}<p class="tag" style="margin-top:10px;">Acceso web verificado</p><p style="font-size:11px;color:#64748b;">Escanee para ver el reporte interactivo</p></div>
         <div style="text-align:right;">
           <div class="visit-chip editorial-gradient">VISITA #{visit['id']}</div>
           <div class="date-text">{visited_at_long}</div>
@@ -310,7 +325,6 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
         <div><div class="label">Sucursal</div><div class="value">{escape(str(visit.get('branch') or 'Sin sucursal'))}</div></div>
         <div><div class="label">Área</div><div class="value">{escape(str(visit.get('area') or 'Sin área'))}</div></div>
         <div><div class="label">Inspector</div><div class="value">{inspector_name}</div></div>
-        <div><div class="label">Estado de visita</div><div class="status-row"><span class="dot"></span><span class="status">{visit_status}</span></div></div>
         <div><div class="label">Responsable del área</div><div class="value">{responsible_name}</div></div>
       </div>
       <div class="visit-times">
@@ -330,6 +344,11 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
       <div class="photos">{''.join(general_photo_slots)}</div>
     </section>
 
+    <section class="section">
+      <div class="section-head"><h2>Anexos por dosificador</h2><div class="line"></div></div>
+      {annex_html}
+    </section>
+
     <section class="section" style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start;">
       <div>
         <div class="section-head"><h2>Observaciones generales</h2><div class="line"></div></div>
@@ -345,6 +364,11 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
       <p style="font-size:22px;font-weight:700;color:#2E3192;margin:12px 0 0;">Firma del responsable</p>
       {signature_html}
       <p class="sig-name">{responsible_name}</p>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>Acceso web</h2><div class="line"></div></div>
+      <div class="verify">{qr_html}<p class="tag" style="margin-top:10px;">Acceso web verificado</p><p style="font-size:11px;color:#64748b;">Escanee para ver el reporte interactivo</p></div>
     </section>
 
     <footer class="footer">
