@@ -1914,7 +1914,7 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         _draw_photo_grid(dispenser["photos"][:6])
 
     _draw_annex_title("Evidencias generales")
-    general_photos = [str(item.file).strip() for item in visit.media.filter(type="image").order_by("id") if item.file]
+    general_photos = [str(item.file).strip() for item in visit.media.filter(media_type="image").order_by("id") if item.file]
     _draw_photo_grid(general_photos[:8])
 
     _draw_report_footer(pdf, generated_at)
