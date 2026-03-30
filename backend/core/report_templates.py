@@ -62,6 +62,30 @@ def _format_datetime(raw: str | None) -> str:
     return dt.strftime("%d/%m/%Y %H:%M")
 
 
+def _format_long_spanish_date(raw: str | None) -> str:
+    if not raw:
+        return "Sin registro"
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return escape(raw)
+    months = [
+        "enero",
+        "febrero",
+        "marzo",
+        "abril",
+        "mayo",
+        "junio",
+        "julio",
+        "agosto",
+        "septiembre",
+        "octubre",
+        "noviembre",
+        "diciembre",
+    ]
+    return f"{dt.day} de {months[dt.month - 1]}, {dt.year}"
+
+
 def _base_styles() -> str:
     return """
       @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
@@ -134,10 +158,10 @@ def _visit_report_styles() -> str:
       * { box-sizing: border-box; }
       body { margin: 0; font-family: 'Poppins', sans-serif; color: #191c1d; background: #f8f9fa; }
       .canvas { width: 100%; max-width: 1100px; margin: 0 auto; }
-      .page { padding: 28px 34px; }
+      .page { padding: 34px; }
       .headline { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 38px; }
       .eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: #64748b; }
-      .title { font-size: 46px; line-height: 1; margin: 8px 0 0; color: #2E3192; font-weight: 700; }
+      .title { font-size: 52px; line-height: 1; margin: 8px 0 0; color: #2E3192; font-weight: 700; }
       .editorial-gradient { background: linear-gradient(135deg, #2E3192 0%, #92B936 100%); }
       .visit-chip { color: #fff; font-size: 12px; letter-spacing: .12em; font-weight: 700; border-radius: 999px; padding: 5px 14px; display: inline-block; }
       .date-text { margin-top: 8px; font-size: 14px; color: #464652; }
@@ -165,7 +189,7 @@ def _visit_report_styles() -> str:
       .photo { aspect-ratio: 1 / 1; border-radius: 10px; background: #f3f4f5; border: 1px dashed #c7c5d4; display: flex; align-items: center; justify-content: center; overflow: hidden; }
       .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
       .obs { background: #f3f4f5; border-left: 4px solid #92B936; border-radius: 14px; padding: 16px; font-style: italic; }
-      .verify { border: 1px solid rgba(119,118,131,.25); border-radius: 14px; padding: 14px; text-align: center; }
+      .verify { border: 1px solid rgba(119,118,131,.2); border-radius: 14px; padding: 14px; text-align: center; background: #fff; box-shadow: 0 12px 28px rgba(46,49,146,.05); }
       .verify img { width: 132px; height: 132px; object-fit: contain; border-radius: 8px; border: 1px solid #e1e3e4; background: #fff; padding: 8px; }
       .signature { margin-top: 40px; text-align: right; }
       .sig-line { height: 2px; opacity: .4; }
@@ -183,6 +207,7 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
     visit_status = escape(str(visit.get("status_label") or "Sin estado"))
 
     visited_at = _format_datetime(visit.get("visited_at"))
+    visited_at_long = _format_long_spanish_date(visit.get("visited_at"))
     started_at = _format_datetime(visit.get("started_at"))
     completed_at = _format_datetime(visit.get("completed_at"))
     generated = datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
@@ -206,9 +231,14 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
         identifier = escape(str(raw.get("identifier") or f"DOS{int(index):03d}"))
         model = escape(str(raw.get("model") or "No especificado"))
         nozzle = escape(str(raw.get("nozzle") or "Sin boquilla"))
+        products = raw.get("products") if isinstance(raw.get("products"), list) else []
+        products = [escape(str(item)) for item in products if str(item).strip()]
         product = escape(str(raw.get("product") or "Producto no especificado"))
         comment = escape(str(raw.get("comment") or "Sin comentario registrado."))
         photos = raw.get("photos") if isinstance(raw.get("photos"), list) else []
+        product_html = f"<div>{product}</div>"
+        if products:
+            product_html = "<ul style='margin:4px 0 0 16px;padding:0;'>" + "".join(f"<li>{item}</li>" for item in products[:4]) + "</ul>"
 
         photo_slots = []
         for photo in photos[:4]:
@@ -220,7 +250,7 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
 
         accent = "#2E3192" if index % 2 else "#92B936"
         cards.append(
-            f'''<article class="dispenser-card"><div class="dispenser-inner"><div class="dispenser-accent" style="background:{accent};"></div><div class="dispenser-content"><h3 class="dispenser-title">{identifier}</h3><div class="kv"><div><div class="tag">Modelo</div><div>{model}</div></div><div><div class="tag">Boquilla</div><div>{nozzle}</div></div><div style="grid-column:1 / -1;"><div class="tag">Producto asociado</div><div>{product}</div></div></div><div class="comment-box"><strong>Comentarios por dosificador:</strong> {comment}</div><div class="photos">{''.join(photo_slots)}</div><div style="display:none">Dispenser ID: {dispenser_id}</div></div></div></article>'''
+            f'''<article class="dispenser-card"><div class="dispenser-inner"><div class="dispenser-accent" style="background:{accent};"></div><div class="dispenser-content"><h3 class="dispenser-title">{identifier}</h3><div class="kv"><div><div class="tag">Modelo</div><div>{model}</div></div><div><div class="tag">Boquilla</div><div>{nozzle}</div></div><div style="grid-column:1 / -1;"><div class="tag">Producto asociado</div>{product_html}</div></div><div class="comment-box"><strong>Comentarios por dosificador:</strong> {comment}</div><div class="tag" style="margin-top:12px;">Evidencia de la visita</div><div class="photos">{''.join(photo_slots)}</div><div style="display:none">Dispenser ID: {dispenser_id}</div></div></div></article>'''
         )
 
     if not cards:
@@ -250,7 +280,7 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
       </div>
       <div style="text-align:right;">
         <div class="visit-chip editorial-gradient">VISITA #{visit['id']}</div>
-        <div class="date-text">{visited_at}</div>
+        <div class="date-text">{visited_at_long}</div>
       </div>
     </header>
 
