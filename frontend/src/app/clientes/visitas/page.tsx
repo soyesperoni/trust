@@ -45,6 +45,9 @@ export default function VisitasPage() {
   const [selectedArea, setSelectedArea] = useState("");
   const [selectedInspector, setSelectedInspector] = useState("");
   const [activeFilter, setActiveFilter] = useState<(typeof mobileFilters)[number]["value"]>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [animatedComplianceScore, setAnimatedComplianceScore] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -214,6 +217,15 @@ export default function VisitasPage() {
       const mappedFilter = mapVisitTypeToFilter(typeLabel);
       const matchesFilter = activeFilter === "all" || mappedFilter === activeFilter;
       if (!matchesFilter) return false;
+      const visitDate = new Date(visit.visited_at);
+      const isValidDate = !Number.isNaN(visitDate.getTime());
+      const lowerBound = startDate ? new Date(`${startDate}T00:00:00`) : null;
+      const upperBound = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
+      const matchesDateRange =
+        !isValidDate ||
+        ((!lowerBound || visitDate >= lowerBound) &&
+          (!upperBound || visitDate <= upperBound));
+      if (!matchesDateRange) return false;
       if (!query) return true;
       return [
         visit.client,
@@ -224,7 +236,18 @@ export default function VisitasPage() {
         `#${visit.id}`,
       ].some((value) => value.toLowerCase().includes(query));
     });
-  }, [activeFilter, searchTerm, selectedArea, selectedBranch, selectedClient, selectedInspector, visits]);
+  }, [activeFilter, endDate, searchTerm, selectedArea, selectedBranch, selectedClient, selectedInspector, startDate, visits]);
+
+  const stats = useMemo(() => {
+    const now = new Date();
+    const dueVisits = filteredVisits.filter((visit) => {
+      const date = new Date(visit.visited_at);
+      return !Number.isNaN(date.getTime()) && date <= now;
+    });
+    const completedDueVisits = dueVisits.filter((visit) => visit.status === "completed");
+    const compliance = dueVisits.length ? Math.round((completedDueVisits.length / dueVisits.length) * 100) : 0;
+    return { compliance };
+  }, [filteredVisits]);
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando historial...";
@@ -232,26 +255,73 @@ export default function VisitasPage() {
     return "No hay visitas registradas.";
   }, [error, isLoading]);
 
+  useEffect(() => {
+    if (isLoading) return;
+
+    let animationFrame = 0;
+    const duration = 1100;
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      setAnimatedComplianceScore(Math.round(stats.compliance * easedProgress));
+
+      if (progress < 1) {
+        animationFrame = window.requestAnimationFrame(animate);
+      }
+    };
+
+    setAnimatedComplianceScore(0);
+    animationFrame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [isLoading, stats.compliance]);
+
   return (
     <>
       <DashboardHeader
         title="Historial de Visitas"
-        description="Registros recientes de inspecciones y mantenimientos."
+        description="Registros recientes de visitas con score de cumplimiento basado en fechas programadas vencidas."
       />
 
       <div className="md:hidden px-4 pt-3 pb-2 sticky top-16 z-20 bg-white/95 dark:bg-[#161e27]/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5 shadow-sm">
-          <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">search</span>
-          <input
-            className="bg-transparent border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-200 w-full placeholder-slate-500 dark:placeholder-slate-400 text-base"
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Buscar historial..."
-            type="text"
-            value={searchTerm}
-          />
-          <button className="flex items-center justify-center text-slate-600 dark:text-slate-300" type="button">
-            <span className="material-symbols-outlined">filter_list</span>
-          </button>
+        <div className="grid grid-cols-1 gap-2">
+          <div className="rounded-xl border border-slate-100 bg-gradient-to-b from-white to-slate-50 px-4 py-3 text-center dark:border-slate-700/60 dark:from-slate-900/60 dark:to-slate-900/30">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Cumplimiento</p>
+            <div className="mt-2 flex items-end justify-center gap-1">
+              <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-4xl font-black leading-none text-transparent">
+                {isLoading ? "..." : animatedComplianceScore}
+              </span>
+              <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-0.5 text-xl font-bold text-transparent">%</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              max={endDate || undefined}
+              onChange={(event) => setStartDate(event.target.value)}
+              type="date"
+              value={startDate}
+            />
+            <input
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              min={startDate || undefined}
+              onChange={(event) => setEndDate(event.target.value)}
+              type="date"
+              value={endDate}
+            />
+          </div>
+          <div className="flex items-center gap-3 rounded-full bg-slate-100 px-4 py-2.5 shadow-sm dark:bg-slate-800">
+            <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">search</span>
+            <input
+              className="w-full border-none bg-transparent p-0 text-base text-slate-700 placeholder-slate-500 focus:ring-0 dark:text-slate-200 dark:placeholder-slate-400"
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Buscar historial..."
+              type="text"
+              value={searchTerm}
+            />
+          </div>
         </div>
       </div>
 
@@ -361,81 +431,109 @@ export default function VisitasPage() {
       <PageTransition className="hidden flex-1 flex-col overflow-y-auto md:flex">
 
         <div className="hidden shrink-0 px-4 pb-2 pt-6 md:block md:px-8">
-          <div className="mt-6 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
-            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-              <div className="relative w-full md:w-96">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">
-                  search
+          <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
+              <div className="flex w-full flex-col justify-center rounded-xl border border-slate-100 bg-gradient-to-b from-white to-slate-50 px-4 py-5 text-center dark:border-slate-700/60 dark:from-slate-900/60 dark:to-slate-900/30 xl:max-w-[290px]">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Score cumplimiento</p>
+                <div className="mt-3 flex items-end justify-center gap-1">
+                  <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-6xl font-black leading-none text-transparent">
+                    {isLoading ? "..." : animatedComplianceScore}
+                  </span>
+                  <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-1 text-2xl font-bold text-transparent">%</span>
+                </div>
+                <span className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Basado en visitas programadas con fecha vencida
                 </span>
-                <input
-                  className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Buscar visita..."
-                  type="text"
-                  value={searchTerm}
-                />
               </div>
-            </div>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <select
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                onChange={(event) => setSelectedClient(event.target.value)}
-                value={selectedClient}
-              >
-                <option value="">Todos los clientes</option>
-                {clientOptions.map((client) => (
-                  <option key={client} value={client}>
-                    {client}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                onChange={(event) => setSelectedBranch(event.target.value)}
-                value={selectedBranch}
-              >
-                <option value="">Todas las sucursales</option>
-                {branchOptions.map((branch) => (
-                  <option key={branch} value={branch}>
-                    {branch}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                onChange={(event) => setSelectedArea(event.target.value)}
-                value={selectedArea}
-              >
-                <option value="">Todas las áreas</option>
-                {areaOptions.map((area) => (
-                  <option key={area} value={area}>
-                    {area}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                onChange={(event) => setSelectedInspector(event.target.value)}
-                value={selectedInspector}
-              >
-                <option value="">Todos los inspectores</option>
-                {inspectors.map((inspector) => (
-                  <option key={inspector.id} value={inspector.full_name}>
-                    {inspector.full_name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
-                onChange={(event) => setActiveFilter(event.target.value as (typeof mobileFilters)[number]["value"])}
-                value={activeFilter}
-              >
-                {mobileFilters.map((filter) => (
-                  <option key={filter.value} value={filter.value}>
-                    {filter.label}
-                  </option>
-                ))}
-              </select>
+              <div className="flex-1 rounded-xl border border-slate-100 p-3 dark:border-slate-700/60">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  <div className="relative md:col-span-2 xl:col-span-5">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">
+                      search
+                    </span>
+                    <input
+                      className="pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Buscar visita..."
+                      type="text"
+                      value={searchTerm}
+                    />
+                  </div>
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    onChange={(event) => setSelectedClient(event.target.value)}
+                    value={selectedClient}
+                  >
+                    <option value="">Todos los clientes</option>
+                    {clientOptions.map((client) => (
+                      <option key={client} value={client}>
+                        {client}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    onChange={(event) => setSelectedBranch(event.target.value)}
+                    value={selectedBranch}
+                  >
+                    <option value="">Todas las sucursales</option>
+                    {branchOptions.map((branch) => (
+                      <option key={branch} value={branch}>
+                        {branch}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    onChange={(event) => setSelectedArea(event.target.value)}
+                    value={selectedArea}
+                  >
+                    <option value="">Todas las áreas</option>
+                    {areaOptions.map((area) => (
+                      <option key={area} value={area}>
+                        {area}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    onChange={(event) => setSelectedInspector(event.target.value)}
+                    value={selectedInspector}
+                  >
+                    <option value="">Todos los inspectores</option>
+                    {inspectors.map((inspector) => (
+                      <option key={inspector.id} value={inspector.full_name}>
+                        {inspector.full_name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    onChange={(event) => setActiveFilter(event.target.value as (typeof mobileFilters)[number]["value"])}
+                    value={activeFilter}
+                  >
+                    {mobileFilters.map((filter) => (
+                      <option key={filter.value} value={filter.value}>
+                        {filter.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    max={endDate || undefined}
+                    onChange={(event) => setStartDate(event.target.value)}
+                    type="date"
+                    value={startDate}
+                  />
+                  <input
+                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+                    min={startDate || undefined}
+                    onChange={(event) => setEndDate(event.target.value)}
+                    type="date"
+                    value={endDate}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
