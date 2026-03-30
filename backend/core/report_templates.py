@@ -1,9 +1,53 @@
 from __future__ import annotations
 
+import base64
 from datetime import datetime
 from html import escape
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
-from urllib.parse import quote_plus
+
+from reportlab.graphics import renderSVG
+from reportlab.graphics.barcode import qr
+from reportlab.graphics.shapes import Drawing
+
+
+@lru_cache(maxsize=1)
+def _logo_data_uri() -> str:
+    logo_paths = [
+        Path(__file__).resolve().parents[2] / "frontend/public/trust_logo_s.svg",
+        Path(__file__).resolve().parents[2] / "frontend/public/trust_logo.svg",
+    ]
+    for path in logo_paths:
+        try:
+            svg_content = path.read_bytes()
+        except OSError:
+            continue
+        encoded = base64.b64encode(svg_content).decode("ascii")
+        return f"data:image/svg+xml;base64,{encoded}"
+    return "https://trust.supplymax.net/trust_logo_s.svg"
+
+
+def _qr_data_uri(url: str) -> str:
+    qr_widget = qr.QrCodeWidget(url)
+    bounds = qr_widget.getBounds()
+    size = 220
+    qr_drawing = Drawing(
+        size,
+        size,
+        transform=[
+            size / (bounds[2] - bounds[0]),
+            0,
+            0,
+            size / (bounds[3] - bounds[1]),
+            0,
+            0,
+        ],
+    )
+    qr_drawing.add(qr_widget)
+    svg_content = renderSVG.drawToString(qr_drawing).encode("utf-8")
+    encoded = base64.b64encode(svg_content).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
 
 
 def _format_datetime(raw: str | None) -> str:
@@ -99,11 +143,8 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
         else "<div class=\"signature-placeholder\">Firma no registrada</div>"
     )
     web_access_url = str(visit.get("public_report_url") or visit.get("web_access_url") or "").strip()
-    qr_url = (
-        f"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={quote_plus(web_access_url)}"
-        if web_access_url
-        else ""
-    )
+    logo_uri = _logo_data_uri()
+    qr_url = _qr_data_uri(web_access_url) if web_access_url else ""
     generated = datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
     qr_html = (
         f'<img src="{escape(qr_url)}" alt="Código QR de acceso web"/>'
@@ -116,7 +157,7 @@ def build_visit_report_html(visit: dict[str, Any]) -> str:
 <html lang=\"es\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>
 <title>Informe de visita #{visit['id']}</title><style>{_base_styles()}</style></head><body>
 <section class=\"page cover\">
-  <img class=\"cover-logo\" src=\"https://trust.supplymax.net/trust_logo_s.svg\" alt=\"Logo Trust\"/>
+  <img class=\"cover-logo\" src=\"{logo_uri}\" alt=\"Logo Trust\"/>
   <div class=\"brand\">Trust · Reportes Corporativos</div>
   <h1 class=\"title\">Informe Ejecutivo de Visita</h1>
   <p class=\"subtitle\">Documento diseñado para renderizarse con Puppeteer y exportarse a PDF con identidad corporativa.</p>
