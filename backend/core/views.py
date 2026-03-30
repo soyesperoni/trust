@@ -1700,6 +1700,21 @@ def _load_report_image(reference: str) -> ImageReader | None:
         except Exception:
             return None
 
+    media_root = Path(getattr(settings, "MEDIA_ROOT", "")).resolve()
+    media_url = str(getattr(settings, "MEDIA_URL", "/media/") or "/media/").strip()
+    if media_url and not media_url.startswith("/"):
+        media_url = f"/{media_url}"
+    media_prefix = media_url.rstrip("/")
+
+    if media_prefix and ref.startswith(f"{media_prefix}/"):
+        relative_path = ref.replace(f"{media_prefix}/", "", 1)
+        candidate = (media_root / relative_path).resolve()
+        if candidate.is_file() and str(candidate).startswith(str(media_root)):
+            try:
+                return ImageReader(str(candidate))
+            except Exception:
+                return None
+
     if ref.startswith("/media/"):
         media_root = Path(getattr(settings, "MEDIA_ROOT", "")).resolve()
         candidate = (media_root / ref.replace("/media/", "", 1)).resolve()
@@ -1708,6 +1723,13 @@ def _load_report_image(reference: str) -> ImageReader | None:
                 return ImageReader(str(candidate))
             except Exception:
                 return None
+
+    candidate = (media_root / ref).resolve()
+    if candidate.is_file() and str(candidate).startswith(str(media_root)):
+        try:
+            return ImageReader(str(candidate))
+        except Exception:
+            return None
 
     if ref.startswith("http://") or ref.startswith("https://"):
         try:
@@ -1915,7 +1937,7 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         _draw_photo_grid(dispenser["photos"][:6])
 
     _draw_annex_title("Evidencias generales")
-    general_photos = [str(item.file).strip() for item in visit.media.filter(media_type="image").order_by("id") if item.file]
+    general_photos = [str(item.file).strip() for item in visit.media.filter(media_type=VisitMedia.MediaType.PHOTO).order_by("id") if item.file]
     _draw_photo_grid(general_photos[:8])
 
     _draw_report_footer(pdf, generated_at)
