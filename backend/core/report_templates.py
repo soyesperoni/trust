@@ -184,8 +184,8 @@ def _visit_report_styles() -> str:
       .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
       .tag { font-size: 12px; color: #464652; text-transform: uppercase; font-weight: 600; }
       .comment-box { background: #edeeef; border-radius: 10px; padding: 10px 12px; margin-top: 10px; font-size: 13px; }
-      .photos { margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
-      .photo { aspect-ratio: 4 / 3; min-height: 180px; border-radius: 18px; background: #f3f4f5; border: 1px dashed #c7c5d4; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+      .photos { margin-top: 12px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+      .photo { aspect-ratio: 4 / 3; min-height: 180px; border-radius: 0; background: #f3f4f5; border: 1px solid #d6d9dd; display: flex; align-items: center; justify-content: center; overflow: hidden; }
       .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
       .obs { background: #f3f4f5; border-left: 4px solid #92B936; border-radius: 14px; padding: 16px; font-style: italic; }
       .verify { border: 1px solid rgba(119,118,131,.2); border-radius: 14px; padding: 14px; text-align: center; background: #fff; box-shadow: 0 12px 28px rgba(46,49,146,.05); }
