@@ -3538,6 +3538,10 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     report = audit.audit_report or {}
     ai_analysis = report.get("ai_analysis") if isinstance(report.get("ai_analysis"), dict) else {}
     answers = report.get("answers") if isinstance(report.get("answers"), list) else []
+    risks = ai_analysis.get("risks") if isinstance(ai_analysis.get("risks"), list) else []
+    strengths = ai_analysis.get("strengths") if isinstance(ai_analysis.get("strengths"), list) else []
+    recommendations = ai_analysis.get("recommendations") if isinstance(ai_analysis.get("recommendations"), list) else []
+    next_steps = ai_analysis.get("next_steps") if isinstance(ai_analysis.get("next_steps"), list) else []
     brand_green = colors.HexColor("#86BC25")
     brand_blue = colors.HexColor("#2E3192")
     brand_text = colors.HexColor("#12233D")
@@ -3741,8 +3745,6 @@ def _build_audit_pdf(audit: Audit) -> bytes:
 
     _header("Anexos de campo y conformidad", f"Auditoría #{audit.id} · Evidencia geolocalizada y multimedia")
 
-    recommendations = ai_analysis.get("recommendations") if isinstance(ai_analysis.get("recommendations"), list) else []
-    next_steps = ai_analysis.get("next_steps") if isinstance(ai_analysis.get("next_steps"), list) else []
     actions = [f"• {str(item)}" for item in (recommendations[:5] + next_steps[:5]) if str(item).strip()]
 
     actions_top = height - 120

@@ -1256,3 +1256,33 @@ class AuditApiTests(TestCase):
         analysis = _fallback_audit_ai_analysis(report)
 
         self.assertEqual(analysis["score"], 100)
+
+    def test_audit_report_route_returns_pdf_for_completed_audit(self):
+        form = AuditForm.objects.create(name="Checklist reporte", schema={"questions": []})
+        audit = Audit.objects.create(
+            area=self.area,
+            form=form,
+            form_name=form.name,
+            form_schema=form.schema,
+            inspector=self.inspector,
+            status=Audit.Status.COMPLETED,
+            completed_at=timezone.now(),
+            audit_report={
+                "ai_analysis": {
+                    "score": 88,
+                    "risks": ["Riesgo 1"],
+                    "strengths": ["Fortaleza 1"],
+                    "recommendations": ["Acción 1"],
+                    "next_steps": ["Paso 1"],
+                },
+                "answers": [{"label": "Orden", "value": "Sí"}],
+            },
+        )
+
+        response = self.client.get(
+            f"/api/audits/{audit.id}/report",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
