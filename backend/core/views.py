@@ -1347,11 +1347,22 @@ def _draw_rounded_photo(pdf: canvas.Canvas, photo: ImageReader, x: float, y: flo
     path = pdf.beginPath()
     path.roundRect(x, y, width, height, radius)
     pdf.clipPath(path, stroke=0, fill=0)
-    pdf.drawImage(photo, x, y, width=width, height=height, preserveAspectRatio=True, mask="auto")
+    image_width, image_height = photo.getSize()
+    if image_width > 0 and image_height > 0:
+        image_ratio = image_width / image_height
+        box_ratio = width / height
+        if image_ratio > box_ratio:
+            draw_height = height
+            draw_width = height * image_ratio
+        else:
+            draw_width = width
+            draw_height = width / image_ratio
+        draw_x = x + ((width - draw_width) / 2)
+        draw_y = y + ((height - draw_height) / 2)
+        pdf.drawImage(photo, draw_x, draw_y, width=draw_width, height=draw_height, preserveAspectRatio=False, mask="auto")
+    else:
+        pdf.drawImage(photo, x, y, width=width, height=height, preserveAspectRatio=False, mask="auto")
     pdf.restoreState()
-    pdf.setStrokeColor(colors.HexColor("#d7e2ef"))
-    pdf.setLineWidth(0.8)
-    pdf.roundRect(x, y, width, height, radius, fill=0, stroke=1)
 
 def _draw_wrapped_text(pdf: canvas.Canvas, text: str, x: float, y: float, width: float, line_height: float = 14):
     if not text:
@@ -2000,10 +2011,11 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         y -= 24
 
     gallery_width = page_width - (margin_x * 2)
-    card_gap_x = 10
+    card_gap_x = 8
     card_gap_y = 10
-    image_w = (gallery_width - card_gap_x) / 2
-    image_h = 220
+    columns = 3
+    image_w = (gallery_width - (card_gap_x * (columns - 1))) / columns
+    image_h = 168
 
     def _draw_annex_title(title: str) -> None:
         nonlocal y
@@ -2031,20 +2043,19 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
 
         total = len(valid_photos)
         for idx, photo in enumerate(valid_photos):
-            if idx % 2 == 0:
+            col = idx % columns
+            if col == 0:
                 _ensure_space(image_h + 16)
-            row_is_single = (idx == total - 1) and (idx % 2 == 0)
-            if row_is_single:
-                x = margin_x + (gallery_width - image_w) / 2
-            else:
-                x = margin_x if idx % 2 == 0 else margin_x + image_w + card_gap_x
+            x = margin_x + (col * (image_w + card_gap_x))
             y_image = y - image_h
             try:
                 _draw_rounded_photo(pdf, photo, x, y_image, image_w, image_h, radius=10)
             except Exception:
                 pdf.setFillColor(colors.HexColor("#e2e8f0"))
                 pdf.roundRect(x, y_image, image_w, image_h, 10, fill=1, stroke=0)
-            if idx % 2 == 1 or idx == total - 1:
+            row_complete = col == columns - 1
+            is_last = idx == total - 1
+            if row_complete or is_last:
                 y -= image_h + card_gap_y
 
     if has_annex_content:
