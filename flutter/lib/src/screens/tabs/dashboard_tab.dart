@@ -357,11 +357,11 @@ class _RiskOverviewGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      _MetricData('Visitas programadas', payload.stats.pendingVisits, Icons.calendar_today),
-      _MetricData('Auditorías pendientes', payload.stats.scheduledAudits, Icons.assignment_late),
-      _MetricData('Visitas vencidas', payload.stats.overdueVisits, Icons.event_busy),
-      _MetricData('Auditorías vencidas', payload.stats.overdueAudits, Icons.warning_amber),
-      _MetricData('Incidencias activas', payload.stats.incidents, Icons.report_problem),
+      _MetricData('Visitas programadas', payload.stats.pendingVisits),
+      _MetricData('Auditorías pendientes', payload.stats.scheduledAudits),
+      _MetricData('Visitas vencidas', payload.stats.overdueVisits),
+      _MetricData('Auditorías vencidas', payload.stats.overdueAudits),
+      _MetricData('Incidencias activas', payload.stats.incidents),
     ];
 
     return LayoutBuilder(
@@ -384,11 +384,10 @@ class _RiskOverviewGrid extends StatelessWidget {
 }
 
 class _MetricData {
-  const _MetricData(this.title, this.value, this.icon);
+  const _MetricData(this.title, this.value);
 
   final String title;
   final int value;
-  final IconData icon;
 }
 
 class _MetricCard extends StatelessWidget {
@@ -409,34 +408,26 @@ class _MetricCard extends StatelessWidget {
           color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(data.icon, color: isDark ? const Color(0xFF93C5FD) : AppColors.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${data.value}',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                    color: isDark ? Colors.white : AppColors.primaryDark,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  data.title,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.darkMuted : const Color(0xFF64748B),
-                  ),
-                ),
-              ],
+          Text(
+            '${data.value}',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              height: 1,
+              color: isDark ? Colors.white : AppColors.primaryDark,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            data.title,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.darkMuted : const Color(0xFF64748B),
             ),
           ),
         ],
