@@ -3562,10 +3562,14 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     answered_count = len([item for item in answers if isinstance(item, dict)])
     total_questions = len(((report.get("form") or {}).get("schema") or {}).get("questions") or [])
     completion_pct = int((answered_count / total_questions) * 100) if total_questions else 0
-    _header(
-        "Informe Ejecutivo de Auditoría",
-        f"Auditoría #{audit.id} · Generado: {generated_at.strftime('%d/%m/%Y %H:%M')}",
-    )
+    _header("Informe Ejecutivo de Auditoría", "")
+    header_meta = f"AUDITORÍA #{audit.id} {generated_at.strftime('%d/%m/%Y')}"
+    header_meta_x = width - 210
+    header_meta_y = height - 98
+    pdf.setFillColor(colors.HexColor("#64748b"))
+    pdf.setFont(REPORT_FONT_BOLD, 10)
+    pdf.drawString(header_meta_x, header_meta_y, header_meta)
+    pdf.setFillColor(brand_text)
     inspector_name = audit.inspector.get_full_name() if audit.inspector else "Sin asignar"
     responsible_name = str(report.get("responsible_name") or "No registrado")
     signature_data = str(report.get("responsible_signature") or "")
