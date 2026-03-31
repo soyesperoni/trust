@@ -1272,7 +1272,7 @@ def _draw_signature_and_qr_row(
     public_report_url: str | None,
     margin_x: float = REPORT_PAGE_PADDING,
 ) -> float:
-    card_gap = 12
+    card_gap = 20
     card_w = (540 - card_gap) / 2
     card_h = 126
     card_y = y_start - card_h
@@ -1633,7 +1633,7 @@ def _draw_location_map(pdf: canvas.Canvas, visit: Visit, y_start: int):
 
 
 def _draw_report_images(pdf: canvas.Canvas, visit: Visit, y_start: int):
-    images = [item for item in visit.media.all() if item.media_type == VisitMedia.MediaType.PHOTO][:4]
+    images = [item for item in visit.media.all() if item.media_type == VisitMedia.MediaType.PHOTO][:6]
     if not images:
         return y_start
 
@@ -1646,15 +1646,18 @@ def _draw_report_images(pdf: canvas.Canvas, visit: Visit, y_start: int):
     pdf.setFont(REPORT_FONT_BOLD, 12)
     pdf.drawString(section_x + 16, section_y + section_h - 24, "Evidencias fotográficas")
 
+    images_per_row = 3
     x = section_x + 16
     y = section_y + section_h - 42
-    width = 248
-    height = 96
+    width = 164
+    height = 84
+    horizontal_gap = 12
+    vertical_gap = 14
 
     for index, item in enumerate(images):
-        if index and index % 2 == 0:
+        if index and index % images_per_row == 0:
             x = section_x + 16
-            y -= 108
+            y -= height + vertical_gap
 
         pdf.setFillColor(colors.HexColor("#f1f5f9"))
         pdf.roundRect(x, y - height, width, height, 8, fill=1, stroke=0)
@@ -1675,7 +1678,7 @@ def _draw_report_images(pdf: canvas.Canvas, visit: Visit, y_start: int):
             pdf.setFillColor(colors.HexColor("#cbd5e1"))
             pdf.roundRect(x + 1, y - height + 1, width - 2, height - 2, 8, fill=1, stroke=0)
 
-        x += 260
+        x += width + horizontal_gap
 
     return section_y - 18
 
