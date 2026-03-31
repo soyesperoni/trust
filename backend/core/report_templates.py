@@ -198,8 +198,8 @@ def _visit_report_styles() -> str:
       .verify-signature .empty { margin: 10px 0 0; text-align: center; font-size: 12px; color: #777683; }
       .annex-item { margin-bottom: 20px; }
       .annex-title { margin: 0 0 10px; font-size: 18px; color: #2E3192; font-weight: 700; }
-      .annex-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-      .annex-photo { aspect-ratio: 4 / 3; min-height: 260px; border-radius: 22px; background:#f3f4f5; border: 1px dashed #c7c5d4; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+      .annex-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .annex-photo { aspect-ratio: 4 / 3; min-height: 180px; border-radius: 0; background:#f3f4f5; border: 1px solid #d6d9dd; overflow:hidden; display:flex; align-items:center; justify-content:center; }
       .annex-photo img { width:100%; height:100%; object-fit:cover; display:block; }
       .signature { margin-top: 40px; text-align: right; }
       .sig-line { height: 2px; opacity: .4; }
