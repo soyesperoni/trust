@@ -9,6 +9,8 @@ import '../../services/trust_repository.dart';
 import '../../theme/app_colors.dart';
 import '../audits/start_audit_screen.dart';
 
+enum _ScoreRange { month, week, last6Days }
+
 class DashboardTab extends StatefulWidget {
   const DashboardTab({
     required this.email,
@@ -25,12 +27,13 @@ class DashboardTab extends StatefulWidget {
 
 class _DashboardTabState extends State<DashboardTab> {
   final TrustRepository _repository = TrustRepository();
-  static const Duration _refreshInterval = Duration(seconds: 1);
+  static const Duration _refreshInterval = Duration(seconds: 20);
 
   Timer? _refreshTimer;
   _DashboardPayload? _payload;
   Object? _error;
   bool _isLoading = true;
+  _ScoreRange _scoreRange = _ScoreRange.last6Days;
 
   @override
   void initState() {
@@ -61,7 +64,7 @@ class _DashboardTabState extends State<DashboardTab> {
     }
 
     final payload = _payload!;
-    final chartItems = _buildChartItems(payload);
+    final trendItems = _buildTrendItems(payload.dailyAuditScoreHistory);
 
     return Container(
       decoration: BoxDecoration(
@@ -78,14 +81,20 @@ class _DashboardTabState extends State<DashboardTab> {
               ),
       ),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
         child: Column(
           children: [
-            _AuditScoreCard(payload: payload),
-            const SizedBox(height: 14),
-            _DashboardKpiStrip(payload: payload),
-            const SizedBox(height: 14),
-            _MiniBarChart(items: chartItems),
+            _ComplianceHeroCard(payload: payload),
+            const SizedBox(height: 12),
+            _RiskOverviewGrid(payload: payload),
+            const SizedBox(height: 12),
+            _TrendCard(
+              selectedRange: _scoreRange,
+              items: trendItems,
+              onChanged: (value) => setState(() => _scoreRange = value),
+            ),
+            const SizedBox(height: 12),
+            _EntityCountersCard(payload: payload, role: widget.role),
             const SizedBox(height: 14),
             SizedBox(
               height: 66,
@@ -97,12 +106,14 @@ class _DashboardTabState extends State<DashboardTab> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: Theme.of(context).brightness == Brightness.dark
-                      ? AppColors.darkCard
-                      : const Color(0xFFE5E7EB),
-                  disabledForegroundColor: Theme.of(context).brightness == Brightness.dark
-                      ? AppColors.darkMuted
-                      : const Color(0xFF6B7280),
+                  disabledBackgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.darkCard
+                          : const Color(0xFFE5E7EB),
+                  disabledForegroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.darkMuted
+                          : const Color(0xFF6B7280),
                   textStyle: const TextStyle(fontWeight: FontWeight.w700),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
@@ -156,17 +167,18 @@ class _DashboardTabState extends State<DashboardTab> {
 
   Future<_DashboardPayload> _loadPayload() async {
     final results = await Future.wait<dynamic>([
-      _repository.loadDashboardStats(widget.email),
+      _repository.loadDashboardSummary(widget.email),
       _repository.loadAudits(widget.email),
     ]);
 
-    final stats = results[0] as DashboardStats;
+    final summary = results[0] as DashboardSummary;
     final audits = results[1] as List<Audit>;
 
     return _DashboardPayload(
-      stats: stats,
+      stats: summary.stats,
       totalAudits: audits.length,
       pendingAudits: _countPendingAudits(audits),
+      dailyAuditScoreHistory: summary.dailyAuditScoreHistory,
     );
   }
 
@@ -174,36 +186,100 @@ class _DashboardTabState extends State<DashboardTab> {
     return audits.where((audit) => audit.status.toLowerCase() == 'scheduled').length;
   }
 
-  List<_BarChartItem> _buildChartItems(_DashboardPayload payload) {
-    final completedAudits = (payload.totalAudits - payload.pendingAudits).clamp(0, 9999);
-    final completedVisits = (payload.stats.visits - payload.stats.pendingVisits).clamp(0, 9999);
-    final incidents = payload.stats.incidents;
-    final pendingAudits = payload.pendingAudits;
-
-    final rawItems = <_BarChartItem>[
-      _BarChartItem(label: 'Aud. OK', count: completedAudits),
-      _BarChartItem(label: 'Visitas', count: completedVisits),
-      _BarChartItem(label: 'Incid.', count: incidents),
-      _BarChartItem(label: 'Pend.', count: pendingAudits),
-    ];
-
-    final maxValue = rawItems
-        .map((item) => item.count.toDouble())
-        .reduce((a, b) => a > b ? a : b);
-
-    if (maxValue <= 0) {
-      return rawItems
-          .map((item) => item.copyWith(normalizedValue: 0.1))
-          .toList(growable: false);
-    }
-
-    return rawItems
+  List<_TrendChartItem> _buildTrendItems(List<DailyAuditScore> history) {
+    final sanitized = history
+        .where((entry) => entry.date.millisecondsSinceEpoch > 0)
         .map(
-          (item) => item.copyWith(
-            normalizedValue: (item.count / maxValue).toDouble().clamp(0.1, 1.0),
+          (entry) => _DayScore(
+            date: DateTime(entry.date.year, entry.date.month, entry.date.day),
+            score: entry.score <= 1
+                ? (entry.score * 100).round().clamp(0, 100)
+                : entry.score.round().clamp(0, 100),
           ),
         )
-        .toList(growable: false);
+        .toList(growable: false)
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    switch (_scoreRange) {
+      case _ScoreRange.month:
+        return _buildMonthTrend(sanitized);
+      case _ScoreRange.week:
+        return _buildWeekTrend(sanitized);
+      case _ScoreRange.last6Days:
+        return _buildLastDaysTrend(sanitized, 6);
+    }
+  }
+
+  List<_TrendChartItem> _buildMonthTrend(List<_DayScore> items) {
+    final grouped = <String, List<int>>{};
+    for (final item in items) {
+      final key = '${item.date.year}-${item.date.month}';
+      grouped.putIfAbsent(key, () => <int>[]).add(item.score);
+    }
+
+    final now = DateTime.now();
+    return List.generate(6, (index) {
+      final offset = 5 - index;
+      final monthDate = DateTime(now.year, now.month - offset, 1);
+      final key = '${monthDate.year}-${monthDate.month}';
+      final scores = grouped[key] ?? const <int>[];
+      final score = scores.isEmpty
+          ? 0
+          : (scores.reduce((a, b) => a + b) / scores.length).round();
+      return _TrendChartItem(
+        label: '${_monthLabel(monthDate.month)} ${monthDate.year.toString().substring(2)}',
+        score: score,
+      );
+    });
+  }
+
+  List<_TrendChartItem> _buildWeekTrend(List<_DayScore> items) {
+    final grouped = <DateTime, List<int>>{};
+    for (final item in items) {
+      final startOfWeek = item.date.subtract(Duration(days: item.date.weekday % 7));
+      final key = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+      grouped.putIfAbsent(key, () => <int>[]).add(item.score);
+    }
+
+    final now = DateTime.now();
+    final currentWeekStart = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday % 7));
+
+    return List.generate(6, (index) {
+      final offset = 5 - index;
+      final weekStart = currentWeekStart.subtract(Duration(days: offset * 7));
+      final scores = grouped[weekStart] ?? const <int>[];
+      final score = scores.isEmpty
+          ? 0
+          : (scores.reduce((a, b) => a + b) / scores.length).round();
+      return _TrendChartItem(
+        label: '${weekStart.day.toString().padLeft(2, '0')} ${_monthLabel(weekStart.month)}',
+        score: score,
+      );
+    });
+  }
+
+  List<_TrendChartItem> _buildLastDaysTrend(List<_DayScore> items, int count) {
+    final byDate = <DateTime, int>{for (final item in items) item.date: item.score};
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day - (count - 1));
+
+    var rollingScore = 0;
+    return List.generate(count, (index) {
+      final date = DateTime(start.year, start.month, start.day + index);
+      if (byDate.containsKey(date)) {
+        rollingScore = byDate[date]!;
+      }
+      return _TrendChartItem(
+        label: '${date.day.toString().padLeft(2, '0')} ${_monthLabel(date.month)}',
+        score: rollingScore,
+      );
+    });
+  }
+
+  String _monthLabel(int month) {
+    const labels = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return labels[(month - 1).clamp(0, 11)];
   }
 }
 
@@ -212,28 +288,24 @@ class _DashboardPayload {
     required this.stats,
     required this.totalAudits,
     required this.pendingAudits,
+    required this.dailyAuditScoreHistory,
   });
 
   final DashboardStats stats;
   final int totalAudits;
   final int pendingAudits;
+  final List<DailyAuditScore> dailyAuditScoreHistory;
 }
 
-class _AuditScoreCard extends StatelessWidget {
-  const _AuditScoreCard({required this.payload});
+class _ComplianceHeroCard extends StatelessWidget {
+  const _ComplianceHeroCard({required this.payload});
 
   final _DashboardPayload payload;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final completedAudits = (payload.totalAudits - payload.pendingAudits).clamp(0, 9999);
-    final score = payload.totalAudits == 0
-        ? 0
-        : ((completedAudits / payload.totalAudits) * 100).round();
-    final secondaryValue = payload.totalAudits == 0
-        ? 0
-        : (100 - score).clamp(0, 100).toInt();
+    final score = payload.stats.complianceScore.round().clamp(0, 100);
 
     return Container(
       width: double.infinity,
@@ -251,105 +323,42 @@ class _AuditScoreCard extends StatelessWidget {
                 colors: [Color(0xFFEEF2FF), Color(0xFFE0E7FF)],
               ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isDark ? const Color(0xFF312E81) : const Color(0xFFC7D2FE),
-        ),
-        boxShadow: isDark
-            ? null
-            : const [
-                BoxShadow(
-                  color: Color(0x1A1E3A8A),
-                  blurRadius: 24,
-                  offset: Offset(0, 12),
-                ),
-              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Score General de Auditorías',
+            'Score de cumplimiento',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4338CA),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 '$score%',
                 style: TextStyle(
-                  fontSize: 46,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
+                  fontSize: 54,
+                  fontWeight: FontWeight.w900,
+                  height: 0.95,
                   color: isDark ? Colors.white : AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0x3310B981) : const Color(0xFFD1FAE5),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    'cumplimiento',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857),
-                    ),
-                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
-              minHeight: 12,
+              minHeight: 10,
               value: score / 100,
               backgroundColor: isDark ? const Color(0xFF312E81) : const Color(0xFFC7D2FE),
               valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF22C55E)),
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _ScoreChip(
-                  label: 'Cerradas',
-                  value: completedAudits,
-                  chipColor: isDark ? const Color(0x3322D3EE) : const Color(0xFFE0F2FE),
-                  valueColor: isDark ? const Color(0xFF67E8F9) : const Color(0xFF0E7490),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _ScoreChip(
-                  label: 'Pendientes',
-                  value: payload.pendingAudits,
-                  chipColor: isDark ? const Color(0x334ADE80) : const Color(0xFFDCFCE7),
-                  valueColor: isDark ? const Color(0xFF86EFAC) : const Color(0xFF15803D),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _ScoreChip(
-                  label: 'Brecha',
-                  value: secondaryValue,
-                  suffix: '%',
-                  chipColor: isDark ? const Color(0x33C084FC) : const Color(0xFFF3E8FF),
-                  valueColor: isDark ? const Color(0xFFD8B4FE) : const Color(0xFF7E22CE),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -357,87 +366,73 @@ class _AuditScoreCard extends StatelessWidget {
   }
 }
 
-class _DashboardKpiStrip extends StatelessWidget {
-  const _DashboardKpiStrip({required this.payload});
+class _RiskOverviewGrid extends StatelessWidget {
+  const _RiskOverviewGrid({required this.payload});
 
   final _DashboardPayload payload;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final items = [
+      _MetricData('Visitas programadas', payload.stats.pendingVisits, Icons.calendar_today),
+      _MetricData('Auditorías pendientes', payload.stats.scheduledAudits, Icons.assignment_late),
+      _MetricData('Visitas vencidas', payload.stats.overdueVisits, Icons.event_busy),
+      _MetricData('Auditorías vencidas', payload.stats.overdueAudits, Icons.warning_amber),
+      _MetricData('Incidencias activas', payload.stats.incidents, Icons.report_problem),
+    ];
 
-    return Row(
-      children: [
-        Expanded(
-          child: _MetricCard(
-            title: 'Visitas pendientes',
-            value: payload.stats.pendingVisits,
-            tone: isDark ? const Color(0xFF1D4ED8) : const Color(0xFFDBEAFE),
-            valueColor: isDark ? const Color(0xFFBFDBFE) : const Color(0xFF1D4ED8),
-            icon: Icons.event_busy_rounded,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _MetricCard(
-            title: 'Incidencias',
-            value: payload.stats.incidents,
-            tone: isDark ? const Color(0xFF7C2D12) : const Color(0xFFFFEDD5),
-            valueColor: isDark ? const Color(0xFFFED7AA) : const Color(0xFF9A3412),
-            icon: Icons.warning_amber_rounded,
-          ),
-        ),
-      ],
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.7,
+      ),
+      itemBuilder: (context, index) => _MetricCard(data: items[index]),
     );
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.title,
-    required this.value,
-    required this.tone,
-    required this.valueColor,
-    required this.icon,
-  });
+class _MetricData {
+  const _MetricData(this.title, this.value, this.icon);
 
   final String title;
   final int value;
-  final Color tone;
-  final Color valueColor;
   final IconData icon;
+}
+
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({required this.data});
+
+  final _MetricData data;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0),
         ),
       ),
       child: Row(
         children: [
-          Container(
-            height: 36,
-            width: 36,
-            decoration: BoxDecoration(
-              color: tone,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, size: 20, color: valueColor),
-          ),
+          Icon(data.icon, color: isDark ? const Color(0xFF93C5FD) : AppColors.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  '$value',
+                  '${data.value}',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
@@ -447,7 +442,7 @@ class _MetricCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  title,
+                  data.title,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -463,181 +458,91 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _ScoreChip extends StatelessWidget {
-  const _ScoreChip({
-    required this.label,
-    required this.value,
-    required this.chipColor,
-    required this.valueColor,
-    this.suffix = '',
+class _TrendCard extends StatelessWidget {
+  const _TrendCard({
+    required this.selectedRange,
+    required this.items,
+    required this.onChanged,
   });
 
-  final String label;
-  final int value;
-  final Color chipColor;
-  final Color valueColor;
-  final String suffix;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(color: chipColor, borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$value$suffix',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: valueColor,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? AppColors.darkMuted
-                  : const Color(0xFF64748B),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BarChartItem {
-  const _BarChartItem({
-    required this.label,
-    required this.count,
-    this.normalizedValue = 0.08,
-  });
-
-  final String label;
-  final int count;
-  final double normalizedValue;
-
-  _BarChartItem copyWith({double? normalizedValue}) {
-    return _BarChartItem(
-      label: label,
-      count: count,
-      normalizedValue: normalizedValue ?? this.normalizedValue,
-    );
-  }
-}
-
-class _MiniBarChart extends StatelessWidget {
-  const _MiniBarChart({required this.items});
-
-  final List<_BarChartItem> items;
+  final _ScoreRange selectedRange;
+  final List<_TrendChartItem> items;
+  final ValueChanged<_ScoreRange> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0),
-        ),
-        boxShadow: isDark
-            ? null
-            : const [
-                BoxShadow(
-                  color: Color(0x14000000),
-                  blurRadius: 22,
-                  offset: Offset(0, 8),
-                ),
-              ],
+        border: Border.all(color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Actividad dinámica',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white : AppColors.primary,
-            ),
+          const Text(
+            'Tendencia diaria de cumplimiento',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Resumen de cierres, visitas, incidencias y pendientes',
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? AppColors.darkMuted : const Color(0xFF64748B),
-            ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _RangeButton(
+                label: '6 meses',
+                selected: selectedRange == _ScoreRange.month,
+                onTap: () => onChanged(_ScoreRange.month),
+              ),
+              _RangeButton(
+                label: '6 semanas',
+                selected: selectedRange == _ScoreRange.week,
+                onTap: () => onChanged(_ScoreRange.week),
+              ),
+              _RangeButton(
+                label: '6 días',
+                selected: selectedRange == _ScoreRange.last6Days,
+                onTap: () => onChanged(_ScoreRange.last6Days),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           SizedBox(
             height: 170,
-            child: Stack(
-              children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(
-                    4,
-                    (index) => Container(
-                      height: 1,
-                      color: isDark ? const Color(0xFF223043) : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: List.generate(items.length, (index) {
-                    final item = items[index];
-                    final barGradient = index.isEven
-                        ? const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xFF60A5FA), Color(0xFF2563EB)],
-                          )
-                        : const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xFF34D399), Color(0xFF16A34A)],
-                          );
-
-                    return Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: items
+                  .map(
+                    (item) => Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            Text(
-                              item.count.toString(),
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                color: isDark ? Colors.white : AppColors.primaryDark,
-                                height: 1,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
+                            Text('${item.score}% ', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 4),
                             AnimatedContainer(
-                              duration: const Duration(milliseconds: 700),
+                              duration: const Duration(milliseconds: 650),
                               curve: Curves.easeOutCubic,
-                              height: 104 * item.normalizedValue,
-                              width: 28,
+                              height: (item.score <= 1 ? 2 : item.score) * 1.15,
+                              width: 22,
                               decoration: BoxDecoration(
-                                gradient: barGradient,
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [Color(0xFF34D399), Color(0xFF1D4ED8)],
+                                ),
                                 borderRadius: BorderRadius.circular(999),
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               item.label,
+                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -647,14 +552,139 @@ class _MiniBarChart extends StatelessWidget {
                           ],
                         ),
                       ),
-                    );
-                  }),
-                ),
-              ],
+                    ),
+                  )
+                  .toList(growable: false),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _RangeButton extends StatelessWidget {
+  const _RangeButton({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          color: selected ? AppColors.primary : const Color(0xFFE2E8F0),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EntityCountersCard extends StatelessWidget {
+  const _EntityCountersCard({required this.payload, required this.role});
+
+  final _DashboardPayload payload;
+  final UserRole role;
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = <_MetricData>[
+      if (role != UserRole.accountAdmin && role != UserRole.branchAdmin)
+        _MetricData('Clientes', payload.stats.clients, Icons.apartment),
+      if (role != UserRole.branchAdmin)
+        _MetricData('Sucursales', payload.stats.branches, Icons.store),
+      _MetricData('Áreas', payload.stats.areas, Icons.map),
+      _MetricData('Dosificadores', payload.stats.dispensers, Icons.water_drop),
+      _MetricData('Productos', payload.stats.products, Icons.inventory_2),
+      _MetricData('Visitas', payload.stats.visits, Icons.history),
+      _MetricData('Auditorías', payload.stats.audits, Icons.assignment_turned_in),
+      _MetricData('Incidencias', payload.stats.incidents, Icons.report),
+    ];
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0)),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: cards
+            .map(
+              (item) => Container(
+                width: (MediaQuery.of(context).size.width - 64) / 2,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0B1527) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Icon(item.icon, size: 18, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${item.value}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : AppColors.primaryDark,
+                            ),
+                          ),
+                          Text(
+                            item.title,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.darkMuted : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+            .toList(growable: false),
+      ),
+    );
+  }
+}
+
+class _DayScore {
+  const _DayScore({required this.date, required this.score});
+
+  final DateTime date;
+  final int score;
+}
+
+class _TrendChartItem {
+  const _TrendChartItem({required this.label, required this.score});
+
+  final String label;
+  final int score;
 }
