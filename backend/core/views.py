@@ -1321,7 +1321,7 @@ def _draw_signature_and_qr_row(
     if public_report_url:
         qr_code = qr.QrCodeWidget(public_report_url)
         bounds = qr_code.getBounds()
-        qr_size = 62
+        qr_size = 78
         qr_drawing = Drawing(
             qr_size,
             qr_size,
@@ -1329,11 +1329,8 @@ def _draw_signature_and_qr_row(
         )
         qr_drawing.add(qr_code)
         qr_x = right_x + (card_w - qr_size) / 2
-        qr_y = card_y + 38
+        qr_y = card_y + 28
         renderPDF.draw(qr_drawing, pdf, qr_x, qr_y)
-        pdf.setFillColor(colors.HexColor("#64748b"))
-        pdf.setFont(REPORT_FONT, 8)
-        pdf.drawCentredString(right_x + (card_w / 2), card_y + 16, "Escanea para abrir el informe web")
     else:
         pdf.setFillColor(colors.HexColor("#64748b"))
         pdf.setFont(REPORT_FONT, 9)
@@ -2066,7 +2063,6 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         _draw_annex_title("Evidencias generales")
         _draw_photo_grid(general_photos[:8])
 
-    _section_title("Conformidad y acceso web")
     _ensure_space(156)
     y = _draw_signature_and_qr_row(
         pdf,
