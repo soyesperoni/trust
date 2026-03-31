@@ -3585,17 +3585,7 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     c_on_surface_variant = colors.HexColor("#464652")
 
     # Portada simplificada sin gráficas: resumen general + trazabilidad + firma.
-    meta_chip_x, meta_chip_y = 56, height - 146
-    pdf.setFillColor(colors.HexColor("#e1e0ff"))
-    pdf.roundRect(meta_chip_x, meta_chip_y, 96, 20, 5, fill=1, stroke=0)
-    pdf.setFillColor(colors.HexColor("#04006d"))
-    pdf.setFont(REPORT_FONT_BOLD, 8)
-    pdf.drawString(meta_chip_x + 8, meta_chip_y + 7, f"AUDITORÍA #{audit.id}")
-    pdf.setFillColor(c_outline)
-    pdf.setFont(REPORT_FONT_BOLD, 9)
-    pdf.drawString(meta_chip_x + 108, meta_chip_y + 7, generated_at.strftime("%d/%m/%Y"))
-
-    info_y = height - 185
+    info_y = height - 155
     trace_items = [
         ("Cliente", audit.area.branch.client.name),
         ("Sucursal", audit.area.branch.name),
@@ -3639,7 +3629,10 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     pdf.setFillColor(c_on_surface_variant)
     pdf.setFont(REPORT_FONT, 9.7)
     summary_lines = _split_text_to_lines(pdf, summary, summary_w - 32)
-    _draw_justified_lines(pdf, summary_lines[:17], summary_x + 16, summary_y + summary_h - 52, summary_w - 32, line_height=12.3)
+    summary_text_y = summary_y + summary_h - 52
+    for line in summary_lines[:17]:
+        pdf.drawString(summary_x + 16, summary_text_y, line)
+        summary_text_y -= 12.3
 
     _draw_card(pdf, 40, 50, 540, 104)
     pdf.setFillColor(colors.HexColor("#0f172a"))
@@ -3758,6 +3751,59 @@ def _build_audit_pdf(audit: Audit) -> bytes:
                 pdf.drawString(72, y, row)
                 y -= 14
             y -= 6
+
+    evidence_images: list[ImageReader] = []
+    for medium in audit.media.filter(media_type=AuditMedia.MediaType.PHOTO).order_by("id"):
+        if medium.file:
+            image = _load_report_image(str(medium.file).strip())
+            if image is not None:
+                evidence_images.append(image)
+
+    if y < 200:
+        _draw_report_footer(pdf, generated_at)
+        pdf.showPage()
+        _header("Anexo técnico de respuestas", f"Auditoría #{audit.id} · Registro fotográfico")
+        y = height - 132
+
+    pdf.setFont(REPORT_FONT_BOLD, 12)
+    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.drawString(56, y, "Evidencia fotográfica")
+    y -= 22
+
+    if not evidence_images:
+        pdf.setFont(REPORT_FONT, 10)
+        pdf.setFillColor(colors.HexColor("#334155"))
+        pdf.drawString(60, y, "Sin evidencia fotográfica registrada.")
+        y -= 18
+    else:
+        gallery_width = width - 112
+        columns = 3
+        gap_x = 8
+        gap_y = 10
+        image_w = (gallery_width - (gap_x * (columns - 1))) / columns
+        image_h = 130
+        for idx, image in enumerate(evidence_images[:12]):
+            col = idx % columns
+            if col == 0 and y - image_h < 70:
+                _draw_report_footer(pdf, generated_at)
+                pdf.showPage()
+                _header("Anexo técnico de respuestas", f"Auditoría #{audit.id} · Registro fotográfico")
+                y = height - 132
+                pdf.setFont(REPORT_FONT_BOLD, 12)
+                pdf.setFillColor(colors.HexColor("#0f172a"))
+                pdf.drawString(56, y, "Evidencia fotográfica (continuación)")
+                y -= 22
+            x = 56 + (col * (image_w + gap_x))
+            y_image = y - image_h
+            try:
+                _draw_rounded_photo(pdf, image, x, y_image, image_w, image_h, radius=8)
+            except Exception:
+                pdf.setFillColor(colors.HexColor("#e2e8f0"))
+                pdf.roundRect(x, y_image, image_w, image_h, 8, fill=1, stroke=0)
+            row_complete = col == columns - 1
+            is_last = idx == min(len(evidence_images), 12) - 1
+            if row_complete or is_last:
+                y -= image_h + gap_y
 
     _draw_report_footer(pdf, generated_at)
     pdf.save()
