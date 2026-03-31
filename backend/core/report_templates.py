@@ -209,6 +209,48 @@ def _visit_report_styles() -> str:
     """
 
 
+def _audit_report_styles() -> str:
+    return """
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap');
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: 'Poppins', sans-serif; color: #0f172a; background: #f1f5f9; }
+      .page { width: 100%; max-width: 1040px; margin: 0 auto; padding: 36px; background: #fff; }
+      .header { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; padding-bottom:18px; border-bottom:1px solid #e2e8f0; }
+      .header h1 { margin: 10px 0 0; font-size: 42px; line-height: 1.05; color:#1e3a8a; }
+      .eyebrow { margin-top: 4px; font-size:11px; letter-spacing:.12em; font-weight:700; text-transform:uppercase; color:#475569; }
+      .meta-chip { background:#1e3a8a; color:#fff; border-radius:999px; padding:6px 14px; font-size:12px; font-weight:700; letter-spacing:.08em; display:inline-block; }
+      .meta-date { margin-top:8px; text-align:right; color:#334155; font-size:13px; }
+      .section { margin-top: 28px; }
+      .section h2 { margin:0 0 12px; color:#1e3a8a; font-size:24px; }
+      .section-head { display:flex; align-items:center; gap:10px; }
+      .section-head .line { height:1px; background:#cbd5e1; flex:1; }
+      .grid-3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+      .card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; }
+      .label { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#64748b; font-weight:700; }
+      .value { margin-top:6px; font-size:16px; font-weight:600; color:#0f172a; }
+      .score-card { background:#eff6ff; border-color:#bfdbfe; }
+      .score-value { font-size:30px; color:#1d4ed8; font-weight:800; margin-top:4px; }
+      .times { margin-top:12px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+      .summary { background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #22c55e; border-radius:12px; padding:14px; line-height:1.65; color:#1e293b; }
+      .summary p { margin:0; }
+      .impact { margin-top:10px; font-size:13px; color:#334155; font-weight:500; }
+      .insights { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+      .insight-card { border:1px solid #e2e8f0; border-radius:12px; padding:12px; background:#fff; }
+      .insight-card h3 { margin:0; font-size:14px; color:#1e3a8a; text-transform:uppercase; letter-spacing:.06em; }
+      .list { margin:10px 0 0; padding-left:18px; }
+      .list li { margin-bottom:8px; line-height:1.5; font-size:14px; color:#334155; }
+      .answer { border:1px solid #e2e8f0; border-radius:12px; margin-bottom:10px; padding:12px; background:#fff; }
+      .answer .question { margin:0; font-size:15px; font-weight:700; color:#0f172a; }
+      .answer .response { margin-top:8px; font-size:14px; color:#334155; }
+      .answer .context { margin-top:8px; background:#f8fafc; border-radius:8px; padding:8px 10px; font-size:13px; color:#475569; }
+      .photos { margin-top:8px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+      .photo { aspect-ratio:16/9; border-radius:10px; border:1px solid #cbd5e1; background:#f8fafc; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+      .photo img { width:100%; height:100%; object-fit:cover; display:block; }
+      .footer { margin-top:24px; padding-top:12px; border-top:1px solid #e2e8f0; font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#64748b; display:flex; justify-content:space-between; gap:12px; }
+      @page { margin: 0; size: A4; }
+    """
+
+
 def build_visit_report_html(visit: dict[str, Any]) -> str:
     report = visit.get("visit_report") if isinstance(visit.get("visit_report"), dict) else {}
     comments = escape(str(report.get("comments") or visit.get("notes") or "Sin observaciones."))
@@ -410,13 +452,12 @@ def build_audit_report_html(audit: dict[str, Any]) -> str:
         label = escape(str(raw.get("label") or f"Pregunta {index}"))
         value = escape(str(raw.get("value") or "Sin respuesta"))
         contextual = escape(str(raw.get("contextual_response") or ""))
-        comment = f"<div class=\"comment-box\">{contextual}</div>" if contextual else ""
-        accent = "#2E3192" if index % 2 else "#92B936"
+        comment = f"<div class=\"context\">{contextual}</div>" if contextual else ""
         answer_cards.append(
-            f'''<article class="dispenser-card"><div class="dispenser-inner"><div class="dispenser-accent" style="background:{accent};"></div><div class="dispenser-content"><h3 class="dispenser-title">{label}</h3><div class="tag">Respuesta registrada</div><div style="margin-top:6px;line-height:1.6;">{value}</div>{comment}</div></div></article>'''
+            f'''<article class="answer"><h3 class="question">{label}</h3><div class="response"><strong>Respuesta:</strong> {value}</div>{comment}</article>'''
         )
     if not answer_cards:
-        answer_cards.append('<article class="dispenser-card"><div class="dispenser-inner"><div class="dispenser-accent"></div><div class="dispenser-content">No hay respuestas registradas para esta auditoría.</div></div></article>')
+        answer_cards.append('<article class="answer">No hay respuestas registradas para esta auditoría.</article>')
 
     media = audit.get("media") if isinstance(audit.get("media"), list) else []
     media_photos = [item for item in media if isinstance(item, dict) and str(item.get("type") or "").lower() == "photo"]
@@ -433,49 +474,50 @@ def build_audit_report_html(audit: dict[str, Any]) -> str:
 
     return f'''<!doctype html>
 <html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Informe de auditoría #{audit['id']} | SUPPLYMAX</title><style>{_visit_report_styles()}</style></head><body>
-  <main class="canvas page">
-    <header class="headline">
-      <div class="brand-block">
+<title>Informe de auditoría #{audit['id']} | SUPPLYMAX</title><style>{_audit_report_styles()}</style></head><body>
+  <main class="page">
+    <header class="header">
+      <div>
         <img src="{logo_uri}" alt="Logo Trust" style="height:30px;width:auto;display:block;margin:22px 0 10px;"/>
         <div class="eyebrow">SUPPLYMAX Technical Services</div>
-        <h1 class="title">Informe de auditoría</h1>
+        <h1>Informe Ejecutivo de Auditoría</h1>
       </div>
-      <div class="top-right-panel">
-        <div style="text-align:right;">
-          <div class="visit-chip editorial-gradient">AUDITORÍA #{audit['id']}</div>
-          <div class="date-text">{audited_at_long}</div>
-        </div>
+      <div>
+        <div class="meta-chip">AUDITORÍA #{audit['id']}</div>
+        <div class="meta-date">{audited_at_long}</div>
       </div>
     </header>
 
     <section class="section">
       <div class="section-head"><h2>Datos generales</h2><div class="line"></div></div>
       <div class="grid-3">
-        <div><div class="label">Cliente</div><div class="value">{escape(str(audit.get('client') or 'Sin cliente'))}</div></div>
-        <div><div class="label">Sucursal</div><div class="value">{escape(str(audit.get('branch') or 'Sin sucursal'))}</div></div>
-        <div><div class="label">Área</div><div class="value">{escape(str(audit.get('area') or 'Sin área'))}</div></div>
-        <div><div class="label">Inspector</div><div class="value">{escape(str(audit.get('inspector') or 'Sin inspector'))}</div></div>
-        <div><div class="label">Plantilla</div><div class="value">{escape(str(audit.get('form_name') or audit.get('form') or 'Sin plantilla'))}</div></div>
-        <div><div class="label">Puntaje global</div><div class="value">{score_text}</div></div>
+        <div class="card"><div class="label">Cliente</div><div class="value">{escape(str(audit.get('client') or 'Sin cliente'))}</div></div>
+        <div class="card"><div class="label">Sucursal</div><div class="value">{escape(str(audit.get('branch') or 'Sin sucursal'))}</div></div>
+        <div class="card"><div class="label">Área</div><div class="value">{escape(str(audit.get('area') or 'Sin área'))}</div></div>
+        <div class="card"><div class="label">Inspector</div><div class="value">{escape(str(audit.get('inspector') or 'Sin inspector'))}</div></div>
+        <div class="card"><div class="label">Plantilla</div><div class="value">{escape(str(audit.get('form_name') or audit.get('form') or 'Sin plantilla'))}</div></div>
+        <div class="card score-card"><div class="label">Puntaje global</div><div class="score-value">{score_text}</div></div>
       </div>
-      <div class="visit-times">
-        <div><div class="tag">Fecha de auditoría</div><div>{audited_at}</div></div>
-        <div class="divider-x"><div class="tag">Inicio</div><div>{started_at}</div></div>
-        <div class="divider-x"><div class="tag">Finalización</div><div>{completed_at}</div></div>
+      <div class="times">
+        <div class="card"><div class="label">Fecha de auditoría</div><div class="value">{audited_at}</div></div>
+        <div class="card"><div class="label">Inicio</div><div class="value">{started_at}</div></div>
+        <div class="card"><div class="label">Finalización</div><div class="value">{completed_at}</div></div>
       </div>
     </section>
 
     <section class="section">
       <div class="section-head"><h2>Resumen ejecutivo</h2><div class="line"></div></div>
-      <div class="obs">"{executive_summary}"<p style="margin-top:10px;font-style:normal;font-size:12px;color:#475569;">Impacto de negocio: {business_impact}</p><p style="margin-top:4px;font-style:normal;font-size:12px;color:#475569;">Generado: {generated}</p></div>
+      <div class="summary"><p>{executive_summary}</p><p class="impact"><strong>Impacto de negocio:</strong> {business_impact}</p><p class="impact"><strong>Generado:</strong> {generated}</p></div>
     </section>
 
-    <section class="section" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <article class="verify-signature" style="justify-content:flex-start;"><p class="title">Fortalezas detectadas</p><ul class="list" style="margin:10px 0 0;padding-left:18px;">{strengths_html}</ul></article>
-      <article class="verify-signature" style="justify-content:flex-start;"><p class="title">Riesgos detectados</p><ul class="list" style="margin:10px 0 0;padding-left:18px;">{risks_html}</ul></article>
-      <article class="verify-signature" style="justify-content:flex-start;"><p class="title">Recomendaciones</p><ul class="list" style="margin:10px 0 0;padding-left:18px;">{rec_html}</ul></article>
-      <article class="verify-signature" style="justify-content:flex-start;"><p class="title">Siguientes pasos</p><ul class="list" style="margin:10px 0 0;padding-left:18px;">{next_steps_html}</ul></article>
+    <section class="section">
+      <div class="section-head"><h2>Hallazgos y plan de acción</h2><div class="line"></div></div>
+      <div class="insights">
+        <article class="insight-card"><h3>Fortalezas detectadas</h3><ul class="list">{strengths_html}</ul></article>
+        <article class="insight-card"><h3>Riesgos detectados</h3><ul class="list">{risks_html}</ul></article>
+        <article class="insight-card"><h3>Recomendaciones</h3><ul class="list">{rec_html}</ul></article>
+        <article class="insight-card"><h3>Siguientes pasos</h3><ul class="list">{next_steps_html}</ul></article>
+      </div>
     </section>
 
     <section class="section">
