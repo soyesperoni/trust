@@ -26,6 +26,16 @@ class TrustRepository {
     return DashboardStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {});
   }
 
+  Future<DashboardSummary> loadDashboardSummary(String email) async {
+    final json = await _apiClient.getJson('/dashboard/', email: email);
+    final stats = DashboardStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {});
+    final results = (json['daily_audit_score_history'] as List<dynamic>? ?? const []);
+    final history = results
+        .whereType<Map<String, dynamic>>()
+        .map(DailyAuditScore.fromJson)
+        .toList(growable: false);
+    return DashboardSummary(stats: stats, dailyAuditScoreHistory: history);
+  }
 
 
   Future<Map<String, dynamic>> loadCurrentUser(String email) async {
@@ -542,6 +552,35 @@ class TrustRepository {
       },
     );
   }
+}
+
+class DailyAuditScore {
+  const DailyAuditScore({
+    required this.date,
+    required this.score,
+  });
+
+  final DateTime date;
+  final double score;
+
+  factory DailyAuditScore.fromJson(Map<String, dynamic> json) {
+    final rawDate = (json['date'] as String? ?? '').trim();
+    final parsedDate = DateTime.tryParse(rawDate);
+    return DailyAuditScore(
+      date: parsedDate ?? DateTime.fromMillisecondsSinceEpoch(0),
+      score: (json['score'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+class DashboardSummary {
+  const DashboardSummary({
+    required this.stats,
+    required this.dailyAuditScoreHistory,
+  });
+
+  final DashboardStats stats;
+  final List<DailyAuditScore> dailyAuditScoreHistory;
 }
 
 class VisitReportData {
