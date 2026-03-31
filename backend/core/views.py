@@ -1183,6 +1183,18 @@ def _draw_page_background(pdf: canvas.Canvas):
     page_width, page_height = LETTER
     pdf.setFillColor(colors.HexColor("#f3f6fb"))
     pdf.rect(0, 0, page_width, page_height, fill=1, stroke=0)
+    gradient_steps = 42
+    bar_width = 16
+    start_color = colors.HexColor("#2E3192")
+    end_color = colors.HexColor("#92B936")
+    for step in range(gradient_steps):
+        ratio = step / max(gradient_steps - 1, 1)
+        red = start_color.red + (end_color.red - start_color.red) * ratio
+        green = start_color.green + (end_color.green - start_color.green) * ratio
+        blue = start_color.blue + (end_color.blue - start_color.blue) * ratio
+        pdf.setFillColor(colors.Color(red, green, blue))
+        y = (page_height / gradient_steps) * step
+        pdf.rect(0, y, bar_width, (page_height / gradient_steps) + 1, fill=1, stroke=0)
 
 
 def _draw_card(pdf: canvas.Canvas, x: float, y: float, width: float, height: float):
@@ -1757,6 +1769,8 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
     label_color = colors.HexColor("#475569")
     text_color = colors.HexColor("#0f172a")
     report = _get_visit_report_data(visit)
+    responsible_name = str(report.get("responsible_name") or "No registrado")
+    responsible_signature = str(report.get("responsible_signature") or "").strip()
 
     def _new_page() -> None:
         nonlocal y
@@ -1799,6 +1813,7 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         ("Sucursal", visit.area.branch.name),
         ("Área", visit.area.name),
         ("Inspector", (visit.inspector.get_full_name() or visit.inspector.username) if visit.inspector else "Sin asignar"),
+        ("Responsable del área", responsible_name),
         ("Estado", visit.get_status_display()),
         ("Fecha programada", timezone.localtime(visit.visited_at).strftime("%d/%m/%Y %H:%M")),
         ("Inicio", timezone.localtime(visit.started_at).strftime("%d/%m/%Y %H:%M") if visit.started_at else "No registrado"),
@@ -1825,6 +1840,42 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         pdf.drawString(margin_x, y, line)
         y -= line_h
     y -= section_gap
+
+    _section_title("Firma de conformidad")
+    _ensure_space(94)
+    sign_card_x = margin_x
+    sign_card_w = page_width - (margin_x * 2)
+    sign_card_h = 84
+    sign_card_y = y - sign_card_h + 10
+    pdf.setFillColor(colors.white)
+    pdf.setStrokeColor(colors.HexColor("#d7e2ef"))
+    pdf.roundRect(sign_card_x, sign_card_y, sign_card_w, sign_card_h, 10, fill=1, stroke=1)
+    pdf.setStrokeColor(colors.HexColor("#2E3192"))
+    pdf.setLineWidth(1)
+    pdf.line(sign_card_x + 24, sign_card_y + 26, sign_card_x + sign_card_w - 24, sign_card_y + 26)
+    if responsible_signature:
+        signature_image = _load_report_image(responsible_signature)
+        if signature_image is not None:
+            try:
+                pdf.drawImage(
+                    signature_image,
+                    sign_card_x + 170,
+                    sign_card_y + 30,
+                    width=220,
+                    height=40,
+                    preserveAspectRatio=True,
+                    anchor="c",
+                    mask="auto",
+                )
+            except Exception:
+                pass
+    pdf.setFillColor(colors.HexColor("#475569"))
+    pdf.setFont(REPORT_FONT_BOLD, 9)
+    pdf.drawCentredString(sign_card_x + (sign_card_w / 2), sign_card_y + 14, "RESPONSABLE DEL ÁREA")
+    pdf.setFillColor(text_color)
+    pdf.setFont(REPORT_FONT_BOLD, 11)
+    pdf.drawCentredString(sign_card_x + (sign_card_w / 2), sign_card_y + 4, responsible_name[:80])
+    y = sign_card_y - 18
 
     if public_report_url:
         _section_title("Acceso web")
@@ -1874,25 +1925,34 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         pdf.line(margin_x, y, page_width - margin_x, y)
         y -= 16
 
-    _new_page()
-    _draw_page_background(pdf)
-    if _draw_report_logo(pdf, margin_x, y - 2, 130, 36):
-        y -= 42
+    dispenser_annexes = [item for item in dispensers if item["photos"]]
+    general_photos = [str(item.file).strip() for item in visit.media.filter(media_type=VisitMedia.MediaType.PHOTO).order_by("id") if item.file]
+    has_annex_content = bool(dispenser_annexes or general_photos)
 
-    pdf.setFont(REPORT_FONT_BOLD, 18)
-    pdf.setFillColor(text_color)
-    pdf.drawString(margin_x, y, "Anexos")
-    y -= 18
-    pdf.setFont(REPORT_FONT, 10)
-    pdf.setFillColor(label_color)
-    pdf.drawString(margin_x, y, f"Evidencia fotográfica de la visita #{visit.id}")
-    y -= 24
+    if has_annex_content:
+        _ensure_space(90)
+        if y < page_height * 0.34:
+            _new_page()
+            _draw_page_background(pdf)
+            if _draw_report_logo(pdf, margin_x, y - 2, 130, 36):
+                y -= 42
+        else:
+            y -= 4
+
+        pdf.setFont(REPORT_FONT_BOLD, 18)
+        pdf.setFillColor(text_color)
+        pdf.drawString(margin_x, y, "Anexos")
+        y -= 18
+        pdf.setFont(REPORT_FONT, 10)
+        pdf.setFillColor(label_color)
+        pdf.drawString(margin_x, y, f"Evidencia fotográfica de la visita #{visit.id}")
+        y -= 24
 
     gallery_width = page_width - (margin_x * 2)
     card_gap_x = 16
     card_gap_y = 14
     image_w = (gallery_width - card_gap_x) / 2
-    image_h = 120
+    image_h = 210
 
     def _draw_annex_title(title: str) -> None:
         nonlocal y
@@ -1931,14 +1991,13 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
             if idx % 2 == 1 or idx == len(valid_photos) - 1:
                 y -= image_h + card_gap_y
 
-    dispenser_annexes = [item for item in dispensers if item["photos"]]
-    for dispenser in dispenser_annexes:
-        _draw_annex_title(f"Dosificador {dispenser['identifier']}")
-        _draw_photo_grid(dispenser["photos"][:6])
+    if has_annex_content:
+        for dispenser in dispenser_annexes:
+            _draw_annex_title(f"Dosificador {dispenser['identifier']}")
+            _draw_photo_grid(dispenser["photos"][:6])
 
-    _draw_annex_title("Evidencias generales")
-    general_photos = [str(item.file).strip() for item in visit.media.filter(media_type=VisitMedia.MediaType.PHOTO).order_by("id") if item.file]
-    _draw_photo_grid(general_photos[:8])
+        _draw_annex_title("Evidencias generales")
+        _draw_photo_grid(general_photos[:8])
 
     _draw_report_footer(pdf, generated_at)
     pdf.save()
