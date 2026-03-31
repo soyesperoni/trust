@@ -1263,6 +1263,96 @@ def _draw_report_qr(pdf: canvas.Canvas, public_url: str | None, y_start: float):
 
     return card_y - 18
 
+
+def _draw_signature_and_qr_row(
+    pdf: canvas.Canvas,
+    y_start: float,
+    responsible_name: str,
+    responsible_signature: str | None,
+    public_report_url: str | None,
+    margin_x: float = REPORT_PAGE_PADDING,
+) -> float:
+    card_gap = 12
+    card_w = (540 - card_gap) / 2
+    card_h = 126
+    card_y = y_start - card_h
+    left_x = margin_x
+    right_x = margin_x + card_w + card_gap
+
+    _draw_card(pdf, left_x, card_y, card_w, card_h)
+    _draw_card(pdf, right_x, card_y, card_w, card_h)
+
+    # Firma
+    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.setFont(REPORT_FONT_BOLD, 10)
+    pdf.drawString(left_x + 14, card_y + card_h - 18, "Firma de conformidad")
+    pdf.setStrokeColor(colors.HexColor("#2E3192"))
+    pdf.setLineWidth(1)
+    pdf.line(left_x + 18, card_y + 34, left_x + card_w - 18, card_y + 34)
+
+    if responsible_signature:
+        signature_image = _load_report_image(responsible_signature)
+        if signature_image is not None:
+            try:
+                pdf.drawImage(
+                    signature_image,
+                    left_x + 30,
+                    card_y + 40,
+                    width=card_w - 60,
+                    height=52,
+                    preserveAspectRatio=True,
+                    anchor="c",
+                    mask="auto",
+                )
+            except Exception:
+                pass
+
+    pdf.setFillColor(colors.HexColor("#475569"))
+    pdf.setFont(REPORT_FONT_BOLD, 8)
+    pdf.drawCentredString(left_x + (card_w / 2), card_y + 20, "RESPONSABLE DEL ÁREA")
+    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.setFont(REPORT_FONT_BOLD, 10)
+    pdf.drawCentredString(left_x + (card_w / 2), card_y + 10, (responsible_name or "No registrado")[:70])
+
+    # QR
+    pdf.setFillColor(colors.HexColor("#0f172a"))
+    pdf.setFont(REPORT_FONT_BOLD, 10)
+    pdf.drawString(right_x + 14, card_y + card_h - 18, "Acceso web")
+    if public_report_url:
+        qr_code = qr.QrCodeWidget(public_report_url)
+        bounds = qr_code.getBounds()
+        qr_size = 62
+        qr_drawing = Drawing(
+            qr_size,
+            qr_size,
+            transform=[qr_size / (bounds[2] - bounds[0]), 0, 0, qr_size / (bounds[3] - bounds[1]), 0, 0],
+        )
+        qr_drawing.add(qr_code)
+        qr_x = right_x + (card_w - qr_size) / 2
+        qr_y = card_y + 38
+        renderPDF.draw(qr_drawing, pdf, qr_x, qr_y)
+        pdf.setFillColor(colors.HexColor("#64748b"))
+        pdf.setFont(REPORT_FONT, 8)
+        pdf.drawCentredString(right_x + (card_w / 2), card_y + 16, "Escanea para abrir el informe web")
+    else:
+        pdf.setFillColor(colors.HexColor("#64748b"))
+        pdf.setFont(REPORT_FONT, 9)
+        pdf.drawCentredString(right_x + (card_w / 2), card_y + 58, "Sin URL pública disponible")
+
+    return card_y - 18
+
+
+def _draw_rounded_photo(pdf: canvas.Canvas, photo: ImageReader, x: float, y: float, width: float, height: float, radius: float = 10):
+    pdf.saveState()
+    path = pdf.beginPath()
+    path.roundRect(x, y, width, height, radius)
+    pdf.clipPath(path, stroke=0, fill=0)
+    pdf.drawImage(photo, x, y, width=width, height=height, preserveAspectRatio=True, mask="auto")
+    pdf.restoreState()
+    pdf.setStrokeColor(colors.HexColor("#d7e2ef"))
+    pdf.setLineWidth(0.8)
+    pdf.roundRect(x, y, width, height, radius, fill=0, stroke=1)
+
 def _draw_wrapped_text(pdf: canvas.Canvas, text: str, x: float, y: float, width: float, line_height: float = 14):
     if not text:
         return y
@@ -1776,6 +1866,7 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         nonlocal y
         _draw_report_footer(pdf, generated_at)
         pdf.showPage()
+        _draw_page_background(pdf)
         y = page_height - 54
 
     def _ensure_space(required: float) -> None:
@@ -1841,48 +1932,6 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         y -= line_h
     y -= section_gap
 
-    _section_title("Firma de conformidad")
-    _ensure_space(94)
-    sign_card_x = margin_x
-    sign_card_w = page_width - (margin_x * 2)
-    sign_card_h = 84
-    sign_card_y = y - sign_card_h + 10
-    pdf.setFillColor(colors.white)
-    pdf.setStrokeColor(colors.HexColor("#d7e2ef"))
-    pdf.roundRect(sign_card_x, sign_card_y, sign_card_w, sign_card_h, 10, fill=1, stroke=1)
-    pdf.setStrokeColor(colors.HexColor("#2E3192"))
-    pdf.setLineWidth(1)
-    pdf.line(sign_card_x + 24, sign_card_y + 26, sign_card_x + sign_card_w - 24, sign_card_y + 26)
-    if responsible_signature:
-        signature_image = _load_report_image(responsible_signature)
-        if signature_image is not None:
-            try:
-                pdf.drawImage(
-                    signature_image,
-                    sign_card_x + 170,
-                    sign_card_y + 30,
-                    width=220,
-                    height=40,
-                    preserveAspectRatio=True,
-                    anchor="c",
-                    mask="auto",
-                )
-            except Exception:
-                pass
-    pdf.setFillColor(colors.HexColor("#475569"))
-    pdf.setFont(REPORT_FONT_BOLD, 9)
-    pdf.drawCentredString(sign_card_x + (sign_card_w / 2), sign_card_y + 14, "RESPONSABLE DEL ÁREA")
-    pdf.setFillColor(text_color)
-    pdf.setFont(REPORT_FONT_BOLD, 11)
-    pdf.drawCentredString(sign_card_x + (sign_card_w / 2), sign_card_y + 4, responsible_name[:80])
-    y = sign_card_y - 18
-
-    if public_report_url:
-        _section_title("Acceso web")
-        _ensure_space(150)
-        y = _draw_report_qr(pdf, public_report_url, y)
-        y -= 6
-
     dispensers = _collect_visit_dispensers_snapshot(visit)
     _section_title("Detalle por dosificador")
     if not dispensers:
@@ -1933,7 +1982,6 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         _ensure_space(90)
         if y < page_height * 0.34:
             _new_page()
-            _draw_page_background(pdf)
             if _draw_report_logo(pdf, margin_x, y - 2, 130, 36):
                 y -= 42
         else:
@@ -1949,10 +1997,10 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
         y -= 24
 
     gallery_width = page_width - (margin_x * 2)
-    card_gap_x = 16
-    card_gap_y = 14
+    card_gap_x = 10
+    card_gap_y = 10
     image_w = (gallery_width - card_gap_x) / 2
-    image_h = 210
+    image_h = 220
 
     def _draw_annex_title(title: str) -> None:
         nonlocal y
@@ -1978,17 +2026,22 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
             y -= 22
             return
 
+        total = len(valid_photos)
         for idx, photo in enumerate(valid_photos):
             if idx % 2 == 0:
                 _ensure_space(image_h + 16)
-            x = margin_x if idx % 2 == 0 else margin_x + image_w + card_gap_x
+            row_is_single = (idx == total - 1) and (idx % 2 == 0)
+            if row_is_single:
+                x = margin_x + (gallery_width - image_w) / 2
+            else:
+                x = margin_x if idx % 2 == 0 else margin_x + image_w + card_gap_x
             y_image = y - image_h
             try:
-                pdf.drawImage(photo, x, y_image, width=image_w, height=image_h, preserveAspectRatio=True, mask="auto")
+                _draw_rounded_photo(pdf, photo, x, y_image, image_w, image_h, radius=10)
             except Exception:
                 pdf.setFillColor(colors.HexColor("#e2e8f0"))
-                pdf.rect(x, y_image, image_w, image_h, fill=1, stroke=0)
-            if idx % 2 == 1 or idx == len(valid_photos) - 1:
+                pdf.roundRect(x, y_image, image_w, image_h, 10, fill=1, stroke=0)
+            if idx % 2 == 1 or idx == total - 1:
                 y -= image_h + card_gap_y
 
     if has_annex_content:
@@ -1998,6 +2051,17 @@ def _build_visit_pdf(visit: Visit, public_report_url: str | None = None) -> byte
 
         _draw_annex_title("Evidencias generales")
         _draw_photo_grid(general_photos[:8])
+
+    _section_title("Conformidad y acceso web")
+    _ensure_space(156)
+    y = _draw_signature_and_qr_row(
+        pdf,
+        y,
+        responsible_name=responsible_name,
+        responsible_signature=responsible_signature,
+        public_report_url=public_report_url,
+        margin_x=margin_x,
+    )
 
     _draw_report_footer(pdf, generated_at)
     pdf.save()
