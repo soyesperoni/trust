@@ -3702,7 +3702,7 @@ def _build_audit_pdf(audit: Audit) -> bytes:
         pdf.setFont(REPORT_FONT_BOLD, 16)
         pdf.drawString(x + 12, y + 20, str(value)[:20])
 
-    # Análisis de puntos críticos.
+    # Hallazgos clave sin gráficas (alineado al formato de visita técnica).
     analysis_x, analysis_y, analysis_w, analysis_h = 40, 50, width - 80, 145
     pdf.setFillColor(c_surface_white)
     pdf.roundRect(analysis_x, analysis_y, analysis_w, analysis_h, 10, fill=1, stroke=0)
@@ -3710,42 +3710,31 @@ def _build_audit_pdf(audit: Audit) -> bytes:
     pdf.roundRect(analysis_x, analysis_y, analysis_w, analysis_h, 10, fill=0, stroke=1)
     pdf.setFillColor(c_on_surface)
     pdf.setFont(REPORT_FONT_BOLD, 12)
-    pdf.drawString(analysis_x + 14, analysis_y + analysis_h - 20, "Análisis de Puntos Críticos")
+    pdf.drawString(analysis_x + 14, analysis_y + analysis_h - 20, "Hallazgos clave de auditoría")
     pdf.setFillColor(c_outline)
     pdf.setFont(REPORT_FONT, 8)
-    pdf.drawString(analysis_x + 14, analysis_y + analysis_h - 33, "Desglose por categoría y métricas de desempeño")
+    pdf.drawString(analysis_x + 14, analysis_y + analysis_h - 33, "Resumen textual de riesgos, fortalezas y recomendaciones")
 
-    categories = [
-        ("Saneamiento e Higiene", 95, c_secondary),
-        ("Capacitación del Personal", 88, c_secondary),
-        ("Mantenimiento de Equipos", 75, colors.HexColor("#e39c26")),
+    block_y = analysis_y + 18
+    block_h = 92
+    block_w = (analysis_w - 42) / 3
+    blocks = [
+        ("Riesgos", [str(item) for item in risks[:3] if str(item).strip()], c_error_container, c_error),
+        ("Fortalezas", [str(item) for item in strengths[:3] if str(item).strip()], c_secondary_container, c_secondary),
+        ("Acciones", [str(item) for item in (recommendations[:2] + next_steps[:1]) if str(item).strip()], colors.HexColor("#dbeafe"), c_primary),
     ]
-    current_y = analysis_y + analysis_h - 52
-    for label, value, fill in categories:
-        pdf.setFillColor(c_on_surface)
-        pdf.setFont(REPORT_FONT_BOLD, 8.5)
-        pdf.drawString(analysis_x + 14, current_y, label)
-        pdf.setFillColor(fill)
-        pdf.drawRightString(analysis_x + 256, current_y, f"{value}%")
-        track_x, track_y = analysis_x + 14, current_y - 9
-        pdf.setFillColor(colors.HexColor("#e7e8e9"))
-        pdf.roundRect(track_x, track_y, 242, 4, 2, fill=1, stroke=0)
-        pdf.setFillColor(fill)
-        pdf.roundRect(track_x, track_y, (242 * value) / 100, 4, 2, fill=1, stroke=0)
-        current_y -= 24
-
-    risk_bars = [20, 45, 30, 65, 90, 55, 15]
-    chart_x, chart_y = analysis_x + 296, analysis_y + 20
-    bar_w = 24
-    for idx, bar_value in enumerate(risk_bars):
-        fill_alpha = 0.12 + (idx * 0.11)
-        pdf.setFillColor(colors.Color(c_primary_container.red, c_primary_container.green, c_primary_container.blue, alpha=min(fill_alpha, 0.95)))
-        x = chart_x + (idx * (bar_w + 6))
-        pdf.roundRect(x, chart_y, bar_w, (90 * bar_value) / 100, 3, fill=1, stroke=0)
-    pdf.setFillColor(c_outline)
-    pdf.setFont(REPORT_FONT_BOLD, 6.5)
-    for idx, day in enumerate(["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"]):
-        pdf.drawCentredString(chart_x + (idx * (bar_w + 6)) + (bar_w / 2), chart_y - 9, day)
+    for idx, (title, items, bg, title_color) in enumerate(blocks):
+        block_x = analysis_x + 14 + (idx * (block_w + 7))
+        pdf.setFillColor(bg)
+        pdf.roundRect(block_x, block_y, block_w, block_h, 8, fill=1, stroke=0)
+        pdf.setFillColor(title_color)
+        pdf.setFont(REPORT_FONT_BOLD, 9)
+        pdf.drawString(block_x + 8, block_y + block_h - 14, title.upper())
+        text_lines = items or ["Sin registros."]
+        text = "\n".join(f"• {item}" for item in text_lines)
+        pdf.setFillColor(c_on_surface_variant)
+        pdf.setFont(REPORT_FONT, 7.4)
+        _draw_wrapped_text(pdf, text, block_x + 8, block_y + block_h - 28, block_w - 16, line_height=10.2)
 
     _draw_report_footer(pdf, generated_at)
     pdf.showPage()
