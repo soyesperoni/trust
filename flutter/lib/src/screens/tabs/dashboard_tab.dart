@@ -68,17 +68,9 @@ class _DashboardTabState extends State<DashboardTab> {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: Theme.of(context).brightness == Brightness.dark
-            ? const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF030712), Color(0xFF111827)],
-              )
-            : const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFF5F8FF), Color(0xFFEEF3FF)],
-              ),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.darkBackground
+            : AppColors.gray50,
       ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
@@ -93,8 +85,6 @@ class _DashboardTabState extends State<DashboardTab> {
               items: trendItems,
               onChanged: (value) => setState(() => _scoreRange = value),
             ),
-            const SizedBox(height: 12),
-            _EntityCountersCard(payload: payload, role: widget.role),
             const SizedBox(height: 14),
             SizedBox(
               height: 66,
@@ -311,18 +301,11 @@ class _ComplianceHeroCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: isDark
-            ? const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF172554), Color(0xFF1E1B4B)],
-              )
-            : const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFEEF2FF), Color(0xFFE0E7FF)],
-              ),
+        color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,7 +315,7 @@ class _ComplianceHeroCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4338CA),
+              color: isDark ? AppColors.darkMuted : const Color(0xFF334155),
             ),
           ),
           const SizedBox(height: 10),
@@ -345,7 +328,7 @@ class _ComplianceHeroCard extends StatelessWidget {
                   fontSize: 54,
                   fontWeight: FontWeight.w900,
                   height: 0.95,
-                  color: isDark ? Colors.white : AppColors.primary,
+                  color: isDark ? Colors.white : AppColors.primaryDark,
                 ),
               ),
             ],
@@ -356,8 +339,8 @@ class _ComplianceHeroCard extends StatelessWidget {
             child: LinearProgressIndicator(
               minHeight: 10,
               value: score / 100,
-              backgroundColor: isDark ? const Color(0xFF312E81) : const Color(0xFFC7D2FE),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF22C55E)),
+              backgroundColor: isDark ? AppColors.darkSurface : AppColors.gray100,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
             ),
           ),
         ],
@@ -381,17 +364,21 @@ class _RiskOverviewGrid extends StatelessWidget {
       _MetricData('Incidencias activas', payload.stats.incidents, Icons.report_problem),
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 1.7,
-      ),
-      itemBuilder: (context, index) => _MetricCard(data: items[index]),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = 10.0;
+        final firstRowWidth = (constraints.maxWidth - (spacing * 2)) / 3;
+        final secondRowWidth = (constraints.maxWidth - spacing) / 2;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: List.generate(items.length, (index) {
+            final width = index < 3 ? firstRowWidth : secondRowWidth;
+            return SizedBox(width: width, child: _MetricCard(data: items[index]));
+          }),
+        );
+      },
     );
   }
 }
@@ -531,11 +518,7 @@ class _TrendCard extends StatelessWidget {
                               height: (item.score <= 1 ? 2 : item.score) * 1.15,
                               width: 22,
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [Color(0xFF34D399), Color(0xFF1D4ED8)],
-                                ),
+                                color: AppColors.primary,
                                 borderRadius: BorderRadius.circular(999),
                               ),
                             ),
@@ -589,87 +572,6 @@ class _RangeButton extends StatelessWidget {
             color: selected ? Colors.white : const Color(0xFF475569),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _EntityCountersCard extends StatelessWidget {
-  const _EntityCountersCard({required this.payload, required this.role});
-
-  final _DashboardPayload payload;
-  final UserRole role;
-
-  @override
-  Widget build(BuildContext context) {
-    final cards = <_MetricData>[
-      if (role != UserRole.accountAdmin && role != UserRole.branchAdmin)
-        _MetricData('Clientes', payload.stats.clients, Icons.apartment),
-      if (role != UserRole.branchAdmin)
-        _MetricData('Sucursales', payload.stats.branches, Icons.store),
-      _MetricData('Áreas', payload.stats.areas, Icons.map),
-      _MetricData('Dosificadores', payload.stats.dispensers, Icons.water_drop),
-      _MetricData('Productos', payload.stats.products, Icons.inventory_2),
-      _MetricData('Visitas', payload.stats.visits, Icons.history),
-      _MetricData('Auditorías', payload.stats.audits, Icons.assignment_turned_in),
-      _MetricData('Incidencias', payload.stats.incidents, Icons.report),
-    ];
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0)),
-      ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: cards
-            .map(
-              (item) => Container(
-                width: (MediaQuery.of(context).size.width - 64) / 2,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0B1527) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    Icon(item.icon, size: 18, color: AppColors.primary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${item.value}',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : AppColors.primaryDark,
-                            ),
-                          ),
-                          Text(
-                            item.title,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? AppColors.darkMuted : const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-            .toList(growable: false),
       ),
     );
   }
