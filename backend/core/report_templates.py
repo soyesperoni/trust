@@ -243,9 +243,11 @@ def _audit_report_styles() -> str:
       .answer .question { margin:0; font-size:15px; font-weight:700; color:#0f172a; }
       .answer .response { margin-top:8px; font-size:14px; color:#334155; }
       .answer .context { margin-top:8px; background:#f8fafc; border-radius:8px; padding:8px 10px; font-size:13px; color:#475569; }
-      .photos { margin-top:8px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-      .photo { aspect-ratio:16/9; border-radius:10px; border:1px solid #cbd5e1; background:#f8fafc; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-      .photo img { width:100%; height:100%; object-fit:cover; display:block; }
+      .evidence-grid { margin-top: 12px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .evidence-card { border-radius: 14px; background: #fff; border: 1px solid #d6d9dd; box-shadow: 0 12px 28px rgba(46,49,146,.06); overflow: hidden; }
+      .evidence-photo { aspect-ratio: 4 / 3; min-height: 180px; background: #f3f4f5; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+      .evidence-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .evidence-caption { padding: 10px 12px; font-size: 12px; color: #464652; font-weight: 600; border-top: 1px solid #e7e8e9; text-transform: uppercase; letter-spacing: .04em; }
       .footer { margin-top:24px; padding-top:12px; border-top:1px solid #e2e8f0; font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#64748b; display:flex; justify-content:space-between; gap:12px; }
       @page { margin: 0; size: A4; }
     """
@@ -462,12 +464,17 @@ def build_audit_report_html(audit: dict[str, Any]) -> str:
     media = audit.get("media") if isinstance(audit.get("media"), list) else []
     media_photos = [item for item in media if isinstance(item, dict) and str(item.get("type") or "").lower() == "photo"]
     photo_slots: list[str] = []
-    for item in media_photos[:4]:
+    for index, item in enumerate(media_photos[:6], start=1):
         src = str(item.get("file") or "").strip()
         if src:
-            photo_slots.append(f'<div class="photo" style="aspect-ratio:16 / 9;"><img alt="Evidencia de auditoría" src="{escape(src)}"/></div>')
-    while len(photo_slots) < 4:
-        photo_slots.append('<div class="photo" style="aspect-ratio:16 / 9;"><span style="font-size:12px;color:#777683">Sin evidencia</span></div>')
+            photo_slots.append(
+                f'''<article class="evidence-card"><div class="evidence-photo"><img alt="Evidencia de auditoría {index}" src="{escape(src)}"/></div><div class="evidence-caption">Evidencia #{index:02d}</div></article>'''
+            )
+    while len(photo_slots) < 6:
+        empty_index = len(photo_slots) + 1
+        photo_slots.append(
+            f'''<article class="evidence-card"><div class="evidence-photo"><span style="font-size:12px;color:#777683">Sin evidencia</span></div><div class="evidence-caption">Evidencia #{empty_index:02d}</div></article>'''
+        )
 
     executive_summary = escape(str(ai.get("executive_summary") or "Sin resumen ejecutivo."))
     business_impact = escape(str(ai.get("business_impact") or "Sin impacto de negocio registrado."))
@@ -527,7 +534,7 @@ def build_audit_report_html(audit: dict[str, Any]) -> str:
 
     <section class="section">
       <div class="section-head"><h2>Evidencia fotográfica</h2><div class="line"></div></div>
-      <div class="photos">{''.join(photo_slots)}</div>
+      <div class="evidence-grid">{''.join(photo_slots)}</div>
     </section>
 
     <footer class="footer">
