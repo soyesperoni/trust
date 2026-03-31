@@ -384,44 +384,113 @@ def build_audit_report_html(audit: dict[str, Any]) -> str:
     ai = report.get("ai_analysis") if isinstance(report.get("ai_analysis"), dict) else {}
     answers = report.get("answers") if isinstance(report.get("answers"), list) else []
 
-    answers_html = "".join(
-        f"<li><strong>{escape(str(item.get('label') or 'Pregunta'))}</strong><br/><span>{escape(str(item.get('value') or 'Sin respuesta'))}</span></li>"
-        for item in answers[:18]
-        if isinstance(item, dict)
-    ) or "<li>No hay respuestas registradas.</li>"
+    score = ai.get("score") if isinstance(ai.get("score"), (int, float)) else report.get("score")
+    score_text = f"{int(round(score))}%" if isinstance(score, (int, float)) else "Sin score"
+    audited_at = _format_datetime(audit.get("audited_at"))
+    audited_at_long = _format_long_spanish_date(audit.get("audited_at"))
+    started_at = _format_datetime(audit.get("started_at"))
+    completed_at = _format_datetime(audit.get("completed_at"))
+    generated = datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
+    logo_uri = _logo_data_uri()
 
     recommendations = ai.get("recommendations") if isinstance(ai.get("recommendations"), list) else []
-    rec_html = "".join(f"<li>{escape(str(item))}</li>" for item in recommendations[:8]) or "<li>Sin recomendaciones automáticas.</li>"
+    strengths = ai.get("strengths") if isinstance(ai.get("strengths"), list) else []
+    risks = ai.get("risks") if isinstance(ai.get("risks"), list) else []
+    next_steps = ai.get("next_steps") if isinstance(ai.get("next_steps"), list) else []
 
-    score = ai.get("score") if isinstance(ai.get("score"), (int, float)) else report.get("score")
-    score_text = f"{int(score)}%" if isinstance(score, (int, float)) else "Sin score"
-    generated = datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
+    rec_html = "".join(f"<li>{escape(str(item))}</li>" for item in recommendations[:6] if str(item).strip()) or "<li>Sin recomendaciones automáticas.</li>"
+    strengths_html = "".join(f"<li>{escape(str(item))}</li>" for item in strengths[:6] if str(item).strip()) or "<li>Sin fortalezas detectadas.</li>"
+    risks_html = "".join(f"<li>{escape(str(item))}</li>" for item in risks[:6] if str(item).strip()) or "<li>Sin riesgos reportados.</li>"
+    next_steps_html = "".join(f"<li>{escape(str(item))}</li>" for item in next_steps[:6] if str(item).strip()) or "<li>Sin siguientes pasos sugeridos.</li>"
 
-    return f"""<!doctype html>
-<html lang=\"es\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>
-<title>Informe de auditoría #{audit['id']}</title><style>{_base_styles()}</style></head><body>
-<section class=\"page cover\">
-  <div class=\"brand\">Trust · Auditoría Estratégica</div>
-  <h1 class=\"title\">Informe Ejecutivo de Auditoría</h1>
-  <p class=\"subtitle\">Plantilla HTML corporativa para exportación PDF con Puppeteer, incluyendo portada y bloques ejecutivos.</p>
-  <div class=\"cover-meta\">
-    <div class=\"meta-card\"><span>Cliente</span><strong>{escape(str(audit.get('client') or 'Sin cliente'))}</strong></div>
-    <div class=\"meta-card\"><span>Sucursal</span><strong>{escape(str(audit.get('branch') or 'Sin sucursal'))}</strong></div>
-    <div class=\"meta-card\"><span>Área</span><strong>{escape(str(audit.get('area') or 'Sin área'))}</strong></div>
-    <div class=\"meta-card\"><span>Puntaje global</span><strong>{score_text}</strong></div>
-  </div>
-</section>
-<section class=\"page\">
-  <h2>Hallazgos y trazabilidad</h2>
-  <div class=\"kpis\">
-    <div class=\"kpi\"><span>Auditoría</span><strong>#{audit['id']}</strong></div>
-    <div class=\"kpi\"><span>Programada</span><strong>{_format_datetime(audit.get('audited_at'))}</strong></div>
-    <div class=\"kpi\"><span>Inicio</span><strong>{_format_datetime(audit.get('started_at'))}</strong></div>
-    <div class=\"kpi\"><span>Cierre</span><strong>{_format_datetime(audit.get('completed_at'))}</strong></div>
-  </div>
-  <div class=\"grid-2\">
-    <article class=\"panel\"><h3>Respuestas registradas</h3><ul class=\"list\">{answers_html}</ul></article>
-    <article class=\"panel\"><h3>Resumen y recomendaciones</h3><p>{escape(str(ai.get('executive_summary') or 'Sin resumen ejecutivo.'))}</p><ul class=\"list\">{rec_html}</ul><p class=\"small\">Generado: {generated}</p></article>
-  </div>
-</section>
-</body></html>"""
+    answer_cards: list[str] = []
+    for index, raw in enumerate(answers, start=1):
+        if not isinstance(raw, dict):
+            continue
+        label = escape(str(raw.get("label") or f"Pregunta {index}"))
+        value = escape(str(raw.get("value") or "Sin respuesta"))
+        contextual = escape(str(raw.get("contextual_response") or ""))
+        comment = f"<div class=\"comment-box\">{contextual}</div>" if contextual else ""
+        accent = "#2E3192" if index % 2 else "#92B936"
+        answer_cards.append(
+            f'''<article class="dispenser-card"><div class="dispenser-inner"><div class="dispenser-accent" style="background:{accent};"></div><div class="dispenser-content"><h3 class="dispenser-title">{label}</h3><div class="tag">Respuesta registrada</div><div style="margin-top:6px;line-height:1.6;">{value}</div>{comment}</div></div></article>'''
+        )
+    if not answer_cards:
+        answer_cards.append('<article class="dispenser-card"><div class="dispenser-inner"><div class="dispenser-accent"></div><div class="dispenser-content">No hay respuestas registradas para esta auditoría.</div></div></article>')
+
+    media = audit.get("media") if isinstance(audit.get("media"), list) else []
+    media_photos = [item for item in media if isinstance(item, dict) and str(item.get("type") or "").lower() == "photo"]
+    photo_slots: list[str] = []
+    for item in media_photos[:4]:
+        src = str(item.get("file") or "").strip()
+        if src:
+            photo_slots.append(f'<div class="photo" style="aspect-ratio:16 / 9;"><img alt="Evidencia de auditoría" src="{escape(src)}"/></div>')
+    while len(photo_slots) < 4:
+        photo_slots.append('<div class="photo" style="aspect-ratio:16 / 9;"><span style="font-size:12px;color:#777683">Sin evidencia</span></div>')
+
+    executive_summary = escape(str(ai.get("executive_summary") or "Sin resumen ejecutivo."))
+    business_impact = escape(str(ai.get("business_impact") or "Sin impacto de negocio registrado."))
+
+    return f'''<!doctype html>
+<html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Informe de auditoría #{audit['id']} | SUPPLYMAX</title><style>{_visit_report_styles()}</style></head><body>
+  <main class="canvas page">
+    <header class="headline">
+      <div class="brand-block">
+        <img src="{logo_uri}" alt="Logo Trust" style="height:30px;width:auto;display:block;margin:22px 0 10px;"/>
+        <div class="eyebrow">SUPPLYMAX Technical Services</div>
+        <h1 class="title">Informe de auditoría</h1>
+      </div>
+      <div class="top-right-panel">
+        <div style="text-align:right;">
+          <div class="visit-chip editorial-gradient">AUDITORÍA #{audit['id']}</div>
+          <div class="date-text">{audited_at_long}</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="section">
+      <div class="section-head"><h2>Datos generales</h2><div class="line"></div></div>
+      <div class="grid-3">
+        <div><div class="label">Cliente</div><div class="value">{escape(str(audit.get('client') or 'Sin cliente'))}</div></div>
+        <div><div class="label">Sucursal</div><div class="value">{escape(str(audit.get('branch') or 'Sin sucursal'))}</div></div>
+        <div><div class="label">Área</div><div class="value">{escape(str(audit.get('area') or 'Sin área'))}</div></div>
+        <div><div class="label">Inspector</div><div class="value">{escape(str(audit.get('inspector') or 'Sin inspector'))}</div></div>
+        <div><div class="label">Plantilla</div><div class="value">{escape(str(audit.get('form_name') or audit.get('form') or 'Sin plantilla'))}</div></div>
+        <div><div class="label">Puntaje global</div><div class="value">{score_text}</div></div>
+      </div>
+      <div class="visit-times">
+        <div><div class="tag">Fecha de auditoría</div><div>{audited_at}</div></div>
+        <div class="divider-x"><div class="tag">Inicio</div><div>{started_at}</div></div>
+        <div class="divider-x"><div class="tag">Finalización</div><div>{completed_at}</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>Resumen ejecutivo</h2><div class="line"></div></div>
+      <div class="obs">"{executive_summary}"<p style="margin-top:10px;font-style:normal;font-size:12px;color:#475569;">Impacto de negocio: {business_impact}</p><p style="margin-top:4px;font-style:normal;font-size:12px;color:#475569;">Generado: {generated}</p></div>
+    </section>
+
+    <section class="section" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <article class="verify-signature" style="justify-content:flex-start;"><p class="title">Fortalezas detectadas</p><ul class="list" style="margin:10px 0 0;padding-left:18px;">{strengths_html}</ul></article>
+      <article class="verify-signature" style="justify-content:flex-start;"><p class="title">Riesgos detectados</p><ul class="list" style="margin:10px 0 0;padding-left:18px;">{risks_html}</ul></article>
+      <article class="verify-signature" style="justify-content:flex-start;"><p class="title">Recomendaciones</p><ul class="list" style="margin:10px 0 0;padding-left:18px;">{rec_html}</ul></article>
+      <article class="verify-signature" style="justify-content:flex-start;"><p class="title">Siguientes pasos</p><ul class="list" style="margin:10px 0 0;padding-left:18px;">{next_steps_html}</ul></article>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>Respuestas de auditoría</h2><div class="line"></div></div>
+      {''.join(answer_cards)}
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>Evidencia fotográfica</h2><div class="line"></div></div>
+      <div class="photos">{''.join(photo_slots)}</div>
+    </section>
+
+    <footer class="footer">
+      <div><strong>Trust by SUPPLYMAX de Panamá</strong><br/>&copy; 2026 SUPPLYMAX Technical Services.</div>
+      <div style="text-align:right;">Documento confidencial generado el {generated}.<br/>Cumplimiento técnico bajo normativa ISO-9001:2015.</div>
+    </footer>
+  </main>
+</body></html>'''
