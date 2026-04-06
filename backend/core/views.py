@@ -7,7 +7,7 @@ from functools import lru_cache
 from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Q
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -2246,6 +2246,8 @@ def csrf_token(request):
 @require_GET
 def dashboard(request):
     now = timezone.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_month_start = (month_start + timedelta(days=32)).replace(day=1)
     scope = _get_access_scope(request)
 
     clients = Client.objects.all()
@@ -2266,19 +2268,25 @@ def dashboard(request):
     incidents = _filter_queryset_by_scope(incidents, scope, area_lookup="area_id")
     audits = _filter_queryset_by_scope(audits, scope, area_lookup="area_id")
 
-    completed_visits = visits.filter(status=Visit.Status.COMPLETED)
-    completed_audits = audits.filter(status=Audit.Status.COMPLETED)
-    scheduled_visits_queryset = visits.filter(status=Visit.Status.SCHEDULED)
+    visits_this_month = visits.filter(visited_at__gte=month_start, visited_at__lt=next_month_start)
+    incidents_this_month = incidents.filter(
+        created_at__gte=month_start, created_at__lt=next_month_start
+    )
+    audits_this_month = audits.filter(audited_at__gte=month_start, audited_at__lt=next_month_start)
+
+    completed_visits = visits_this_month.filter(status=Visit.Status.COMPLETED)
+    completed_audits = audits_this_month.filter(status=Audit.Status.COMPLETED)
+    scheduled_visits_queryset = visits_this_month.filter(status=Visit.Status.SCHEDULED)
     overdue_visits_queryset = scheduled_visits_queryset.filter(visited_at__lt=now)
     pending_visits_queryset = scheduled_visits_queryset.filter(visited_at__gte=now).order_by(
         "visited_at"
     )
-    scheduled_audits_queryset = audits.filter(status=Audit.Status.SCHEDULED)
+    scheduled_audits_queryset = audits_this_month.filter(status=Audit.Status.SCHEDULED)
     overdue_audits_queryset = scheduled_audits_queryset.filter(audited_at__lt=now)
     upcoming_scheduled_audits_queryset = scheduled_audits_queryset.filter(
         status=Audit.Status.SCHEDULED, audited_at__gte=now
     ).order_by("audited_at")
-    incident_count = incidents.count()
+    incident_count = incidents_this_month.count()
 
     compliant_events_total = completed_visits.count() + completed_audits.count()
     non_compliant_events_total = (
@@ -2319,7 +2327,7 @@ def dashboard(request):
         bucket_key = timezone.localtime(audit.audited_at).date().isoformat()
         daily_non_compliance_counts[bucket_key] = daily_non_compliance_counts.get(bucket_key, 0) + 1
 
-    for incident in incidents:
+    for incident in incidents_this_month:
         bucket_key = timezone.localtime(incident.created_at).date().isoformat()
         daily_non_compliance_counts[bucket_key] = daily_non_compliance_counts.get(bucket_key, 0) + 1
 
@@ -2383,12 +2391,12 @@ def dashboard(request):
         "areas": areas.count(),
         "dispensers": dispensers.count(),
         "products": products.count(),
-        "visits": visits.count(),
+        "visits": visits_this_month.count(),
         "completed_visits": completed_visits.count(),
-        "pending_visits": scheduled_visits_queryset.count(),
+        "pending_visits": pending_visits_queryset.count(),
         "overdue_visits": overdue_visits_queryset.count(),
-        "incidents": incidents.count(),
-        "audits": audits.count(),
+        "incidents": incidents_this_month.count(),
+        "audits": audits_this_month.count(),
         "completed_audits": completed_audits.count(),
         "scheduled_audits": scheduled_audits_queryset.count(),
         "overdue_audits": overdue_audits_queryset.count(),
@@ -2396,7 +2404,7 @@ def dashboard(request):
         "audit_score": compliance_score_average,
     }
     recent_visits = (
-        visits.select_related("area__branch__client", "inspector")
+        visits_this_month.select_related("area__branch__client", "inspector")
         .order_by("-visited_at")[:6]
     )
     activity = []

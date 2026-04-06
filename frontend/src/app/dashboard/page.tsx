@@ -55,6 +55,8 @@ export default function DashboardPage() {
   const [animatedOverdueAudits, setAnimatedOverdueAudits] = useState(0);
   const [animatedPendingVisits, setAnimatedPendingVisits] = useState(0);
   const [animatedScheduledAudits, setAnimatedScheduledAudits] = useState(0);
+  const [animatedCompletedVisits, setAnimatedCompletedVisits] = useState(0);
+  const [animatedCompletedAudits, setAnimatedCompletedAudits] = useState(0);
   const [animatedIncidents, setAnimatedIncidents] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,9 +118,11 @@ export default function DashboardPage() {
   const metricCardRoutes = useMemo(
     () => ({
       pendingVisits: "/clientes/visitas?estado=programada",
-      scheduledAudits: "/clientes/auditorias?estado=programada",
+      scheduledAudits: "/clientes/auditorias?estado=pendiente",
       overdueVisits: "/clientes/visitas?estado=vencida",
       overdueAudits: "/clientes/auditorias?estado=vencida",
+      completedVisits: "/clientes/visitas?estado=finalizada",
+      completedAudits: "/clientes/auditorias?estado=finalizada",
       incidents: "/clientes/incidencias",
     }),
     [],
@@ -154,6 +158,8 @@ export default function DashboardPage() {
   const overdueAuditsTotal = useMemo(() => stats?.overdue_audits ?? 0, [stats?.overdue_audits]);
   const pendingVisitsTotal = useMemo(() => stats?.pending_visits ?? 0, [stats?.pending_visits]);
   const scheduledAuditsTotal = useMemo(() => stats?.scheduled_audits ?? 0, [stats?.scheduled_audits]);
+  const completedVisitsTotal = useMemo(() => stats?.completed_visits ?? 0, [stats?.completed_visits]);
+  const completedAuditsTotal = useMemo(() => stats?.completed_audits ?? 0, [stats?.completed_audits]);
   const incidentsTotal = useMemo(() => stats?.incidents ?? 0, [stats?.incidents]);
   const scoreBars = useMemo(() => {
     const sanitized = dailyComplianceScoreHistory
@@ -300,6 +306,8 @@ export default function DashboardPage() {
       setAnimatedOverdueAudits(Math.round(overdueAuditsTotal * easedProgress));
       setAnimatedPendingVisits(Math.round(pendingVisitsTotal * easedProgress));
       setAnimatedScheduledAudits(Math.round(scheduledAuditsTotal * easedProgress));
+      setAnimatedCompletedVisits(Math.round(completedVisitsTotal * easedProgress));
+      setAnimatedCompletedAudits(Math.round(completedAuditsTotal * easedProgress));
       setAnimatedIncidents(Math.round(incidentsTotal * easedProgress));
 
       if (progress < 1) {
@@ -312,11 +320,13 @@ export default function DashboardPage() {
     setAnimatedOverdueAudits(0);
     setAnimatedPendingVisits(0);
     setAnimatedScheduledAudits(0);
+    setAnimatedCompletedVisits(0);
+    setAnimatedCompletedAudits(0);
     setAnimatedIncidents(0);
     animationFrame = window.requestAnimationFrame(animate);
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [complianceScore, incidentsTotal, isLoading, overdueAuditsTotal, overdueVisitsTotal, pendingVisitsTotal, scheduledAuditsTotal]);
+  }, [complianceScore, completedAuditsTotal, completedVisitsTotal, incidentsTotal, isLoading, overdueAuditsTotal, overdueVisitsTotal, pendingVisitsTotal, scheduledAuditsTotal]);
 
   return (
     <>
@@ -364,6 +374,22 @@ export default function DashboardPage() {
                           {isLoading ? "..." : animatedScheduledAudits}
                         </span>
                         <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">auditorías pendientes</span>
+                      </div>
+                    </Link>
+                    <Link href={metricCardRoutes.completedVisits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
+                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
+                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
+                          {isLoading ? "..." : animatedCompletedVisits}
+                        </span>
+                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">visitas realizadas</span>
+                      </div>
+                    </Link>
+                    <Link href={metricCardRoutes.completedAudits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
+                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
+                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
+                          {isLoading ? "..." : animatedCompletedAudits}
+                        </span>
+                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">auditorías realizadas</span>
                       </div>
                     </Link>
                     <Link href={metricCardRoutes.overdueVisits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
