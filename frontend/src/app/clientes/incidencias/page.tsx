@@ -62,7 +62,7 @@ const getInitials = (value: string) =>
     .map((part) => part[0]?.toUpperCase())
     .join("");
 
-const isValidDateParam = (value: string | null) => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+const isValidDateParam = (value: string | null): value is string => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 
 export default function IncidenciasPage() {
   const searchParams = useSearchParams();
