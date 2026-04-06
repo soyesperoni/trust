@@ -610,6 +610,12 @@ def _serialize_visit(visit: Visit) -> dict:
         inspector = visit.inspector.get_full_name() or visit.inspector.username
         inspector_id = visit.inspector_id
     dispenser_reports = _normalize_dispenser_report_entries(visit)
+    status = visit.status
+    status_label = visit.get_status_display()
+    if status == Visit.Status.SCHEDULED and visit.visited_at < timezone.now():
+        status = "overdue"
+        status_label = "Vencida"
+
     return {
         "id": visit.id,
         "client": visit.area.branch.client.name,
@@ -625,8 +631,8 @@ def _serialize_visit(visit: Visit) -> dict:
         "inspector_id": inspector_id,
         "visited_at": visit.visited_at.isoformat(),
         "notes": visit.notes,
-        "status": visit.status,
-        "status_label": visit.get_status_display(),
+        "status": status,
+        "status_label": status_label,
         "started_at": visit.started_at.isoformat() if visit.started_at else None,
         "completed_at": visit.completed_at.isoformat() if visit.completed_at else None,
         "start_latitude": visit.start_latitude,
@@ -668,6 +674,12 @@ def _serialize_audit(audit: Audit) -> dict:
     form_name = audit.form_name or audit.form.name
     form_schema = audit.form_schema or audit.form.schema or {}
 
+    status = audit.status
+    status_label = audit.get_status_display()
+    if status == Audit.Status.SCHEDULED and audit.audited_at < timezone.now():
+        status = "overdue"
+        status_label = "Vencida"
+
     return {
         "id": audit.id,
         "client": audit.area.branch.client.name,
@@ -684,8 +696,8 @@ def _serialize_audit(audit: Audit) -> dict:
         "inspector_id": inspector_id,
         "audited_at": audit.audited_at.isoformat(),
         "notes": audit.notes,
-        "status": audit.status,
-        "status_label": audit.get_status_display(),
+        "status": status,
+        "status_label": status_label,
         "started_at": audit.started_at.isoformat() if audit.started_at else None,
         "completed_at": audit.completed_at.isoformat() if audit.completed_at else None,
         "start_latitude": audit.start_latitude,

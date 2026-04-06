@@ -1026,6 +1026,46 @@ class AuditApiTests(TestCase):
         )
         self.inspector.areas.add(self.area)
 
+    def test_visits_list_marks_past_scheduled_visits_as_overdue(self):
+        visit = Visit.objects.create(
+            area=self.area,
+            status=Visit.Status.SCHEDULED,
+            visited_at=timezone.now() - timedelta(days=1),
+            notes="Visita pendiente vencida",
+        )
+
+        response = self.client.get(
+            "/api/visits/",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = next(item for item in response.json()["results"] if item["id"] == visit.id)
+        self.assertEqual(payload["status"], "overdue")
+        self.assertEqual(payload["status_label"], "Vencida")
+
+    def test_audits_list_marks_past_scheduled_audits_as_overdue(self):
+        form = AuditForm.objects.create(name="Checklist vencido", schema={"questions": []})
+        audit = Audit.objects.create(
+            area=self.area,
+            form=form,
+            form_name=form.name,
+            form_schema=form.schema,
+            status=Audit.Status.SCHEDULED,
+            audited_at=timezone.now() - timedelta(days=1),
+            notes="Auditoría pendiente vencida",
+        )
+
+        response = self.client.get(
+            "/api/audits/",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = next(item for item in response.json()["results"] if item["id"] == audit.id)
+        self.assertEqual(payload["status"], "overdue")
+        self.assertEqual(payload["status_label"], "Vencida")
+
 
     def test_create_area_with_audit_form_template(self):
         form = AuditForm.objects.create(name="Plantilla Base", schema={"questions": []})
