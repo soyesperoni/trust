@@ -37,26 +37,15 @@ class _HomeScreenState extends State<HomeScreen> {
   static const Duration _incidentsRefreshInterval = Duration(seconds: 15);
 
   int _currentIndex = 0;
-  late final List<Widget> _tabs;
   final TrustRepository _repository = TrustRepository();
   Timer? _incidentsRefreshTimer;
   int? _incidentCount;
+  VisitStatusFilter _visitsInitialFilter = VisitStatusFilter.all;
+  HistoryTypeFilter _visitsInitialTypeFilter = HistoryTypeFilter.all;
 
   @override
   void initState() {
     super.initState();
-    _tabs = [
-      DashboardTab(
-        email: widget.email,
-        role: widget.role,
-      ),
-      CalendarTab(
-        email: widget.email,
-        role: widget.role,
-      ),
-      VisitsTab(email: widget.email, role: widget.role),
-      IncidentsTab(email: widget.email, role: widget.role),
-    ];
 
     _refreshIncidentCount();
     _incidentsRefreshTimer = Timer.periodic(
@@ -73,6 +62,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tabs = [
+      DashboardTab(
+        email: widget.email,
+        role: widget.role,
+        onMetricTap: _handleDashboardMetricTap,
+      ),
+      CalendarTab(
+        email: widget.email,
+        role: widget.role,
+      ),
+      VisitsTab(
+        key: ValueKey('${_visitsInitialTypeFilter.name}-${_visitsInitialFilter.name}'),
+        email: widget.email,
+        role: widget.role,
+        initialFilter: _visitsInitialFilter,
+        initialTypeFilter: _visitsInitialTypeFilter,
+      ),
+      IncidentsTab(email: widget.email, role: widget.role),
+    ];
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -147,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: IndexedStack(
         index: _currentIndex,
-        children: _tabs,
+        children: tabs,
       ),
       bottomNavigationBar: SafeArea(
         top: false,
@@ -254,6 +263,36 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => DashboardQuickUserScreen(email: widget.email),
       ),
     );
+  }
+
+  void _handleDashboardMetricTap(DashboardMetricShortcut shortcut) {
+    setState(() {
+      switch (shortcut) {
+        case DashboardMetricShortcut.scheduledVisits:
+          _visitsInitialTypeFilter = HistoryTypeFilter.visits;
+          _visitsInitialFilter = VisitStatusFilter.scheduled;
+          _currentIndex = 2;
+          break;
+        case DashboardMetricShortcut.pendingAudits:
+          _visitsInitialTypeFilter = HistoryTypeFilter.audits;
+          _visitsInitialFilter = VisitStatusFilter.scheduled;
+          _currentIndex = 2;
+          break;
+        case DashboardMetricShortcut.overdueVisits:
+          _visitsInitialTypeFilter = HistoryTypeFilter.visits;
+          _visitsInitialFilter = VisitStatusFilter.overdue;
+          _currentIndex = 2;
+          break;
+        case DashboardMetricShortcut.overdueAudits:
+          _visitsInitialTypeFilter = HistoryTypeFilter.audits;
+          _visitsInitialFilter = VisitStatusFilter.overdue;
+          _currentIndex = 2;
+          break;
+        case DashboardMetricShortcut.activeIncidents:
+          _currentIndex = 3;
+          break;
+      }
+    });
   }
 
   static String _initials(String email) {

@@ -113,6 +113,17 @@ export default function DashboardPage() {
     [],
   );
 
+  const metricCardRoutes = useMemo(
+    () => ({
+      pendingVisits: "/clientes/visitas?estado=programada",
+      scheduledAudits: "/clientes/auditorias?estado=programada",
+      overdueVisits: "/clientes/visitas?estado=vencida",
+      overdueAudits: "/clientes/auditorias?estado=vencida",
+      incidents: "/clientes/incidencias",
+    }),
+    [],
+  );
+
   const statsCards = useMemo(
     () => {
       const cards = [
@@ -339,46 +350,46 @@ export default function DashboardPage() {
                         <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-sm sm:tracking-[0.22em] dark:text-slate-300">Score de cumplimiento</p>
                       </div>
                     </div>
-                    <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
+                    <Link href={metricCardRoutes.pendingVisits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
                       <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
                         <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
                           {isLoading ? "..." : animatedPendingVisits}
                         </span>
                         <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">visitas programadas</span>
                       </div>
-                    </article>
-                    <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
+                    </Link>
+                    <Link href={metricCardRoutes.scheduledAudits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
                       <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
                         <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
                           {isLoading ? "..." : animatedScheduledAudits}
                         </span>
                         <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">auditorías pendientes</span>
                       </div>
-                    </article>
-                    <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
+                    </Link>
+                    <Link href={metricCardRoutes.overdueVisits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
                       <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
                         <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
                           {isLoading ? "..." : animatedOverdueVisits}
                         </span>
                         <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">visitas vencidas</span>
                       </div>
-                    </article>
-                    <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
+                    </Link>
+                    <Link href={metricCardRoutes.overdueAudits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
                       <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
                         <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
                           {isLoading ? "..." : animatedOverdueAudits}
                         </span>
                         <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">auditorías vencidas</span>
                       </div>
-                    </article>
-                    <article className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 dark:border-slate-700/70 dark:bg-slate-900/45">
+                    </Link>
+                    <Link href={metricCardRoutes.incidents} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
                       <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
                         <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
                           {isLoading ? "..." : animatedIncidents}
                         </span>
                         <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">incidencias activas</span>
                       </div>
-                    </article>
+                    </Link>
                   </div>
                 </div>
               </div>
