@@ -96,7 +96,7 @@ export default function AuditoriasPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedInspector, setSelectedInspector] = useState("");
-  const [activeFilter, setActiveFilter] = useState<(typeof mobileFilters)[number]["value"]>("finalizada");
+  const [activeFilter, setActiveFilter] = useState<(typeof mobileFilters)[number]["value"]>("all");
   const [animatedAverageScore, setAnimatedAverageScore] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -247,7 +247,7 @@ export default function AuditoriasPage() {
     <>
       <DashboardHeader
         title="Historial de Auditorías"
-        description="Consulta auditorías realizadas y aplica filtros por inspector, estado, cliente, sucursal y rango de fechas."
+        description="Consulta auditorías programadas y finalizadas, y aplica filtros por inspector, estado, cliente, sucursal y rango de fechas."
       />
 
 
