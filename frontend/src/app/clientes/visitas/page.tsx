@@ -36,6 +36,8 @@ const mobileFilters = [
   { label: "Finalizadas", value: "finalizada" as const },
 ];
 
+const isValidDateParam = (value: string | null) => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+
 export default function VisitasPage() {
   const searchParams = useSearchParams();
   const [visits, setVisits] = useState<Visit[]>([]);
@@ -206,6 +208,11 @@ export default function VisitasPage() {
     if (filterFromQuery === "programada" || filterFromQuery === "vencida" || filterFromQuery === "finalizada" || filterFromQuery === "all") {
       setActiveFilter(filterFromQuery);
     }
+
+    const startDateFromQuery = searchParams.get("desde");
+    const endDateFromQuery = searchParams.get("hasta");
+    setStartDate(isValidDateParam(startDateFromQuery) ? startDateFromQuery : "");
+    setEndDate(isValidDateParam(endDateFromQuery) ? endDateFromQuery : "");
   }, [searchParams]);
 
   const clientOptions = useMemo(

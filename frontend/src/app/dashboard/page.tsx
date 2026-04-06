@@ -43,6 +43,19 @@ const getLocalDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const getCurrentMonthDateRange = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0);
+  const toDateKey = (value: Date) => getLocalDateKey(value);
+  return {
+    startDate: toDateKey(start),
+    endDate: toDateKey(end),
+  };
+};
+
 export default function DashboardPage() {
   const { user } = useCurrentUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -116,15 +129,27 @@ export default function DashboardPage() {
   );
 
   const metricCardRoutes = useMemo(
-    () => ({
-      pendingVisits: "/clientes/visitas?estado=programada",
-      scheduledAudits: "/clientes/auditorias?estado=pendiente",
-      overdueVisits: "/clientes/visitas?estado=vencida",
-      overdueAudits: "/clientes/auditorias?estado=vencida",
-      completedVisits: "/clientes/visitas?estado=finalizada",
-      completedAudits: "/clientes/auditorias?estado=finalizada",
-      incidents: "/clientes/incidencias",
-    }),
+    () => {
+      const { startDate, endDate } = getCurrentMonthDateRange();
+      const withMonthRange = (path: string, status?: string) => {
+        const params = new URLSearchParams({
+          desde: startDate,
+          hasta: endDate,
+        });
+        if (status) params.set("estado", status);
+        return `${path}?${params.toString()}`;
+      };
+
+      return {
+        pendingVisits: withMonthRange("/clientes/visitas", "programada"),
+        scheduledAudits: withMonthRange("/clientes/auditorias", "pendiente"),
+        overdueVisits: withMonthRange("/clientes/visitas", "vencida"),
+        overdueAudits: withMonthRange("/clientes/auditorias", "vencida"),
+        completedVisits: withMonthRange("/clientes/visitas", "finalizada"),
+        completedAudits: withMonthRange("/clientes/auditorias", "finalizada"),
+        incidents: withMonthRange("/clientes/incidencias"),
+      };
+    },
     [],
   );
 

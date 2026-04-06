@@ -39,6 +39,8 @@ const mobileFilters = [
   { label: "Finalizadas", value: "finalizada" as const },
 ];
 
+const isValidDateParam = (value: string | null) => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+
 const formatDate = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -195,6 +197,11 @@ export default function AuditoriasPage() {
     if (filterFromQuery === "programada" || filterFromQuery === "vencida" || filterFromQuery === "finalizada" || filterFromQuery === "pendiente" || filterFromQuery === "all") {
       setActiveFilter(filterFromQuery);
     }
+
+    const startDateFromQuery = searchParams.get("desde");
+    const endDateFromQuery = searchParams.get("hasta");
+    setStartDate(isValidDateParam(startDateFromQuery) ? startDateFromQuery : "");
+    setEndDate(isValidDateParam(endDateFromQuery) ? endDateFromQuery : "");
   }, [searchParams]);
 
   const stats = useMemo(() => {
