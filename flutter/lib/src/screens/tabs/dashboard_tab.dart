@@ -15,11 +15,13 @@ class DashboardTab extends StatefulWidget {
   const DashboardTab({
     required this.email,
     required this.role,
+    required this.onMetricTap,
     super.key,
   });
 
   final String email;
   final UserRole role;
+  final ValueChanged<DashboardMetricShortcut> onMetricTap;
 
   @override
   State<DashboardTab> createState() => _DashboardTabState();
@@ -78,7 +80,10 @@ class _DashboardTabState extends State<DashboardTab> {
           children: [
             _ComplianceHeroCard(payload: payload),
             const SizedBox(height: 12),
-            _RiskOverviewGrid(payload: payload),
+            _RiskOverviewGrid(
+              payload: payload,
+              onMetricTap: widget.onMetricTap,
+            ),
             const SizedBox(height: 12),
             _TrendCard(
               selectedRange: _scoreRange,
@@ -350,18 +355,22 @@ class _ComplianceHeroCard extends StatelessWidget {
 }
 
 class _RiskOverviewGrid extends StatelessWidget {
-  const _RiskOverviewGrid({required this.payload});
+  const _RiskOverviewGrid({
+    required this.payload,
+    required this.onMetricTap,
+  });
 
   final _DashboardPayload payload;
+  final ValueChanged<DashboardMetricShortcut> onMetricTap;
 
   @override
   Widget build(BuildContext context) {
     final items = [
-      _MetricData('Visitas programadas', payload.stats.pendingVisits),
-      _MetricData('Auditorías pendientes', payload.stats.scheduledAudits),
-      _MetricData('Visitas vencidas', payload.stats.overdueVisits),
-      _MetricData('Auditorías vencidas', payload.stats.overdueAudits),
-      _MetricData('Incidencias activas', payload.stats.incidents),
+      _MetricData('Visitas programadas', payload.stats.pendingVisits, DashboardMetricShortcut.scheduledVisits),
+      _MetricData('Auditorías pendientes', payload.stats.scheduledAudits, DashboardMetricShortcut.pendingAudits),
+      _MetricData('Visitas vencidas', payload.stats.overdueVisits, DashboardMetricShortcut.overdueVisits),
+      _MetricData('Auditorías vencidas', payload.stats.overdueAudits, DashboardMetricShortcut.overdueAudits),
+      _MetricData('Incidencias activas', payload.stats.incidents, DashboardMetricShortcut.activeIncidents),
     ];
 
     return LayoutBuilder(
@@ -375,7 +384,7 @@ class _RiskOverviewGrid extends StatelessWidget {
           runSpacing: spacing,
           children: List.generate(items.length, (index) {
             final width = index < 3 ? firstRowWidth : secondRowWidth;
-            return SizedBox(width: width, child: _MetricCard(data: items[index]));
+            return SizedBox(width: width, child: _MetricCard(data: items[index], onTap: () => onMetricTap(items[index].shortcut)));
           }),
         );
       },
@@ -384,56 +393,73 @@ class _RiskOverviewGrid extends StatelessWidget {
 }
 
 class _MetricData {
-  const _MetricData(this.title, this.value);
+  const _MetricData(this.title, this.value, this.shortcut);
 
   final String title;
   final int value;
+  final DashboardMetricShortcut shortcut;
 }
 
 class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.data});
+  const _MetricCard({required this.data, required this.onTap});
 
   final _MetricData data;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkCard : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '${data.value}',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                  color: isDark ? Colors.white : AppColors.primaryDark,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                data.title,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppColors.darkMuted : const Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '${data.value}',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              height: 1,
-              color: isDark ? Colors.white : AppColors.primaryDark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            data.title,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.darkMuted : const Color(0xFF64748B),
-            ),
-          ),
-        ],
       ),
     );
   }
+}
+
+enum DashboardMetricShortcut {
+  scheduledVisits,
+  pendingAudits,
+  overdueVisits,
+  overdueAudits,
+  activeIncidents,
 }
 
 class _TrendCard extends StatelessWidget {

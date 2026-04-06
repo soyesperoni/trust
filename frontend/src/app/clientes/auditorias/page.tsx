@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
@@ -33,6 +34,7 @@ type User = {
 const mobileFilters = [
   { label: "Todas", value: "all" as const },
   { label: "Programadas", value: "programada" as const },
+  { label: "Vencidas", value: "vencida" as const },
   { label: "Finalizadas", value: "finalizada" as const },
 ];
 
@@ -79,16 +81,24 @@ const getInitials = (value: string) =>
     .map((part) => part[0]?.toUpperCase())
     .join("");
 
-const auditType = (status?: string) => (status === "completed" ? "Finalizada" : "Programada");
+const auditType = (status?: string) => {
+  const normalizedStatus = status?.trim().toLowerCase() ?? "";
+  if (normalizedStatus === "completed" || normalizedStatus === "finalizada") return "Finalizada";
+  if (normalizedStatus === "overdue" || normalizedStatus === "vencida") return "Vencida";
+  return "Programada";
+};
 
 const typeStyles: Record<string, string> = {
   Finalizada:
     "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-900/60",
   Programada:
     "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-900/60",
+  Vencida:
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/35 dark:text-amber-300 border-amber-200 dark:border-amber-900/60",
 };
 
 export default function AuditoriasPage() {
+  const searchParams = useSearchParams();
   const [audits, setAudits] = useState<AuditApi[]>([]);
   const [inspectors, setInspectors] = useState<User[]>([]);
   const [selectedClient, setSelectedClient] = useState("");
@@ -158,7 +168,7 @@ export default function AuditoriasPage() {
   const filteredAudits = useMemo(() => {
     return audits.filter((audit) => {
       const typeLabel = auditType(audit.status);
-      const mappedFilter = typeLabel === "Programada" ? "programada" : "finalizada";
+      const mappedFilter = typeLabel === "Programada" ? "programada" : typeLabel === "Vencida" ? "vencida" : "finalizada";
       const matchesFilter = activeFilter === "all" || activeFilter === mappedFilter;
       const matchesInspector = !selectedInspector || audit.inspector === selectedInspector;
       const matchesClient = !selectedClient || audit.client === selectedClient;
@@ -175,6 +185,13 @@ export default function AuditoriasPage() {
       return matchesFilter && matchesInspector && matchesClient && matchesBranch && matchesDateRange;
     });
   }, [activeFilter, audits, endDate, selectedBranch, selectedClient, selectedInspector, startDate]);
+
+  useEffect(() => {
+    const filterFromQuery = searchParams.get("estado")?.trim().toLowerCase();
+    if (filterFromQuery === "programada" || filterFromQuery === "vencida" || filterFromQuery === "finalizada" || filterFromQuery === "all") {
+      setActiveFilter(filterFromQuery);
+    }
+  }, [searchParams]);
 
   const stats = useMemo(() => {
     const completed = filteredAudits.filter((audit) => audit.status === "completed");
@@ -341,7 +358,7 @@ export default function AuditoriasPage() {
                 </div>
                 <span
                   className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase ${
-                    typeLabel === "Programada" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
+                    typeLabel === "Programada" ? "bg-blue-100 text-blue-700" : typeLabel === "Vencida" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
                   }`}
                 >
                   {typeLabel}

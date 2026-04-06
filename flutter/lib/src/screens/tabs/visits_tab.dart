@@ -11,10 +11,18 @@ import '../../widgets/visit_summary_card.dart';
 import '../../widgets/audit_summary_card.dart';
 
 class VisitsTab extends StatefulWidget {
-  const VisitsTab({required this.email, required this.role, super.key});
+  const VisitsTab({
+    required this.email,
+    required this.role,
+    this.initialFilter = VisitStatusFilter.all,
+    this.initialTypeFilter = HistoryTypeFilter.all,
+    super.key,
+  });
 
   final String email;
   final UserRole role;
+  final VisitStatusFilter initialFilter;
+  final HistoryTypeFilter initialTypeFilter;
 
   @override
   State<VisitsTab> createState() => _VisitsTabState();
@@ -26,8 +34,8 @@ class _VisitsTabState extends State<VisitsTab> {
   static const Duration _refreshInterval = Duration(seconds: 1);
 
   Timer? _refreshTimer;
-  _VisitFilter _selectedFilter = _VisitFilter.all;
-  _HistoryTypeFilter _selectedTypeFilter = _HistoryTypeFilter.all;
+  late VisitStatusFilter _selectedFilter;
+  late HistoryTypeFilter _selectedTypeFilter;
   List<Visit> _visits = const [];
   List<Audit> _audits = const [];
   Object? _error;
@@ -36,8 +44,21 @@ class _VisitsTabState extends State<VisitsTab> {
   @override
   void initState() {
     super.initState();
+    _selectedFilter = widget.initialFilter;
+    _selectedTypeFilter = widget.initialTypeFilter;
     _refreshVisits(showLoader: true);
     _refreshTimer = Timer.periodic(_refreshInterval, (_) => _refreshVisits());
+  }
+
+  @override
+  void didUpdateWidget(covariant VisitsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialFilter != widget.initialFilter) {
+      _selectedFilter = widget.initialFilter;
+    }
+    if (oldWidget.initialTypeFilter != widget.initialTypeFilter) {
+      _selectedTypeFilter = widget.initialTypeFilter;
+    }
   }
 
   @override
@@ -88,7 +109,7 @@ class _VisitsTabState extends State<VisitsTab> {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                   children: [
-                    if (_selectedTypeFilter != _HistoryTypeFilter.audits && filteredVisits.isNotEmpty) ...[
+                    if (_selectedTypeFilter != HistoryTypeFilter.audits && filteredVisits.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.only(bottom: 8),
                         child: Text('Visitas', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -102,7 +123,7 @@ class _VisitsTabState extends State<VisitsTab> {
                             ),
                           )),
                     ],
-                    if (_selectedTypeFilter != _HistoryTypeFilter.visits && filteredAudits.isNotEmpty) ...[
+                    if (_selectedTypeFilter != HistoryTypeFilter.visits && filteredAudits.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.only(bottom: 8),
                         child: Text('Auditorías', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -152,16 +173,17 @@ class _VisitsTabState extends State<VisitsTab> {
   }
 
   List<Visit> _applyFilters(List<Visit> visits) {
-    if (_selectedTypeFilter == _HistoryTypeFilter.audits) {
+    if (_selectedTypeFilter == HistoryTypeFilter.audits) {
       return const [];
     }
     final normalizedQuery = _searchController.text.trim().toLowerCase();
 
     return visits.where((visit) {
       final matchesStatus = switch (_selectedFilter) {
-        _VisitFilter.all => true,
-        _VisitFilter.scheduled => _isScheduled(visit.status),
-        _VisitFilter.completed => _isCompleted(visit.status),
+        VisitStatusFilter.all => true,
+        VisitStatusFilter.scheduled => _isScheduled(visit.status),
+        VisitStatusFilter.overdue => _isOverdue(visit.status),
+        VisitStatusFilter.completed => _isCompleted(visit.status),
       };
 
       if (!matchesStatus) {
@@ -183,16 +205,17 @@ class _VisitsTabState extends State<VisitsTab> {
   }
 
   List<Audit> _applyAuditFilters(List<Audit> audits) {
-    if (_selectedTypeFilter == _HistoryTypeFilter.visits) {
+    if (_selectedTypeFilter == HistoryTypeFilter.visits) {
       return const [];
     }
     final normalizedQuery = _searchController.text.trim().toLowerCase();
 
     return audits.where((audit) {
       final matchesStatus = switch (_selectedFilter) {
-        _VisitFilter.all => true,
-        _VisitFilter.scheduled => _isScheduled(audit.status),
-        _VisitFilter.completed => _isCompleted(audit.status),
+        VisitStatusFilter.all => true,
+        VisitStatusFilter.scheduled => _isScheduled(audit.status),
+        VisitStatusFilter.overdue => _isOverdue(audit.status),
+        VisitStatusFilter.completed => _isCompleted(audit.status),
       };
 
       if (!matchesStatus) {
@@ -211,6 +234,11 @@ class _VisitsTabState extends State<VisitsTab> {
   bool _isScheduled(String status) {
     final value = _normalizeStatus(status);
     return value.contains('scheduled') || value.contains('programad') || value.contains('pend');
+  }
+
+  bool _isOverdue(String status) {
+    final value = _normalizeStatus(status);
+    return value.contains('overdue') || value.contains('vencid');
   }
 
   bool _isCompleted(String status) {
@@ -234,10 +262,10 @@ class _HistoryHeader extends StatelessWidget {
   });
 
   final TextEditingController searchController;
-  final _VisitFilter selectedFilter;
-  final _HistoryTypeFilter selectedTypeFilter;
-  final ValueChanged<_VisitFilter> onFilterChanged;
-  final ValueChanged<_HistoryTypeFilter> onTypeFilterChanged;
+  final VisitStatusFilter selectedFilter;
+  final HistoryTypeFilter selectedTypeFilter;
+  final ValueChanged<VisitStatusFilter> onFilterChanged;
+  final ValueChanged<HistoryTypeFilter> onTypeFilterChanged;
   final ValueChanged<String> onSearchChanged;
 
   @override
@@ -271,7 +299,7 @@ class _HistoryHeader extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Row(
-            children: _HistoryTypeFilter.values
+            children: HistoryTypeFilter.values
                 .map(
                   (filter) => Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -301,7 +329,7 @@ class _HistoryHeader extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Row(
-            children: _VisitFilter.values
+            children: VisitStatusFilter.values
                 .map(
                   (filter) => Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -335,20 +363,21 @@ class _HistoryHeader extends StatelessWidget {
   }
 }
 
-enum _VisitFilter {
+enum VisitStatusFilter {
   all('Todas'),
   scheduled('Programadas'),
+  overdue('Vencidas'),
   completed('Finalizadas');
 
-  const _VisitFilter(this.label);
+  const VisitStatusFilter(this.label);
   final String label;
 }
 
-enum _HistoryTypeFilter {
+enum HistoryTypeFilter {
   all('Todo'),
   visits('Visitas'),
   audits('Auditorías');
 
-  const _HistoryTypeFilter(this.label);
+  const HistoryTypeFilter(this.label);
   final String label;
 }

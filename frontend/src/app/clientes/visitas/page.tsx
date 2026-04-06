@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import PageTransition from "../../components/PageTransition";
@@ -31,10 +32,12 @@ type User = {
 const mobileFilters = [
   { label: "Todas", value: "all" as const },
   { label: "Programadas", value: "programada" as const },
+  { label: "Vencidas", value: "vencida" as const },
   { label: "Finalizadas", value: "finalizada" as const },
 ];
 
 export default function VisitasPage() {
+  const searchParams = useSearchParams();
   const [visits, setVisits] = useState<Visit[]>([]);
   const [inspectors, setInspectors] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -135,9 +138,18 @@ export default function VisitasPage() {
       .map((part) => part[0]?.toUpperCase())
       .join("");
 
-  const visitType = (status?: string) => (status === "completed" ? "Finalizada" : "Programada");
+  const visitType = (status?: string) => {
+    const normalizedStatus = status?.trim().toLowerCase() ?? "";
+    if (normalizedStatus === "completed" || normalizedStatus === "finalizada") return "Finalizada";
+    if (normalizedStatus === "overdue" || normalizedStatus === "vencida") return "Vencida";
+    return "Programada";
+  };
 
-  const mapVisitTypeToFilter = (typeLabel: string) => (typeLabel === "Programada" ? "programada" as const : "finalizada" as const);
+  const mapVisitTypeToFilter = (typeLabel: string) => {
+    if (typeLabel === "Finalizada") return "finalizada" as const;
+    if (typeLabel === "Vencida") return "vencida" as const;
+    return "programada" as const;
+  };
 
   const buildOpenStreetMapLink = (visit: Visit) => {
     const latitude = visit.end_latitude ?? visit.start_latitude;
@@ -185,7 +197,16 @@ export default function VisitasPage() {
       "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-900/60",
     Programada:
       "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-900/60",
+    Vencida:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/35 dark:text-amber-300 border-amber-200 dark:border-amber-900/60",
   };
+
+  useEffect(() => {
+    const filterFromQuery = searchParams.get("estado")?.trim().toLowerCase();
+    if (filterFromQuery === "programada" || filterFromQuery === "vencida" || filterFromQuery === "finalizada" || filterFromQuery === "all") {
+      setActiveFilter(filterFromQuery);
+    }
+  }, [searchParams]);
 
   const clientOptions = useMemo(
     () => Array.from(new Set(visits.map((visit) => visit.client).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es")),
@@ -354,7 +375,9 @@ export default function VisitasPage() {
                 const mobileStatusStyle =
                   typeLabel === "Programada"
                     ? "bg-blue-100 text-blue-700"
-                    : "bg-green-100 text-green-700";
+                    : typeLabel === "Vencida"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-green-100 text-green-700";
 
                 return (
                   <article
