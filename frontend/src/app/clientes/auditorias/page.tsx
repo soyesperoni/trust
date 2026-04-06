@@ -33,6 +33,7 @@ type User = {
 
 const mobileFilters = [
   { label: "Todas", value: "all" as const },
+  { label: "Pendientes", value: "pendiente" as const },
   { label: "Programadas", value: "programada" as const },
   { label: "Vencidas", value: "vencida" as const },
   { label: "Finalizadas", value: "finalizada" as const },
@@ -169,7 +170,10 @@ export default function AuditoriasPage() {
     return audits.filter((audit) => {
       const typeLabel = auditType(audit.status);
       const mappedFilter = typeLabel === "Programada" ? "programada" : typeLabel === "Vencida" ? "vencida" : "finalizada";
-      const matchesFilter = activeFilter === "all" || activeFilter === mappedFilter;
+      const matchesFilter =
+        activeFilter === "all" ||
+        activeFilter === mappedFilter ||
+        (activeFilter === "pendiente" && (mappedFilter === "programada" || mappedFilter === "vencida"));
       const matchesInspector = !selectedInspector || audit.inspector === selectedInspector;
       const matchesClient = !selectedClient || audit.client === selectedClient;
       const matchesBranch = !selectedBranch || audit.branch === selectedBranch;
@@ -188,7 +192,7 @@ export default function AuditoriasPage() {
 
   useEffect(() => {
     const filterFromQuery = searchParams.get("estado")?.trim().toLowerCase();
-    if (filterFromQuery === "programada" || filterFromQuery === "vencida" || filterFromQuery === "finalizada" || filterFromQuery === "all") {
+    if (filterFromQuery === "programada" || filterFromQuery === "vencida" || filterFromQuery === "finalizada" || filterFromQuery === "pendiente" || filterFromQuery === "all") {
       setActiveFilter(filterFromQuery);
     }
   }, [searchParams]);

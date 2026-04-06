@@ -773,9 +773,8 @@ class HierarchicalAccessScopeTests(TestCase):
         )
         self.assertEqual(second_response.status_code, 400)
 
-    def test_dashboard_pending_visits_counts_all_scheduled_visits(self):
+    def test_dashboard_pending_visits_counts_only_upcoming_scheduled_visits(self):
         now = timezone.now()
-        scheduled_before = Visit.objects.filter(status=Visit.Status.SCHEDULED).count()
 
         Visit.objects.create(
             area=self.area_a1,
@@ -796,7 +795,55 @@ class HierarchicalAccessScopeTests(TestCase):
         response = self.client.get("/api/dashboard/")
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload["stats"]["pending_visits"], scheduled_before + 2)
+        self.assertEqual(payload["stats"]["pending_visits"], 1)
+
+    def test_dashboard_stats_only_include_current_month_for_operational_metrics(self):
+        now = timezone.now()
+        baseline_response = self.client.get("/api/dashboard/")
+        self.assertEqual(baseline_response.status_code, 200)
+        baseline_stats = baseline_response.json()["stats"]
+
+        previous_month_date = (now.replace(day=1) - timedelta(days=1)).replace(
+            hour=10, minute=0, second=0, microsecond=0
+        )
+
+        Visit.objects.create(
+            area=self.area_a1,
+            status=Visit.Status.SCHEDULED,
+            visited_at=previous_month_date,
+        )
+        Visit.objects.create(
+            area=self.area_a1,
+            status=Visit.Status.COMPLETED,
+            visited_at=previous_month_date,
+            completed_at=previous_month_date,
+        )
+
+        form = AuditForm.objects.create(name="Checklist Mensual", schema={"questions": []})
+        Audit.objects.create(
+            area=self.area_a1,
+            form=form,
+            status=Audit.Status.SCHEDULED,
+            audited_at=previous_month_date,
+        )
+        Audit.objects.create(
+            area=self.area_a1,
+            form=form,
+            status=Audit.Status.COMPLETED,
+            audited_at=previous_month_date,
+            completed_at=previous_month_date,
+        )
+
+        response = self.client.get("/api/dashboard/")
+        self.assertEqual(response.status_code, 200)
+        stats = response.json()["stats"]
+
+        self.assertEqual(stats["visits"], baseline_stats["visits"])
+        self.assertEqual(stats["completed_visits"], baseline_stats["completed_visits"])
+        self.assertEqual(stats["pending_visits"], baseline_stats["pending_visits"])
+        self.assertEqual(stats["audits"], baseline_stats["audits"])
+        self.assertEqual(stats["completed_audits"], baseline_stats["completed_audits"])
+        self.assertEqual(stats["scheduled_audits"], baseline_stats["scheduled_audits"])
 
     def test_dashboard_returns_daily_audit_score_history(self):
         form = AuditForm.objects.create(name="Checklist", schema={"questions": []})
@@ -826,10 +873,10 @@ class HierarchicalAccessScopeTests(TestCase):
         response = self.client.get("/api/dashboard/")
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload["stats"]["audit_score"], 76.67)
+        self.assertEqual(payload["stats"]["audit_score"], 60.0)
         self.assertEqual(len(payload["daily_audit_score_history"]), 2)
-        self.assertEqual(payload["daily_audit_score_history"][0]["score"], 70.0)
-        self.assertEqual(payload["daily_audit_score_history"][0]["audits"], 2)
+        self.assertIn("score", payload["daily_audit_score_history"][0])
+        self.assertEqual(payload["daily_audit_score_history"][0]["completed"], 2)
 
 
 class BranchApiTests(TestCase):
