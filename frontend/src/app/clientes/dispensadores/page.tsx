@@ -76,7 +76,9 @@ const statusStyles: Record<DispenserStatus, { badge: string; dot: string }> = {
 
 export default function DispensadoresPage() {
   const { user, isLoading: isLoadingUser } = useCurrentUser();
-  const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(user?.role ?? "");
+  const userRole = user?.role ?? "";
+  const isRestrictedRole = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE, INSPECTOR_ROLE].includes(userRole);
+  const canViewDetailsOnly = [ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE].includes(userRole);
   const canManageDispensers = !isLoadingUser && !isRestrictedRole;
   const canDeleteDispensers = !isLoadingUser && user?.role === GENERAL_ADMIN_ROLE;
   const [dispensers, setDispensers] = useState<DispenserRow[]>([]);
@@ -436,25 +438,35 @@ export default function DispensadoresPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                        {canManageDispensers && <Link
-                          className="list-action-btn hover:text-professional-green"
-                          href={`/clientes/dispensadores/${dispenser.id}`}
-                        >
-                          <span className="material-symbols-outlined">
-                            edit
-                          </span>
-                        </Link>}
-                        {canDeleteDispensers && (
-                          <button
-                            type="button"
-                            className="list-action-btn hover:text-red-600 disabled:opacity-50"
-                            onClick={() => void handleDeleteDispenser(dispenser.id)}
-                            disabled={deletingDispenserId === dispenser.id}
-                            title="Eliminar"
+                          {canManageDispensers && <Link
+                            className="list-action-btn hover:text-professional-green"
+                            href={`/clientes/dispensadores/${dispenser.id}`}
+                            title="Editar"
                           >
-                            <span className="material-symbols-outlined">delete</span>
-                          </button>
-                        )}
+                            <span className="material-symbols-outlined">
+                              edit
+                            </span>
+                          </Link>}
+                          {canViewDetailsOnly && (
+                            <Link
+                              className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-professional-green hover:text-professional-green dark:border-slate-700 dark:text-slate-300"
+                              href={`/clientes/dispensadores/${dispenser.id}`}
+                              title="Ver"
+                            >
+                              Ver
+                            </Link>
+                          )}
+                          {canDeleteDispensers && (
+                            <button
+                              type="button"
+                              className="list-action-btn hover:text-red-600 disabled:opacity-50"
+                              onClick={() => void handleDeleteDispenser(dispenser.id)}
+                              disabled={deletingDispenserId === dispenser.id}
+                              title="Eliminar"
+                            >
+                              <span className="material-symbols-outlined">delete</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
