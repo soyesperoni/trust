@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../components/DashboardHeader";
@@ -61,7 +62,10 @@ const getInitials = (value: string) =>
     .map((part) => part[0]?.toUpperCase())
     .join("");
 
+const isValidDateParam = (value: string | null) => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+
 export default function IncidenciasPage() {
+  const searchParams = useSearchParams();
   const { user } = useCurrentUser();
   const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
   const canScheduleFromIncident = user?.role === GENERAL_ADMIN_ROLE || user?.role === INSPECTOR_ROLE;
@@ -73,6 +77,8 @@ export default function IncidenciasPage() {
   const [clientFilter, setClientFilter] = useState("");
   const [branchFilter, setBranchFilter] = useState("");
   const [areaFilter, setAreaFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -118,6 +124,13 @@ export default function IncidenciasPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const startDateFromQuery = searchParams.get("desde");
+    const endDateFromQuery = searchParams.get("hasta");
+    setStartDate(isValidDateParam(startDateFromQuery) ? startDateFromQuery : "");
+    setEndDate(isValidDateParam(endDateFromQuery) ? endDateFromQuery : "");
+  }, [searchParams]);
+
   const emptyMessage = useMemo(() => {
     if (isLoading) return "Cargando incidencias...";
     if (error) return error;
@@ -130,7 +143,15 @@ export default function IncidenciasPage() {
       const matchesClient = !clientFilter || incident.client === clientFilter;
       const matchesBranch = !branchFilter || incident.branch === branchFilter;
       const matchesArea = !areaFilter || incident.area === areaFilter;
-      if (!matchesClient || !matchesBranch || !matchesArea) return false;
+      const incidentDate = new Date(incident.createdAt);
+      const isValidIncidentDate = !Number.isNaN(incidentDate.getTime());
+      const lowerBound = startDate ? new Date(`${startDate}T00:00:00`) : null;
+      const upperBound = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
+      const matchesDateRange =
+        !isValidIncidentDate ||
+        ((!lowerBound || incidentDate >= lowerBound) &&
+          (!upperBound || incidentDate <= upperBound));
+      if (!matchesClient || !matchesBranch || !matchesArea || !matchesDateRange) return false;
       if (!query) return true;
       return [
         incident.client,
@@ -140,7 +161,7 @@ export default function IncidenciasPage() {
         `#${incident.id}`,
       ].some((item) => item.toLowerCase().includes(query));
     });
-  }, [areaFilter, branchFilter, clientFilter, incidents, searchTerm]);
+  }, [areaFilter, branchFilter, clientFilter, endDate, incidents, searchTerm, startDate]);
 
   const uniqueClients = useMemo(
     () => Array.from(new Set(incidents.map((incident) => incident.client))).sort((a, b) => a.localeCompare(b)),
