@@ -76,11 +76,18 @@ const toDateInputValue = (date: Date) => {
   return localDate.toISOString().slice(0, 10);
 };
 
-const eventStyles = {
-  mantenimiento:
+const eventStylesByType: Record<CalendarActivity["type"], string> = {
+  visit:
     "bg-professional-green/10 border-l-2 border-professional-green text-professional-green hover:bg-professional-green/20",
-  emergencia: "bg-primary/20 border-l-2 border-primary text-slate-900 hover:bg-primary/30",
+  audit: "bg-primary/15 border-l-2 border-primary text-primary hover:bg-primary/25",
 };
+
+const activityTypeBadgeStyles: Record<CalendarActivity["type"], string> = {
+  visit: "bg-professional-green/15 text-professional-green dark:bg-professional-green/25 dark:text-green-200",
+  audit: "bg-primary/15 text-primary dark:bg-primary/25 dark:text-yellow-200",
+};
+
+const activityTypeLabel = (type: CalendarActivity["type"]) => (type === "audit" ? "Auditoría" : "Visita");
 
 export default function CalendarioPage() {
   const { user, isLoading: isLoadingUser } = useCurrentUser();
@@ -372,6 +379,15 @@ export default function CalendarioPage() {
             </span>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-full bg-professional-green/15 px-2.5 py-1 font-semibold text-professional-green dark:bg-professional-green/25 dark:text-green-200">
+              Visita
+            </span>
+            <span className="rounded-full bg-primary/15 px-2.5 py-1 font-semibold text-primary dark:bg-primary/25 dark:text-yellow-200">
+              Auditoría
+            </span>
+          </div>
+
           <div className="space-y-3">
             {selectedDayVisits.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
@@ -379,11 +395,6 @@ export default function CalendarioPage() {
               </div>
             ) : (
               selectedDayVisits.map((visit) => {
-                const emergency = visit.notes.toLowerCase().includes("emergencia");
-                const statusLabel = emergency ? "En Proceso" : "Programada";
-                const statusClasses = emergency
-                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
-                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
                 return (
                   <article
                     className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 shadow-card dark:border-slate-800 dark:bg-slate-900/50"
@@ -392,9 +403,9 @@ export default function CalendarioPage() {
                     <div className="mb-2 flex items-start justify-between gap-3">
                       <div className="flex flex-col gap-1">
                         <span
-                          className={`self-start rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${statusClasses}`}
+                          className={`self-start rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${activityTypeBadgeStyles[visit.type]}`}
                         >
-                          {statusLabel}
+                          {activityTypeLabel(visit.type)}
                         </span>
                         <h4 className="text-base font-bold text-slate-900 dark:text-white">{visit.client}</h4>
                         <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{visit.branch}</p>
@@ -485,15 +496,12 @@ export default function CalendarioPage() {
                       ))}
 
                     {cell.activities.slice(0, 2).map((visit) => {
-                      const type = visit.notes.toLowerCase().includes("emergencia")
-                        ? "emergencia"
-                        : "mantenimiento";
                       return (
                         <div
                           key={`${visit.type}-${visit.id}`}
-                          className={`mt-1 p-1 rounded text-[10px] font-medium truncate cursor-pointer ${eventStyles[type]}`}
+                          className={`mt-1 p-1 rounded text-[10px] font-medium truncate cursor-pointer ${eventStylesByType[visit.type]}`}
                         >
-                          {formatTime(visit.scheduledAt)} - {visit.branch}
+                          {formatTime(visit.scheduledAt)} - {activityTypeLabel(visit.type)} · {visit.branch}
                         </div>
                       );
                     })}
@@ -525,28 +533,26 @@ export default function CalendarioPage() {
               <div className="text-sm text-slate-500">No hay actividades para la fecha seleccionada.</div>
             )}
             {selectedDayVisits.map((visit) => {
-              const emergency = visit.notes.toLowerCase().includes("emergencia");
               return (
                 <div
                   className={`p-4 rounded-xl shadow-sm ${
-                    emergency
-                      ? "border-l-4 border-l-primary bg-yellow-50/30 dark:bg-yellow-900/10"
+                    visit.type === "audit"
+                      ? "border-l-4 border-l-primary bg-primary/5 dark:bg-primary/10"
                       : "border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50"
                   }`}
                   key={`${visit.type}-${visit.id}`}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-                        emergency
-                          ? "bg-primary text-white"
-                          : "bg-yellow-50 text-professional-green dark:bg-yellow-900/30 dark:text-yellow-300"
-                      }`}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${activityTypeBadgeStyles[visit.type]}`}
                     >
-                      {visit.client || "Sin cliente"}
+                      {activityTypeLabel(visit.type)}
                     </span>
                     <span className="text-xs font-semibold text-slate-400">{formatTime(visit.scheduledAt)}</span>
                   </div>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    {visit.client || "Sin cliente"}
+                  </p>
                   <h4 className="font-bold text-slate-800 dark:text-white text-sm">{visit.branch}</h4>
                   <p className="text-xs text-slate-500 mt-1 mb-3">{visit.area}</p>
                   <div className="flex items-center gap-2">
