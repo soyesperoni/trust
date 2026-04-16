@@ -214,6 +214,81 @@ class ProductApiTests(TestCase):
             "No se pudo eliminar el producto por una restricción de integridad.",
         )
 
+    def test_list_products_only_returns_account_admin_area_products(self):
+        client = Client.objects.create(name="Cliente Scope", code="CLI-SCOPE")
+        branch = Branch.objects.create(client=client, name="Sucursal Scope")
+        allowed_area = Area.objects.create(branch=branch, name="Área Permitida")
+        blocked_area = Area.objects.create(branch=branch, name="Área Bloqueada")
+        model = DispenserModel.objects.create(name="Modelo Scope")
+
+        allowed_dispenser = Dispenser.objects.create(model=model, identifier="DSP-ALLOW", area=allowed_area)
+        blocked_dispenser = Dispenser.objects.create(model=model, identifier="DSP-BLOCK", area=blocked_area)
+
+        visible_product = Product.objects.create(name="Producto visible")
+        hidden_product = Product.objects.create(name="Producto oculto")
+
+        DispenserProductAssignment.objects.create(dispenser=allowed_dispenser, product=visible_product)
+        DispenserProductAssignment.objects.create(dispenser=blocked_dispenser, product=hidden_product)
+        DispenserProductAssignment.objects.create(dispenser=blocked_dispenser, product=visible_product)
+
+        account_admin = User.objects.create_user(
+            username="acc-products",
+            email="acc-products@test.com",
+            password="secret123",
+            role=User.Role.ACCOUNT_ADMIN,
+        )
+        account_admin.areas.add(allowed_area)
+
+        response = self.client.get(
+            "/api/products/",
+            HTTP_X_CURRENT_USER_EMAIL=account_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()["results"]
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["name"], visible_product.name)
+        self.assertEqual(len(payload[0]["dispensers"]), 1)
+        self.assertEqual(payload[0]["dispensers"][0]["identifier"], allowed_dispenser.identifier)
+
+    def test_list_products_only_returns_branch_admin_branch_area_products(self):
+        client = Client.objects.create(name="Cliente Branch", code="CLI-BRANCH")
+        allowed_branch = Branch.objects.create(client=client, name="Sucursal Permitida")
+        blocked_branch = Branch.objects.create(client=client, name="Sucursal Bloqueada")
+        allowed_area = Area.objects.create(branch=allowed_branch, name="Área Permitida")
+        blocked_area = Area.objects.create(branch=blocked_branch, name="Área Bloqueada")
+        model = DispenserModel.objects.create(name="Modelo Branch")
+
+        allowed_dispenser = Dispenser.objects.create(model=model, identifier="DSP-BR-ALLOW", area=allowed_area)
+        blocked_dispenser = Dispenser.objects.create(model=model, identifier="DSP-BR-BLOCK", area=blocked_area)
+
+        visible_product = Product.objects.create(name="Producto sucursal visible")
+        hidden_product = Product.objects.create(name="Producto sucursal oculto")
+
+        DispenserProductAssignment.objects.create(dispenser=allowed_dispenser, product=visible_product)
+        DispenserProductAssignment.objects.create(dispenser=blocked_dispenser, product=hidden_product)
+        DispenserProductAssignment.objects.create(dispenser=blocked_dispenser, product=visible_product)
+
+        branch_admin = User.objects.create_user(
+            username="branch-products",
+            email="branch-products@test.com",
+            password="secret123",
+            role=User.Role.BRANCH_ADMIN,
+        )
+        branch_admin.branches.add(allowed_branch)
+
+        response = self.client.get(
+            "/api/products/",
+            HTTP_X_CURRENT_USER_EMAIL=branch_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()["results"]
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["name"], visible_product.name)
+        self.assertEqual(len(payload[0]["dispensers"]), 1)
+        self.assertEqual(payload[0]["dispensers"][0]["identifier"], allowed_dispenser.identifier)
+
 
 class AdminDeletionTests(TestCase):
     def setUp(self):

@@ -508,7 +508,7 @@ def _serialize_dispenser_model(model: DispenserModel) -> dict:
     }
 
 
-def _serialize_product(product: Product) -> dict:
+def _serialize_product(product: Product, allowed_area_ids: set[int] | None = None) -> dict:
     dispensers = [
         {
             "id": dispenser.id,
@@ -516,6 +516,7 @@ def _serialize_product(product: Product) -> dict:
             "model": dispenser.model.name,
         }
         for dispenser in product.dispensers.all()
+        if allowed_area_ids is None or dispenser.area_id in allowed_area_ids
     ]
     return {
         "id": product.id,
@@ -3039,8 +3040,15 @@ def dispenser_detail(request, dispenser_id: int):
 def products(request):
     if request.method == "GET":
         queryset = Product.objects.prefetch_related("dispensers__model")
+        scope = _get_access_scope(request)
+        queryset = _filter_queryset_by_scope(
+            queryset,
+            scope,
+            area_lookup="dispensers__area_id",
+        ).distinct()
+        allowed_area_ids = set(scope["area_ids"]) if scope is not None else None
         payload = [
-            _serialize_product(product)
+            _serialize_product(product, allowed_area_ids=allowed_area_ids)
             for product in queryset.all()
         ]
         return JsonResponse({"results": payload})
