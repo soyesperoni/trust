@@ -37,6 +37,7 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
+from .fcm_manager import send_push_notification_to_devices
 from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, IncidentMedia, Nozzle, Product, User, Visit, VisitMedia
 from .report_templates import build_audit_report_html, build_visit_report_html
 
@@ -308,6 +309,7 @@ def _collect_related_area_users(area: Area) -> list[dict[str, Any]]:
             | Q(branches=area.branch)
             | Q(clients=area.branch.client)
         )
+        .filter(is_active=True)
         .distinct()
         .order_by("id")
     )
@@ -324,6 +326,38 @@ def _collect_related_area_users(area: Area) -> list[dict[str, Any]]:
             }
         )
     return payload
+
+
+def _send_area_push_notification(
+    *,
+    area: Area,
+    title: str,
+    body: str,
+    data: dict[str, str] | None = None,
+) -> int:
+    related_user_ids = list(
+        User.objects.filter(
+            Q(areas=area)
+            | Q(branches=area.branch)
+            | Q(clients=area.branch.client)
+        )
+        .filter(is_active=True)
+        .values_list("id", flat=True)
+        .distinct()
+    )
+    if not related_user_ids:
+        return 0
+
+    devices = FCMDevice.objects.filter(user_id__in=related_user_ids)
+    if not devices.exists():
+        return 0
+
+    return send_push_notification_to_devices(
+        devices,
+        title=title,
+        body=body,
+        data=data,
+    )
 
 
 def _post_json_webhook(url: str, payload: dict[str, Any]) -> None:
@@ -3170,6 +3204,18 @@ def visits(request):
         create_kwargs["visited_at"] = visited_at
 
     visit = Visit.objects.create(**create_kwargs)
+    _send_area_push_notification(
+        area=area,
+        title="Visita programada",
+        body=f"{area.branch.name} · {area.name}: visita programada.",
+        data={
+            "event": "visit_scheduled",
+            "visit_id": str(visit.id),
+            "area_id": str(area.id),
+            "branch_id": str(area.branch_id),
+            "client_id": str(area.branch.client_id),
+        },
+    )
 
     return JsonResponse(_serialize_visit(visit), status=201)
 
@@ -3283,6 +3329,18 @@ def visit_mobile_flow(request, visit_id: int):
                 "visit": visit_payload,
                 "related_area_users": _collect_related_area_users(visit.area),
                 "visit_confirmation_pdf_base64": visit_pdf_base64,
+            },
+        )
+        _send_area_push_notification(
+            area=visit.area,
+            title="Visita finalizada",
+            body=f"{visit.area.branch.name} · {visit.area.name}: visita completada.",
+            data={
+                "event": "visit_completed",
+                "visit_id": str(visit.id),
+                "area_id": str(visit.area_id),
+                "branch_id": str(visit.area.branch_id),
+                "client_id": str(visit.area.branch.client_id),
             },
         )
 
@@ -3441,6 +3499,18 @@ def audits(request):
         create_kwargs["audited_at"] = audited_at
 
     audit = Audit.objects.create(**create_kwargs)
+    _send_area_push_notification(
+        area=area,
+        title="Auditoría programada",
+        body=f"{area.branch.name} · {area.name}: auditoría programada.",
+        data={
+            "event": "audit_scheduled",
+            "audit_id": str(audit.id),
+            "area_id": str(area.id),
+            "branch_id": str(area.branch_id),
+            "client_id": str(area.branch.client_id),
+        },
+    )
     return JsonResponse(_serialize_audit(audit), status=201)
 
 
@@ -3557,6 +3627,18 @@ def audit_mobile_flow(request, audit_id: int):
                 "source": "flutter",
                 "audit": _serialize_audit(audit),
                 "related_area_users": _collect_related_area_users(audit.area),
+            },
+        )
+        _send_area_push_notification(
+            area=audit.area,
+            title="Auditoría finalizada",
+            body=f"{audit.area.branch.name} · {audit.area.name}: auditoría completada.",
+            data={
+                "event": "audit_completed",
+                "audit_id": str(audit.id),
+                "area_id": str(audit.area_id),
+                "branch_id": str(audit.area.branch_id),
+                "client_id": str(audit.area.branch.client_id),
             },
         )
 
@@ -4090,6 +4172,18 @@ def incidents(request):
             "related_area_users": _collect_related_area_users(area),
         },
     )
+    _send_area_push_notification(
+        area=area,
+        title="Nueva incidencia",
+        body=f"{branch.name} · {area.name}: {description}",
+        data={
+            "event": "incident_created",
+            "incident_id": str(incident.id),
+            "area_id": str(area.id),
+            "branch_id": str(branch.id),
+            "client_id": str(client.id),
+        },
+    )
 
     return JsonResponse(_serialize_incident(incident), status=201)
 
@@ -4150,6 +4244,18 @@ def incident_schedule_visit(request, incident_id: int):
         visited_at=visited_at,
         notes=f"[INCIDENCIA #{incident.id}] {notes}".strip(),
         status=Visit.Status.SCHEDULED,
+    )
+    _send_area_push_notification(
+        area=incident.area,
+        title="Visita programada",
+        body=f"{incident.area.branch.name} · {incident.area.name}: visita programada desde incidencia.",
+        data={
+            "event": "visit_scheduled",
+            "visit_id": str(visit.id),
+            "area_id": str(incident.area_id),
+            "branch_id": str(incident.area.branch_id),
+            "client_id": str(incident.client_id),
+        },
     )
 
     incident.delete()
