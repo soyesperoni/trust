@@ -35,6 +35,7 @@ function AgendarVisitaPageContent() {
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
   const [notes, setNotes] = useState("");
+  const [visitType, setVisitType] = useState<"technical" | "commercial">("technical");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,6 +103,7 @@ function AgendarVisitaPageContent() {
         body: JSON.stringify({
           visited_at: visitedAt,
           notes,
+          visit_type: visitType,
         }),
       });
 
@@ -159,6 +161,13 @@ function AgendarVisitaPageContent() {
                   <input className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800" onChange={(e) => setTime(e.target.value)} required type="time" value={time} />
                 </label>
               </div>
+
+              <label className="block text-sm text-slate-600 dark:text-slate-300">Tipo de visita
+                <select className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800" onChange={(e) => setVisitType(e.target.value as "technical" | "commercial")} value={visitType}>
+                  <option value="technical">Técnica</option>
+                  <option value="commercial">Comercial</option>
+                </select>
+              </label>
 
               <label className="block text-sm text-slate-600 dark:text-slate-300">Observaciones
                 <textarea className="mt-1 h-28 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800" onChange={(e) => setNotes(e.target.value)} placeholder="Instrucciones para la visita programada." value={notes} />

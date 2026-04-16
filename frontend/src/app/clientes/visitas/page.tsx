@@ -18,6 +18,7 @@ type Visit = {
   visited_at: string;
   notes: string;
   status?: string;
+  visit_type?: "technical" | "commercial";
   start_latitude?: number | null;
   start_longitude?: number | null;
   end_latitude?: number | null;
@@ -151,6 +152,12 @@ export default function VisitasPage() {
     if (typeLabel === "Finalizada") return "finalizada" as const;
     if (typeLabel === "Vencida") return "vencida" as const;
     return "programada" as const;
+  };
+
+
+  const visitCategoryLabel = (visitType?: string) => {
+    if ((visitType ?? "").trim().toLowerCase() === "commercial") return "Comercial";
+    return "Técnica";
   };
 
   const buildOpenStreetMapLink = (visit: Visit) => {
@@ -410,6 +417,7 @@ export default function VisitasPage() {
                       <span className="material-symbols-outlined text-[18px] text-slate-400 dark:text-slate-500">store</span>
                       <span>{visit.branch}</span>
                     </div>
+                    <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Tipo: {visitCategoryLabel(visit.visit_type)}</div>
                     <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300 mt-1">
                       <span className="material-symbols-outlined text-[18px] text-slate-400 dark:text-slate-500">schedule</span>
                       <span>{formatted.date} · {formatted.time}</span>
@@ -616,13 +624,18 @@ export default function VisitasPage() {
                           {visit.inspector}
                         </td>
                         <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
-                              typeStyles[typeLabel] ?? typeStyles.Finalizada
-                            }`}
-                          >
-                            {typeLabel}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
+                                typeStyles[typeLabel] ?? typeStyles.Finalizada
+                              }`}
+                            >
+                              {typeLabel}
+                            </span>
+                            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                              {visitCategoryLabel(visit.visit_type)}
+                            </span>
+                          </div>
                         </td>
                         <td className="whitespace-nowrap px-6 py-4">
                           <div className="flex justify-end items-center gap-2">

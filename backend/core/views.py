@@ -657,6 +657,13 @@ def _normalize_dispenser_report_entries(visit: Visit) -> list[dict[str, Any]]:
     return normalized_entries
 
 
+def _normalize_visit_type(raw_visit_type: Any) -> str:
+    normalized = str(raw_visit_type or "").strip().lower()
+    if normalized in {"comercial", "commercial"}:
+        return Visit.VisitType.COMMERCIAL
+    return Visit.VisitType.TECHNICAL
+
+
 def _serialize_visit(visit: Visit) -> dict:
     inspector = "Sin asignar"
     inspector_id = None
@@ -685,6 +692,8 @@ def _serialize_visit(visit: Visit) -> dict:
         "inspector_id": inspector_id,
         "visited_at": visit.visited_at.isoformat(),
         "notes": visit.notes,
+        "visit_type": visit.visit_type,
+        "visit_type_label": visit.get_visit_type_display(),
         "status": status,
         "status_label": status_label,
         "started_at": visit.started_at.isoformat() if visit.started_at else None,
@@ -3189,6 +3198,7 @@ def visits(request):
             return JsonResponse({"error": "Dosificador no válido."}, status=400)
 
     notes = str(data.get("notes") or "").strip()
+    visit_type = _normalize_visit_type(data.get("visit_type"))
 
     visited_at = None
     visited_at_input = str(data.get("visited_at") or "").strip()
@@ -3206,6 +3216,7 @@ def visits(request):
         "dispenser": dispenser,
         "inspector": None,
         "notes": notes,
+        "visit_type": visit_type,
         "status": Visit.Status.SCHEDULED,
     }
     if visited_at:
@@ -4244,6 +4255,7 @@ def incident_schedule_visit(request, incident_id: int):
         return JsonResponse({"error": "La fecha/hora de la visita no tiene un formato válido."}, status=400)
 
     notes = str(data.get("notes") or "").strip()
+    visit_type = _normalize_visit_type(data.get("visit_type"))
 
     visit = Visit.objects.create(
         area=incident.area,
@@ -4251,6 +4263,7 @@ def incident_schedule_visit(request, incident_id: int):
         inspector=None,
         visited_at=visited_at,
         notes=f"[INCIDENCIA #{incident.id}] {notes}".strip(),
+        visit_type=visit_type,
         status=Visit.Status.SCHEDULED,
     )
     _send_area_push_notification(

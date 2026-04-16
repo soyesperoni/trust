@@ -288,8 +288,8 @@ class NozzleAdmin(admin.ModelAdmin):
 
 @admin.register(Visit)
 class VisitAdmin(admin.ModelAdmin):
-    list_display = ("area", "inspector", "visited_at")
-    list_filter = ("area__branch__client", "area__branch", "inspector")
+    list_display = ("area", "visit_type", "inspector", "visited_at")
+    list_filter = ("visit_type", "area__branch__client", "area__branch", "inspector")
     search_fields = ("area__name", "inspector__username")
     exclude = ("dispenser",)
     inlines = [VisitMediaInline]

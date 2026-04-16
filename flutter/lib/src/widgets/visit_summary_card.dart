@@ -107,6 +107,8 @@ class VisitSummaryCard extends StatelessWidget {
           const SizedBox(height: 8),
           _infoRow(context, Icons.place_outlined, 'Área: ${visit.area}'),
           const SizedBox(height: 8),
+          _infoRow(context, Icons.category_outlined, 'Tipo: ${visit.visitTypeLabel}'),
+          const SizedBox(height: 8),
           _infoRow(context, Icons.water_drop_outlined, 'Dosificadores: ${visit.areaDispensersCount}'),
           if (!status.isCompleted) ...[
             const SizedBox(height: 14),
