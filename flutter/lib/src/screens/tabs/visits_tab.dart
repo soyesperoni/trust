@@ -298,61 +298,59 @@ class _HistoryHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: HistoryTypeFilter.values
                 .map(
-                  (filter) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(filter.label),
-                      selected: selectedTypeFilter == filter,
-                      showCheckmark: false,
-                      selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary,
-                      backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
-                      side: BorderSide(
-                        color: selectedTypeFilter == filter
-                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary)
-                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
-                      ),
-                      labelStyle: TextStyle(
-                        color: selectedTypeFilter == filter
-                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.black : Colors.white)
-                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      onSelected: (_) => onTypeFilterChanged(filter),
+                  (filter) => ChoiceChip(
+                    label: Text(filter.label),
+                    selected: selectedTypeFilter == filter,
+                    showCheckmark: false,
+                    selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary,
+                    backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
+                    side: BorderSide(
+                      color: selectedTypeFilter == filter
+                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary)
+                          : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
                     ),
+                    labelStyle: TextStyle(
+                      color: selectedTypeFilter == filter
+                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.black : Colors.white)
+                          : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: (_) => onTypeFilterChanged(filter),
                   ),
                 )
                 .toList(),
           ),
           const SizedBox(height: 10),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: VisitStatusFilter.values
                 .map(
-                  (filter) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(filter.label),
-                      selected: selectedFilter == filter,
-                      showCheckmark: false,
-                      selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary,
-                      backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
-                      side: BorderSide(
-                        color: selectedFilter == filter
-                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary)
-                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
-                      ),
-                      labelStyle: TextStyle(
-                        color: selectedFilter == filter
-                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.black : Colors.white)
-                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      onSelected: (_) => onFilterChanged(filter),
+                  (filter) => ChoiceChip(
+                    label: Text(filter.label),
+                    selected: selectedFilter == filter,
+                    showCheckmark: false,
+                    selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary,
+                    backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
+                    side: BorderSide(
+                      color: selectedFilter == filter
+                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary)
+                          : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
                     ),
+                    labelStyle: TextStyle(
+                      color: selectedFilter == filter
+                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.black : Colors.white)
+                          : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: (_) => onFilterChanged(filter),
                   ),
                 )
                 .toList(),
