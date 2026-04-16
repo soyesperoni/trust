@@ -273,6 +273,7 @@ class _HistoryHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
             controller: searchController,
@@ -298,62 +299,68 @@ class _HistoryHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: HistoryTypeFilter.values
-                .map(
-                  (filter) => ChoiceChip(
-                    label: Text(filter.label),
-                    selected: selectedTypeFilter == filter,
-                    showCheckmark: false,
-                    selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary,
-                    backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
-                    side: BorderSide(
-                      color: selectedTypeFilter == filter
-                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary)
-                          : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: HistoryTypeFilter.values
+                  .map(
+                    (filter) => ChoiceChip(
+                      label: Text(filter.label),
+                      selected: selectedTypeFilter == filter,
+                      showCheckmark: false,
+                      selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary,
+                      backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
+                      side: BorderSide(
+                        color: selectedTypeFilter == filter
+                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary)
+                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
+                      ),
+                      labelStyle: TextStyle(
+                        color: selectedTypeFilter == filter
+                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.black : Colors.white)
+                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) => onTypeFilterChanged(filter),
                     ),
-                    labelStyle: TextStyle(
-                      color: selectedTypeFilter == filter
-                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.black : Colors.white)
-                          : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    onSelected: (_) => onTypeFilterChanged(filter),
-                  ),
-                )
-                .toList(),
+                  )
+                  .toList(),
+            ),
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: VisitStatusFilter.values
-                .map(
-                  (filter) => ChoiceChip(
-                    label: Text(filter.label),
-                    selected: selectedFilter == filter,
-                    showCheckmark: false,
-                    selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary,
-                    backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
-                    side: BorderSide(
-                      color: selectedFilter == filter
-                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary)
-                          : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: VisitStatusFilter.values
+                  .map(
+                    (filter) => ChoiceChip(
+                      label: Text(filter.label),
+                      selected: selectedFilter == filter,
+                      showCheckmark: false,
+                      selectedColor: Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary,
+                      backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
+                      side: BorderSide(
+                        color: selectedFilter == filter
+                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.yellow : AppColors.primary)
+                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkCardBorder : AppColors.gray300),
+                      ),
+                      labelStyle: TextStyle(
+                        color: selectedFilter == filter
+                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.black : Colors.white)
+                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) => onFilterChanged(filter),
                     ),
-                    labelStyle: TextStyle(
-                      color: selectedFilter == filter
-                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.black : Colors.white)
-                          : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkMuted : AppColors.gray700),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    onSelected: (_) => onFilterChanged(filter),
-                  ),
-                )
-                .toList(),
+                  )
+                  .toList(),
+            ),
           ),
         ],
       ),
