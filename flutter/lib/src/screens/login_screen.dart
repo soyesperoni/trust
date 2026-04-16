@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -100,6 +101,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) {
         return;
       }
+      await _requestNotificationPermission();
+      if (!mounted) {
+        return;
+      }
       _goToHome(email: finalEmail, role: resolvedRole);
     } catch (error) {
       if (!mounted) {
@@ -152,6 +157,10 @@ class _LoginScreenState extends State<LoginScreen> {
       final finalEmail =
           (resolvedEmail == null || resolvedEmail.isEmpty) ? storedEmail : resolvedEmail;
 
+      if (!mounted) {
+        return;
+      }
+      await _requestNotificationPermission();
       if (!mounted) {
         return;
       }
@@ -252,6 +261,18 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    try {
+      await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    } catch (_) {
+      // Evita bloquear el flujo de login si no se pudo solicitar el permiso.
+    }
   }
 
 
