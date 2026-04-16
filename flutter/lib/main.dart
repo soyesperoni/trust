@@ -225,7 +225,7 @@ class _TrustAppState extends State<TrustApp> {
           ? const TrustSplashScreen()
           : LoginScreen(
               isDarkMode: _isDarkMode,
-              onToggleTheme: _toggleThemeMode,
+              onToggleThemeMode: _toggleThemeMode,
             ),
     );
   }
