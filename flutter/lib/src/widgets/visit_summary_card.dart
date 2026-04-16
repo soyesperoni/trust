@@ -24,7 +24,7 @@ class VisitSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final status = _badgeForStatus(visit.status, isDark);
-    final canStartVisit = !status.isCompleted && status.label == 'Programada' && role.isInspector;
+    final canStartVisit = !status.isCompleted && !status.isPending && role.isInspector;
 
     final cardColor = isDark ? AppColors.darkCard : const Color(0xFFF9FAFB);
     final borderColor = isDark ? AppColors.darkCardBorder : const Color(0xFFE5E7EB);
@@ -238,6 +238,16 @@ class VisitSummaryCard extends StatelessWidget {
         background: isDark ? const Color(0x1F22C55E) : const Color(0xFFDCFCE7),
         foreground: isDark ? const Color(0xFF86EFAC) : const Color(0xFF15803D),
         isCompleted: true,
+        isPending: false,
+      );
+    }
+    if (status.contains('overdue') || status.contains('vencid')) {
+      return _StatusBadge(
+        label: 'Vencida',
+        background: isDark ? const Color(0x1FB91C1C) : const Color(0xFFFEE2E2),
+        foreground: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C),
+        isCompleted: false,
+        isPending: false,
       );
     }
     if (status.contains('pend')) {
@@ -246,6 +256,7 @@ class VisitSummaryCard extends StatelessWidget {
         background: isDark ? const Color(0x1F94A3B8) : const Color(0xFFE5E7EB),
         foreground: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF374151),
         isCompleted: false,
+        isPending: true,
       );
     }
     return _StatusBadge(
@@ -253,6 +264,7 @@ class VisitSummaryCard extends StatelessWidget {
       background: isDark ? const Color(0x1F3B82F6) : const Color(0xFFDBEAFE),
       foreground: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
       isCompleted: false,
+      isPending: false,
     );
   }
 
@@ -275,10 +287,12 @@ class _StatusBadge {
     required this.background,
     required this.foreground,
     required this.isCompleted,
+    required this.isPending,
   });
 
   final String label;
   final Color background;
   final Color foreground;
   final bool isCompleted;
+  final bool isPending;
 }

@@ -208,6 +208,14 @@ class AuditSummaryCard extends StatelessWidget {
         isCompleted: true,
       );
     }
+    if (value.contains('overdue') || value.contains('vencid')) {
+      return _StatusBadge(
+        label: 'Vencida',
+        background: isDark ? const Color(0x1FB91C1C) : const Color(0xFFFEE2E2),
+        foreground: isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C),
+        isCompleted: false,
+      );
+    }
 
     return _StatusBadge(
       label: 'Programada',
