@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from config import settings_prod
 from .admin import DispenserAdmin, ProductAdmin
-from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, DispenserProductAssignment, Incident, Product, User, Visit
+from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, Product, User, Visit
 from .report_templates import build_visit_report_html
 from .views import _fallback_audit_ai_analysis
 
@@ -693,6 +693,44 @@ class LoginApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["user"]["email"], self.user.email)
+
+    def test_login_creates_fcm_device_when_token_is_sent(self):
+        response = self.client.post(
+            "/api/login/",
+            data=json.dumps(
+                {
+                    "email": self.user.email,
+                    "password": "secret123",
+                    "fcm_token": "token-login-1",
+                    "device_type": FCMDevice.DeviceType.ANDROID,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            FCMDevice.objects.filter(
+                user=self.user,
+                registration_id="token-login-1",
+                device_type=FCMDevice.DeviceType.ANDROID,
+            ).exists()
+        )
+
+    def test_login_does_not_create_fcm_device_when_token_is_missing(self):
+        response = self.client.post(
+            "/api/login/",
+            data=json.dumps(
+                {
+                    "email": self.user.email,
+                    "password": "secret123",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(FCMDevice.objects.count(), 0)
 
 
 class HierarchicalAccessScopeTests(TestCase):
