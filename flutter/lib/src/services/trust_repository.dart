@@ -17,8 +17,15 @@ class TrustRepository {
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
+    String? fcmToken,
+    String? deviceType,
   }) {
-    return _apiClient.login(email: email, password: password);
+    return _apiClient.login(
+      email: email,
+      password: password,
+      fcmToken: fcmToken,
+      deviceType: deviceType,
+    );
   }
 
   Future<DashboardStats> loadDashboardStats(String email) async {

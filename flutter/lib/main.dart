@@ -1,11 +1,11 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'firebase_options.dart';
 import 'src/screens/login_screen.dart';
 import 'src/theme/app_colors.dart';
+import 'src/services/push_notification_service.dart';
 
 final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -85,21 +85,7 @@ class _TrustAppState extends State<TrustApp> {
   }
 
   void _initFirebaseMessaging() {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('¡LLEGÓ UN MENSAJE EN PRIMER PLANO!');
-
-      if (message.notification != null) {
-        messengerKey.currentState?.showSnackBar(
-          SnackBar(
-            content: Text(
-              '${message.notification!.title}: ${message.notification!.body}',
-            ),
-            backgroundColor: AppColors.secondary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    });
+    PushNotificationService.instance.init(messengerKey: messengerKey);
   }
 
   void _toggleThemeMode() {
