@@ -1,10 +1,17 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'firebase_options.dart';
 import 'src/screens/login_screen.dart';
 import 'src/theme/app_colors.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const TrustApp());
 }
 
@@ -218,132 +225,61 @@ class _TrustAppState extends State<TrustApp> {
           ? const TrustSplashScreen()
           : LoginScreen(
               isDarkMode: _isDarkMode,
-              onToggleThemeMode: _toggleThemeMode,
+              onToggleTheme: _toggleThemeMode,
             ),
     );
   }
 }
 
-class TrustSplashScreen extends StatefulWidget {
+class TrustSplashScreen extends StatelessWidget {
   const TrustSplashScreen({super.key});
 
   @override
-  State<TrustSplashScreen> createState() => _TrustSplashScreenState();
-}
-
-class _TrustSplashScreenState extends State<TrustSplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2800),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final progress = _controller.value;
-        final pulse = 1 + (0.08 * (0.5 - (progress - 0.5).abs()) * 2);
-
-        return Scaffold(
-          body: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF0B0F1A), Color(0xFF151D2E), Color(0xFF1F2B46)],
+    return Scaffold(
+      backgroundColor: AppColors.primary,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: const Icon(Icons.shield_outlined, color: Colors.white, size: 44),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Trust',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 30,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
               ),
             ),
-            child: Stack(
-              children: [
-                Positioned(
-                  top: -60 + (30 * progress),
-                  right: -30,
-                  child: _glowBubble(180, AppColors.yellow.withValues(alpha: 0.12)),
-                ),
-                Positioned(
-                  bottom: -80 + (25 * (1 - progress)),
-                  left: -40,
-                  child: _glowBubble(220, AppColors.primary.withValues(alpha: 0.18)),
-                ),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Transform.scale(
-                        scale: pulse,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Transform.rotate(
-                              angle: progress * 6.28,
-                              child: Container(
-                                width: 118,
-                                height: 118,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: AppColors.yellow.withValues(alpha: 0.35),
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Image.asset(
-                              'assets/icon/trust_logo_s.png',
-                              height: 64,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Bienvenido a Trust',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Preparando tu experiencia...',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white.withValues(alpha: 0.72),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            const SizedBox(height: 8),
+            Text(
+              'Inspecciones inteligentes',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.85),
+                fontSize: 15,
+              ),
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _glowBubble(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
+            const SizedBox(height: 30),
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.8,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
