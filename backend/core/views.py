@@ -37,7 +37,7 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, Incident, IncidentMedia, Nozzle, Product, User, Visit, VisitMedia
+from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, IncidentMedia, Nozzle, Product, User, Visit, VisitMedia
 from .report_templates import build_audit_report_html, build_visit_report_html
 
 
@@ -4137,6 +4137,34 @@ def incident_schedule_visit(request, incident_id: int):
 
     return JsonResponse(_serialize_visit(visit), status=201)
 
+
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def register_fcm_token(request):
+    current_user = _get_current_user(request)
+    if not current_user:
+        return JsonResponse({"error": "Usuario no autenticado."}, status=401)
+
+    data, _ = _extract_user_data(request)
+    if data is None:
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    token = str(data.get("fcm_token") or "").strip()
+    if not token:
+        return JsonResponse({"error": "No token provided"}, status=400)
+
+    device_type = str(data.get("device_type") or FCMDevice.DeviceType.ANDROID).strip().lower()
+    valid_types = {choice[0] for choice in FCMDevice.DeviceType.choices}
+    if device_type not in valid_types:
+        device_type = FCMDevice.DeviceType.ANDROID
+
+    FCMDevice.objects.update_or_create(
+        registration_id=token,
+        defaults={"user": current_user, "device_type": device_type},
+    )
+    return JsonResponse({"status": "success"})
 
 @csrf_exempt
 @require_http_methods(["POST"])

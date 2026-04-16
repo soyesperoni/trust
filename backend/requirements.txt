@@ -4,3 +4,4 @@ whitenoise
 Pillow
 reportlab
 svglib==1.5.1
+firebase-admin

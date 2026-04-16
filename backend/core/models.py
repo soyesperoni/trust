@@ -329,3 +329,42 @@ class User(AbstractUser):
 
     def __str__(self) -> str:
         return f"{self.get_full_name() or self.username} ({self.get_role_display()})"
+
+
+class FirebaseConfig(models.Model):
+    nombre = models.CharField(max_length=100, default="Configuración Principal")
+    archivo_json = models.FileField(
+        upload_to="secrets/",
+        help_text="Sube el JSON de la cuenta de servicio",
+    )
+    proyecto_id = models.CharField(max_length=100, help_text="ID del proyecto de Firebase")
+    esta_activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Configuración Firebase"
+        verbose_name_plural = "Configuración Firebase"
+
+    def __str__(self) -> str:
+        return self.nombre
+
+
+class FCMDevice(models.Model):
+    class DeviceType(models.TextChoices):
+        ANDROID = "android", "Android"
+        IOS = "ios", "iOS"
+
+    user = models.ForeignKey(
+        'core.User',
+        on_delete=models.CASCADE,
+        related_name='fcm_devices',
+    )
+    registration_id = models.TextField(unique=True)
+    device_type = models.CharField(max_length=20, choices=DeviceType.choices, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Dispositivo FCM"
+        verbose_name_plural = "Dispositivos FCM"
+
+    def __str__(self) -> str:
+        return f"{self.user_id} - {self.device_type or 'unknown'}"

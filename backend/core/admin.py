@@ -10,6 +10,8 @@ from .models import (
     AuditForm,
     AuditMedia,
     DeepSeekAPISettings,
+    FCMDevice,
+    FirebaseConfig,
     Branch,
     Client,
     Dispenser,
@@ -148,6 +150,21 @@ class SafeDeleteAdminMixin:
                 level=messages.ERROR,
             )
 
+
+
+
+@admin.register(FirebaseConfig)
+class FirebaseConfigAdmin(admin.ModelAdmin):
+    list_display = ("nombre", "proyecto_id", "esta_activo")
+    list_filter = ("esta_activo",)
+    search_fields = ("nombre", "proyecto_id")
+
+
+@admin.register(FCMDevice)
+class FCMDeviceAdmin(admin.ModelAdmin):
+    list_display = ("user", "device_type", "created_at")
+    list_filter = ("device_type",)
+    search_fields = ("user__email", "registration_id")
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
