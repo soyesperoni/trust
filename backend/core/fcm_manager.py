@@ -20,13 +20,12 @@ def _get_firebase_app():
     return firebase_admin.initialize_app(cred)
 
 
-def send_push_notification(user, title: str, body: str, data: dict[str, str] | None = None) -> int:
+def _send_to_tokens(tokens: list[str], title: str, body: str, data: dict[str, str] | None = None) -> int:
     app = _get_firebase_app()
     if not app:
         logger.warning("Firebase no está configurado o activo.")
         return 0
 
-    tokens = list(user.fcm_devices.values_list("registration_id", flat=True))
     if not tokens:
         return 0
 
@@ -38,3 +37,13 @@ def send_push_notification(user, title: str, body: str, data: dict[str, str] | N
     response = messaging.send_each_for_multicast(message, app=app)
     logger.info("Notificaciones FCM enviadas: %s", response.success_count)
     return response.success_count
+
+
+def send_push_notification(user, title: str, body: str, data: dict[str, str] | None = None) -> int:
+    tokens = list(user.fcm_devices.values_list("registration_id", flat=True))
+    return _send_to_tokens(tokens, title=title, body=body, data=data)
+
+
+def send_push_notification_to_devices(devices, title: str, body: str, data: dict[str, str] | None = None) -> int:
+    tokens = list(devices.values_list("registration_id", flat=True).distinct())
+    return _send_to_tokens(tokens, title=title, body=body, data=data)

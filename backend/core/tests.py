@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.core import signing
@@ -16,6 +17,7 @@ from django.utils import timezone
 
 from config import settings_prod
 from .admin import DispenserAdmin, ProductAdmin
+from .fcm_manager import send_push_notification_to_devices
 from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, Product, User, Visit
 from .report_templates import build_visit_report_html
 from .views import _fallback_audit_ai_analysis
@@ -1411,3 +1413,48 @@ class AuditApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
+
+
+class FCMManagerTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="push-user",
+            email="push@test.com",
+            password="secret123",
+        )
+
+    @patch("core.fcm_manager.messaging.send_each_for_multicast")
+    @patch("core.fcm_manager._get_firebase_app")
+    def test_send_push_notification_to_devices_sends_distinct_tokens(self, app_mock, multicast_mock):
+        app_mock.return_value = object()
+        multicast_mock.return_value = SimpleNamespace(success_count=1)
+
+        FCMDevice.objects.create(user=self.user, registration_id="token-1", device_type=FCMDevice.DeviceType.ANDROID)
+        FCMDevice.objects.create(user=self.user, registration_id="token-2", device_type=FCMDevice.DeviceType.IOS)
+
+        sent = send_push_notification_to_devices(
+            FCMDevice.objects.filter(user=self.user),
+            title="Titulo",
+            body="Mensaje",
+            data={"kind": "test"},
+        )
+
+        self.assertEqual(sent, 1)
+        multicast_mock.assert_called_once()
+        message = multicast_mock.call_args.args[0]
+        self.assertCountEqual(message.tokens, ["token-1", "token-2"])
+
+    @patch("core.fcm_manager.messaging.send_each_for_multicast")
+    @patch("core.fcm_manager._get_firebase_app")
+    def test_send_push_notification_to_devices_returns_zero_when_firebase_not_configured(self, app_mock, multicast_mock):
+        app_mock.return_value = None
+        FCMDevice.objects.create(user=self.user, registration_id="token-1", device_type=FCMDevice.DeviceType.ANDROID)
+
+        sent = send_push_notification_to_devices(
+            FCMDevice.objects.filter(user=self.user),
+            title="Titulo",
+            body="Mensaje",
+        )
+
+        self.assertEqual(sent, 0)
+        multicast_mock.assert_not_called()
