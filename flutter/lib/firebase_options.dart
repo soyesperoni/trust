@@ -42,7 +42,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyB2BnZMKBRFblSrinHh8Z_v1wPMGYuNHvI',
-    appId: '1:971144054329:android:4ec8126196ca451e3befe8',
+    appId: '1:971144054329:android:4e62c56828d59b723befe8',
     messagingSenderId: '971144054329',
     projectId: 'trustmobile-bd90d',
     storageBucket: 'trustmobile-bd90d.firebasestorage.app',
@@ -50,10 +50,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyD58S3Ok5ZBJBfNX0oqfxnsXyAyjF8VF34',
-    appId: '1:971144054329:ios:0c67650b328049303befe8',
+    appId: '1:971144054329:ios:0da2ffd31585f9b63befe8',
     messagingSenderId: '971144054329',
     projectId: 'trustmobile-bd90d',
     storageBucket: 'trustmobile-bd90d.firebasestorage.app',
-    iosBundleId: 'com.example.trustMobile',
+    iosBundleId: 'net.supplymax.trustmobile',
   );
+
 }

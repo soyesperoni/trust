@@ -1,4 +1,4 @@
-package net.supplymax.trust_mobile
+package net.supplymax.trustmobile
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

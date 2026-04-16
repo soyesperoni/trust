@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.trustMobile</string>
+	<string>net.supplymax.trustmobile</string>
 	<key>PROJECT_ID</key>
 	<string>trustmobile-bd90d</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:971144054329:ios:0c67650b328049303befe8</string>
+	<string>1:971144054329:ios:0da2ffd31585f9b63befe8</string>
 </dict>
 </plist>
