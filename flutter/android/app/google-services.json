@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "971144054329",
+    "project_id": "trustmobile-bd90d",
+    "storage_bucket": "trustmobile-bd90d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:971144054329:android:4ec8126196ca451e3befe8",
+        "android_client_info": {
+          "package_name": "net.supplymax.trust_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2BnZMKBRFblSrinHh8Z_v1wPMGYuNHvI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
