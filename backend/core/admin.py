@@ -4,6 +4,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.db import IntegrityError, connection
 from django.db.models.deletion import ProtectedError, RestrictedError
 
+from .fcm_manager import send_push_notification_to_devices
 from .models import (
     Area,
     Audit,
@@ -165,6 +166,30 @@ class FCMDeviceAdmin(admin.ModelAdmin):
     list_display = ("user", "device_type", "created_at")
     list_filter = ("device_type",)
     search_fields = ("user__email", "registration_id")
+    actions = ("send_test_push_notification",)
+
+    @admin.action(description="Enviar notificación push de prueba")
+    def send_test_push_notification(self, request, queryset):
+        selected = queryset.count()
+        success_count = send_push_notification_to_devices(
+            queryset,
+            title="Prueba Trust",
+            body="Esta es una notificación de prueba enviada desde Django Admin.",
+            data={"source": "django_admin", "type": "test_push"},
+        )
+
+        if success_count:
+            self.message_user(
+                request,
+                f"Notificación de prueba enviada correctamente a {success_count} dispositivo(s) de {selected} seleccionado(s).",
+                level=messages.SUCCESS,
+            )
+        else:
+            self.message_user(
+                request,
+                "No se enviaron notificaciones. Verifica la configuración de Firebase y los tokens de los dispositivos seleccionados.",
+                level=messages.WARNING,
+            )
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
