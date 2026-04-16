@@ -200,6 +200,7 @@ class TrustRepository {
     required String name,
     required String code,
     String notes = '',
+    String visitType = 'technical',
   }) {
     return _apiClient.postJson(
       '/clients/',
@@ -208,6 +209,7 @@ class TrustRepository {
         'name': name,
         'code': code,
         'notes': notes,
+        'visit_type': visitType,
       },
     );
   }
@@ -508,6 +510,7 @@ class TrustRepository {
     required int? inspectorId,
     required DateTime visitedAt,
     String notes = '',
+    String visitType = 'technical',
   }) {
     return _apiClient.postJson(
       '/incidents/$incidentId/schedule-visit/',
@@ -516,6 +519,7 @@ class TrustRepository {
         if (inspectorId != null) 'inspector_id': inspectorId,
         'visited_at': visitedAt.toUtc().toIso8601String(),
         'notes': notes,
+        'visit_type': visitType,
       },
     );
   }

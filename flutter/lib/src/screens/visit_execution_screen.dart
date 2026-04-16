@@ -191,6 +191,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
           _kvRow('Cliente', visit.client),
           _kvRow('Sucursal', visit.branch),
           _kvRow('Área', visit.area),
+          _kvRow('Tipo', visit.visitTypeLabel),
         ],
       ),
     );

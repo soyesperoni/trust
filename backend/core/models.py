@@ -148,6 +148,10 @@ class Visit(models.Model):
         SCHEDULED = "scheduled", _("Programada")
         COMPLETED = "completed", _("Finalizada")
 
+    class VisitType(models.TextChoices):
+        TECHNICAL = "technical", _("Técnica")
+        COMMERCIAL = "commercial", _("Comercial")
+
     area = models.ForeignKey(Area, on_delete=models.CASCADE, related_name="visits")
     dispenser = models.ForeignKey(
         Dispenser,
@@ -165,6 +169,11 @@ class Visit(models.Model):
     )
     visited_at = models.DateTimeField(default=timezone.now)
     notes = models.TextField(blank=True)
+    visit_type = models.CharField(
+        max_length=20,
+        choices=VisitType.choices,
+        default=VisitType.TECHNICAL,
+    )
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

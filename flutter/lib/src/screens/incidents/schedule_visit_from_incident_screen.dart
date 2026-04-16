@@ -26,6 +26,7 @@ class _ScheduleVisitFromIncidentScreenState extends State<ScheduleVisitFromIncid
   List<Map<String, dynamic>> _inspectors = const [];
   int? _inspectorId;
   DateTime _selectedDateTime = DateTime.now();
+  String _visitType = 'technical';
   bool _loading = true;
   bool _isCurrentUserInspector = false;
   bool _submitting = false;
@@ -107,6 +108,7 @@ class _ScheduleVisitFromIncidentScreenState extends State<ScheduleVisitFromIncid
         inspectorId: _inspectorId,
         visitedAt: _selectedDateTime,
         notes: _notesController.text.trim(),
+        visitType: _visitType,
       );
 
       if (!mounted) return;
@@ -168,6 +170,19 @@ class _ScheduleVisitFromIncidentScreenState extends State<ScheduleVisitFromIncid
                     ),
                     const SizedBox(height: 12),
                   ],
+                  DropdownButtonFormField<String>(
+                    initialValue: _visitType,
+                    decoration: _inputDecoration(context, 'Tipo de visita'),
+                    items: const [
+                      DropdownMenuItem<String>(value: 'technical', child: Text('Técnica')),
+                      DropdownMenuItem<String>(value: 'commercial', child: Text('Comercial')),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _visitType = value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
                   InkWell(
                     onTap: _pickDateTime,
                     child: InputDecorator(

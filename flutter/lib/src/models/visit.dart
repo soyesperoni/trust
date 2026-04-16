@@ -7,6 +7,7 @@ class Visit {
     required this.visitedAt,
     required this.inspector,
     required this.status,
+    required this.visitType,
     required this.areaDispensersCount,
     required this.areaId,
   });
@@ -18,6 +19,7 @@ class Visit {
   final String visitedAt;
   final String inspector;
   final String status;
+  final String visitType;
   final int areaDispensersCount;
   final int areaId;
 
@@ -35,11 +37,15 @@ class Visit {
       visitedAt: json['visited_at'] as String? ?? '',
       inspector: json['inspector'] as String? ?? 'Sin inspector',
       status: json['status'] as String? ?? 'unknown',
+      visitType: _readVisitType(json['visit_type'] as String?),
       areaDispensersCount: _readAreaDispensersCount(json),
       areaId: _asInt(json['area_id']) ?? 0,
     );
   }
 
+
+
+  String get visitTypeLabel => visitType == 'commercial' ? 'Comercial' : 'Técnica';
   static int _readAreaDispensersCount(Map<String, dynamic> json) {
     final rawValue = _readFirstNotNull(
       json,
@@ -91,6 +97,15 @@ class Visit {
     return null;
   }
 
+
+
+  static String _readVisitType(String? rawValue) {
+    final normalized = (rawValue ?? '').trim().toLowerCase();
+    if (normalized == 'commercial' || normalized == 'comercial') {
+      return 'commercial';
+    }
+    return 'technical';
+  }
   static int? _asInt(Object? rawValue) {
     if (rawValue is int) {
       return rawValue;

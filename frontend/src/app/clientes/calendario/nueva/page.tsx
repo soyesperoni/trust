@@ -32,6 +32,7 @@ export default function NuevaVisitaPage() {
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
   const [activityType, setActivityType] = useState<"visit" | "audit">("visit");
+  const [visitType, setVisitType] = useState<"technical" | "commercial">("technical");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -118,6 +119,7 @@ export default function NuevaVisitaPage() {
         : {
             area_id: Number(areaId),
             visited_at: visitDateTime.toISOString(),
+            visit_type: visitType,
             notes: notes.trim(),
           };
 
@@ -187,6 +189,19 @@ export default function NuevaVisitaPage() {
                 </label>
               </div>
 
+
+
+              {activityType === "visit" ? (
+                <div className="md:col-span-2">
+                  <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="visitType">
+                    Tipo de visita
+                    <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="visitType" onChange={(e) => setVisitType(e.target.value as "technical" | "commercial")} value={visitType}>
+                      <option value="technical">Técnica</option>
+                      <option value="commercial">Comercial</option>
+                    </select>
+                  </label>
+                </div>
+              ) : null}
               <div className="md:col-span-2">
                 <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="client">
                   Cliente

@@ -16,14 +16,17 @@ void main() {
       });
 
       expect(visit.areaDispensersCount, 3);
+      expect(visit.visitType, 'technical');
     });
 
     test('supports alternate payload keys and numeric formats', () {
       final visit = Visit.fromJson({
         'dispensers_count': 2.0,
+        'visit_type': 'commercial',
       });
 
       expect(visit.areaDispensersCount, 2);
+      expect(visit.visitType, 'commercial');
     });
 
     test('supports nested area payload with dispenser counters', () {
