@@ -282,6 +282,25 @@ def _extract_user_data(request):
         return None, None
 
 
+def _upsert_fcm_device_for_user(user: User, data: Any) -> None:
+    if not isinstance(data, dict):
+        return
+
+    token = str(data.get("fcm_token") or "").strip()
+    if not token:
+        return
+
+    device_type = str(data.get("device_type") or FCMDevice.DeviceType.ANDROID).strip().lower()
+    valid_types = {choice[0] for choice in FCMDevice.DeviceType.choices}
+    if device_type not in valid_types:
+        device_type = FCMDevice.DeviceType.ANDROID
+
+    FCMDevice.objects.update_or_create(
+        registration_id=token,
+        defaults={"user": user, "device_type": device_type},
+    )
+
+
 def _collect_related_area_users(area: Area) -> list[dict[str, Any]]:
     users = (
         User.objects.filter(
@@ -4155,15 +4174,7 @@ def register_fcm_token(request):
     if not token:
         return JsonResponse({"error": "No token provided"}, status=400)
 
-    device_type = str(data.get("device_type") or FCMDevice.DeviceType.ANDROID).strip().lower()
-    valid_types = {choice[0] for choice in FCMDevice.DeviceType.choices}
-    if device_type not in valid_types:
-        device_type = FCMDevice.DeviceType.ANDROID
-
-    FCMDevice.objects.update_or_create(
-        registration_id=token,
-        defaults={"user": current_user, "device_type": device_type},
-    )
+    _upsert_fcm_device_for_user(current_user, data)
     return JsonResponse({"status": "success"})
 
 @csrf_exempt
@@ -4184,6 +4195,8 @@ def login(request):
         return JsonResponse({"error": "Credenciales inválidas."}, status=401)
     if not user.is_active:
         return JsonResponse({"error": "El usuario está inactivo."}, status=403)
+
+    _upsert_fcm_device_for_user(user, data)
 
     return JsonResponse({"user": _serialize_user(user)})
 
