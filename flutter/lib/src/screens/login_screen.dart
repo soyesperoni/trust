@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,6 +8,7 @@ import 'home_screen.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 import '../models/user_role.dart';
+import '../services/push_notification_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -72,6 +72,11 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+
+  Future<String?> _safeFcmToken() async {
+    return PushNotificationService.instance.getToken();
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _isSubmitting) {
       return;
@@ -81,9 +86,12 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
 
     try {
+      final fcmToken = await _safeFcmToken();
       final response = await _repository.login(
         email: email,
         password: _passwordController.text,
+        fcmToken: fcmToken,
+        deviceType: 'android',
       );
       final user = response['user'] as Map<String, dynamic>?;
       final resolvedEmail = (user?['email'] as String?)?.trim();
@@ -98,10 +106,6 @@ class _LoginScreenState extends State<LoginScreen> {
         email: finalEmail,
         password: _passwordController.text,
       );
-      if (!mounted) {
-        return;
-      }
-      await _requestNotificationPermission();
       if (!mounted) {
         return;
       }
@@ -150,17 +154,19 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception('No hay credenciales biométricas guardadas.');
       }
 
-      final response = await _repository.login(email: storedEmail, password: storedPassword);
+      final fcmToken = await _safeFcmToken();
+      final response = await _repository.login(
+        email: storedEmail,
+        password: storedPassword,
+        fcmToken: fcmToken,
+        deviceType: 'android',
+      );
       final user = response['user'] as Map<String, dynamic>?;
       final resolvedEmail = (user?['email'] as String?)?.trim();
       final resolvedRole = UserRoleParsing.fromBackendRole(user?['role'] as String?);
       final finalEmail =
           (resolvedEmail == null || resolvedEmail.isEmpty) ? storedEmail : resolvedEmail;
 
-      if (!mounted) {
-        return;
-      }
-      await _requestNotificationPermission();
       if (!mounted) {
         return;
       }
@@ -261,18 +267,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _requestNotificationPermission() async {
-    try {
-      await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-    } catch (_) {
-      // Evita bloquear el flujo de login si no se pudo solicitar el permiso.
-    }
   }
 
 

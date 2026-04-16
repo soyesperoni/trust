@@ -45,6 +45,8 @@ class ApiClient {
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
+    String? fcmToken,
+    String? deviceType,
   }) async {
     final uri = Uri.parse('$_normalizedBaseUrl/login/');
     final response = await _client.post(
@@ -55,6 +57,8 @@ class ApiClient {
       body: jsonEncode({
         'email': email,
         'password': password,
+        if (fcmToken != null && fcmToken.isNotEmpty) 'fcm_token': fcmToken,
+        if (deviceType != null && deviceType.isNotEmpty) 'device_type': deviceType,
       }),
     );
 
