@@ -28,7 +28,7 @@ export default function NuevaVisitaPage() {
 
   const [clientId, setClientId] = useState("");
   const [branchId, setBranchId] = useState("");
-  const [areaId, setAreaId] = useState("");
+  const [selectedAreaIds, setSelectedAreaIds] = useState<string[]>([]);
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState(initialTime);
   const [activityType, setActivityType] = useState<"visit" | "audit">("visit");
@@ -98,8 +98,8 @@ export default function NuevaVisitaPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!areaId) {
-      setStatusMessage("Debe seleccionar un área para registrar la visita.");
+    if (!selectedAreaIds.length) {
+      setStatusMessage("Debe seleccionar al menos un área para registrar la actividad.");
       return;
     }
 
@@ -110,37 +110,48 @@ export default function NuevaVisitaPage() {
       const visitDateTime = new Date(`${date}T${time}:00`);
       const currentUserEmail = getSessionUserEmail();
       const endpoint = activityType === "audit" ? "/api/audits/" : "/api/visits/";
-      const payloadBody = activityType === "audit"
-        ? {
-            area_id: Number(areaId),
-            audited_at: visitDateTime.toISOString(),
-            notes: notes.trim(),
+      const creationResults = await Promise.all(
+        selectedAreaIds.map(async (selectedAreaId) => {
+          const payloadBody = activityType === "audit"
+            ? {
+                area_id: Number(selectedAreaId),
+                audited_at: visitDateTime.toISOString(),
+                notes: notes.trim(),
+              }
+            : {
+                area_id: Number(selectedAreaId),
+                visited_at: visitDateTime.toISOString(),
+                visit_type: visitType,
+                notes: notes.trim(),
+              };
+
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-current-user-email": currentUserEmail },
+            body: JSON.stringify(payloadBody),
+          });
+
+          const payload = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(payload?.error ?? "No se pudo agendar una de las actividades.");
           }
-        : {
-            area_id: Number(areaId),
-            visited_at: visitDateTime.toISOString(),
-            visit_type: visitType,
-            notes: notes.trim(),
-          };
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-current-user-email": currentUserEmail },
-        body: JSON.stringify(payloadBody),
-      });
+          if (typeof payload?.id !== "number") {
+            throw new Error(
+              "No se confirmó la creación de una actividad. Intenta nuevamente y verifica en el calendario.",
+            );
+          }
 
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(payload?.error ?? "No se pudo agendar la actividad.");
-      }
+          return payload.id as number;
+        }),
+      );
 
-      if (typeof payload?.id !== "number") {
-        throw new Error(
-          "No se confirmó la creación de la visita. Intenta nuevamente y verifica en el calendario.",
-        );
-      }
-
-      setStatusMessage(activityType === "audit" ? "Auditoría registrada correctamente." : "Visita registrada correctamente.");
+      const totalCreated = creationResults.length;
+      setStatusMessage(
+        activityType === "audit"
+          ? `${totalCreated} auditoría${totalCreated === 1 ? "" : "s"} registrada${totalCreated === 1 ? "" : "s"} correctamente.`
+          : `${totalCreated} visita${totalCreated === 1 ? "" : "s"} registrada${totalCreated === 1 ? "" : "s"} correctamente.`,
+      );
       router.push("/clientes/calendario");
       router.refresh();
     } catch (error) {
@@ -154,7 +165,7 @@ export default function NuevaVisitaPage() {
     <>
       <DashboardHeader
         title="Agendar actividad"
-        description="Programa una visita o una auditoría por área. Para auditorías, la ejecución seguirá el flujo móvil con formulario, evidencia y firma."
+        description="Programa una visita o una auditoría para una o varias áreas. Para auditorías, la ejecución seguirá el flujo móvil con formulario, evidencia y firma."
       />
 
       <PageTransition className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -162,7 +173,7 @@ export default function NuevaVisitaPage() {
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Datos de la actividad</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Completa la información base para programar una visita o auditoría. En auditorías se usará la plantilla del área seleccionada.
+              Completa la información base para programar una visita o auditoría. Se creará una actividad por cada área seleccionada.
             </p>
           </div>
 
@@ -208,7 +219,7 @@ export default function NuevaVisitaPage() {
                   <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="client" onChange={(e) => {
                       setClientId(e.target.value);
                       setBranchId("");
-                      setAreaId("");
+                      setSelectedAreaIds([]);
                     }} value={clientId}>
                     <option value="">Seleccione un cliente</option>
                     {clients.map((client) => (
@@ -223,7 +234,7 @@ export default function NuevaVisitaPage() {
                   Sucursal
                   <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="branch" onChange={(e) => {
                         setBranchId(e.target.value);
-                        setAreaId("");
+                        setSelectedAreaIds([]);
                       }} value={branchId}>
                     <option value="">Seleccione una sucursal</option>
                     {filteredBranches.map((branch) => (
@@ -234,16 +245,25 @@ export default function NuevaVisitaPage() {
               </div>
 
               <div>
-                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="area">
-                  Área
-                  <select className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none" id="area" onChange={(e) => {
-                        setAreaId(e.target.value);
-                      }} value={areaId}>
-                    <option value="">Seleccione un área</option>
+                <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="areas">
+                  Áreas
+                  <select
+                    className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary outline-none min-h-40"
+                    id="areas"
+                    multiple
+                    onChange={(e) => {
+                      const values = Array.from(e.target.selectedOptions).map((option) => option.value);
+                      setSelectedAreaIds(values);
+                    }}
+                    value={selectedAreaIds}
+                  >
                     {filteredAreas.map((area) => (
                       <option key={area.id} value={area.id}>{area.name}</option>
                     ))}
                   </select>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Mantén presionada la tecla Ctrl (o Cmd en Mac) para seleccionar varias áreas.
+                  </span>
                 </label>
               </div>
 
