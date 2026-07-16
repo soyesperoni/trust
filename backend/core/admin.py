@@ -11,6 +11,7 @@ from .models import (
     AuditForm,
     AuditMedia,
     DeepSeekAPISettings,
+    GmailAPISettings,
     FCMDevice,
     FirebaseConfig,
     Branch,
@@ -333,6 +334,48 @@ class DeepSeekAPISettingsAdmin(admin.ModelAdmin):
         if DeepSeekAPISettings.objects.exists():
             return False
         return super().has_add_permission(request)
+
+
+@admin.register(GmailAPISettings)
+class GmailAPISettingsAdmin(admin.ModelAdmin):
+    list_display = ("email", "is_enabled", "is_connected_display", "updated_at")
+    readonly_fields = ("redirect_url", "connection_status")
+    fields = ("email", "client_id", "client_secret", "is_enabled", "redirect_url", "connection_status")
+
+    def has_add_permission(self, request):
+        if GmailAPISettings.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+    def redirect_url(self, obj):
+        return "https://trust.supplymax.net/api/gmail/oauth2callback/"
+    redirect_url.short_description = "URL de Redirección (Configurar en Google Console)"
+
+    def is_connected_display(self, obj):
+        from django.utils.html import format_html
+        if obj.refresh_token:
+            return format_html('<span style="color: green; font-weight: bold;">Conectado</span>')
+        return format_html('<span style="color: red; font-weight: bold;">Desconectado</span>')
+    is_connected_display.short_description = "Conexión"
+
+    def connection_status(self, obj):
+        from django.utils.html import format_html
+        if not obj.id:
+            return "Guarda la configuración primero para poder conectarte."
+        
+        auth_url = "/api/gmail/authorize/"
+        if obj.refresh_token:
+            return format_html(
+                '<span style="color: green; font-weight: bold;">Conectado con éxito.</span> '
+                '<a href="{}" class="button" style="background-color: #d9534f; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-left: 10px;">Volver a vincular cuenta</a>',
+                auth_url
+            )
+        else:
+            return format_html(
+                '<a href="{}" class="button" style="background-color: #417690; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold;">Vincular cuenta con Google / Gmail</a>',
+                auth_url
+            )
+    connection_status.short_description = "Estado de la Vinculación"
 
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):

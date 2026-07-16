@@ -288,6 +288,61 @@ class DeepSeekAPISettings(models.Model):
         return "DeepSeek API"
 
 
+class GmailAPISettings(models.Model):
+    email = models.EmailField(max_length=255, help_text="El correo de Gmail que enviará las notificaciones")
+    client_id = models.CharField(max_length=255)
+    client_secret = models.CharField(max_length=255)
+    access_token = models.TextField(blank=True, null=True)
+    refresh_token = models.TextField(blank=True, null=True)
+    token_expiry = models.DateTimeField(blank=True, null=True)
+    is_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuración Gmail API"
+        verbose_name_plural = "Configuración Gmail API"
+
+    def __str__(self) -> str:
+        return f"Gmail API - {self.email}"
+
+    def get_access_token(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        import requests
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        if not self.refresh_token:
+            return None
+
+        if self.access_token and self.token_expiry and self.token_expiry > timezone.now() + timedelta(minutes=5):
+            return self.access_token
+
+        url = "https://oauth2.googleapis.com/token"
+        payload = {
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "refresh_token": self.refresh_token,
+            "grant_type": "refresh_token",
+        }
+        try:
+            response = requests.post(url, data=payload, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                self.access_token = data["access_token"]
+                expires_in = data.get("expires_in", 3600)
+                self.token_expiry = timezone.now() + timedelta(seconds=expires_in)
+                self.save(update_fields=["access_token", "token_expiry"])
+                return self.access_token
+            else:
+                logger.error("Error al refrescar token de Gmail API: %s", response.text)
+                return None
+        except Exception as exc:
+            logger.exception("Excepción al intentar refrescar token de Gmail API: %s", exc)
+            return None
+
+
 class Incident(models.Model):
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="incidents")
     branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="incidents")

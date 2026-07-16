@@ -36,9 +36,13 @@ from .views import (
     visit_report_pdf,
     visit_report_puppeteer,
     visit_report_public_pdf,
+    gmail_authorize,
+    gmail_oauth2callback,
 )
 
 urlpatterns = [
+    path("gmail/authorize/", gmail_authorize, name="gmail_authorize"),
+    path("gmail/oauth2callback/", gmail_oauth2callback, name="gmail_oauth2callback"),
     path("health/", health, name="health"),
     path("csrf/", csrf_token, name="csrf_token"),
     path("login/", login, name="login"),

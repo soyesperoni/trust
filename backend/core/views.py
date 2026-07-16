@@ -375,6 +375,268 @@ def _post_json_webhook(url: str, payload: dict[str, Any]) -> None:
         logger.warning("No se pudo enviar webhook a %s: %s", url, exc)
 
 
+import secrets
+import base64
+import threading
+import requests
+from django.utils import timezone
+from datetime import timedelta
+from django.http import HttpResponse, HttpResponseForbidden
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.contrib.auth.decorators import user_passes_test
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from django.db.models import Q
+
+@user_passes_test(lambda u: u.is_superuser)
+def gmail_authorize(request):
+    from core.models import GmailAPISettings
+    settings_obj = GmailAPISettings.objects.first()
+    if not settings_obj or not settings_obj.client_id or not settings_obj.client_secret:
+        return HttpResponse("Por favor, configure primero el Client ID y Client Secret en el Admin.", status=400)
+    
+    state = secrets.token_urlsafe(32)
+    request.session["gmail_oauth_state"] = state
+    
+    redirect_uri = request.build_absolute_uri(reverse("gmail_oauth2callback"))
+    
+    auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth"
+        f"?response_type=code"
+        f"&client_id={settings_obj.client_id}"
+        f"&redirect_uri={redirect_uri}"
+        f"&scope=https://www.googleapis.com/auth/gmail.send"
+        f"&access_type=offline"
+        f"&prompt=consent"
+        f"&state={state}"
+    )
+    return redirect(auth_url)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def gmail_oauth2callback(request):
+    from core.models import GmailAPISettings
+    state = request.GET.get("state")
+    saved_state = request.session.get("gmail_oauth_state")
+    if not state or state != saved_state:
+        return HttpResponseForbidden("Estado inválido (CSRF Match Failed).")
+    
+    code = request.GET.get("code")
+    if not code:
+        return HttpResponse("No se recibió el código de autorización.", status=400)
+        
+    settings_obj = GmailAPISettings.objects.first()
+    if not settings_obj:
+        return HttpResponse("Configuración no encontrada.", status=400)
+        
+    redirect_uri = request.build_absolute_uri(reverse("gmail_oauth2callback"))
+    
+    url = "https://oauth2.googleapis.com/token"
+    payload = {
+        "code": code,
+        "client_id": settings_obj.client_id,
+        "client_secret": settings_obj.client_secret,
+        "redirect_uri": redirect_uri,
+        "grant_type": "authorization_code",
+    }
+    
+    response = requests.post(url, data=payload, timeout=10)
+    if response.status_code == 200:
+        data = response.json()
+        settings_obj.access_token = data.get("access_token")
+        if "refresh_token" in data:
+            settings_obj.refresh_token = data.get("refresh_token")
+        expires_in = data.get("expires_in", 3600)
+        settings_obj.token_expiry = timezone.now() + timedelta(seconds=expires_in)
+        settings_obj.save()
+        
+        return redirect("/admin/core/gmailapisettings/")
+    else:
+        return HttpResponse(f"Error al obtener el token: {response.text}", status=400)
+
+
+def send_gmail_notification(settings_obj, to_email, subject, body_text, pdf_bytes=None, pdf_filename="report.pdf"):
+    access_token = settings_obj.get_access_token()
+    if not access_token:
+        logger.error("Gmail access token is not available.")
+        return False
+
+    try:
+        message = MIMEMultipart()
+        message["to"] = to_email
+        message["from"] = settings_obj.email
+        message["subject"] = subject
+
+        msg_body = MIMEText(body_text, "plain", "utf-8")
+        message.attach(msg_body)
+
+        if pdf_bytes:
+            attachment = MIMEApplication(pdf_bytes, _subtype="pdf")
+            attachment.add_header("Content-Disposition", "attachment", filename=pdf_filename)
+            message.attach(attachment)
+
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+
+        url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "raw": raw_message
+        }
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        if response.status_code == 200:
+            logger.info("Email sent successfully to %s", to_email)
+            return True
+        else:
+            logger.error("Failed to send email via Gmail API: %s", response.text)
+            return False
+    except Exception as exc:
+        logger.exception("Error sending email via Gmail API: %s", exc)
+        return False
+
+
+def _send_email_async(target, args):
+    thread = threading.Thread(target=target, args=args)
+    thread.daemon = True
+    thread.start()
+
+
+def _process_visit_completed_email(visit_id):
+    try:
+        from core.models import Visit, GmailAPISettings, User
+        visit = Visit.objects.get(id=visit_id)
+        settings_obj = GmailAPISettings.objects.filter(is_enabled=True).first()
+        if not settings_obj or not settings_obj.refresh_token:
+            logger.warning("Gmail API is not configured or disabled.")
+            return
+
+        pdf_bytes = _build_visit_pdf(visit)
+        branch_name_safe = visit.area.branch.name.replace(" ", "_")
+        area_name_safe = visit.area.name.replace(" ", "_")
+        pdf_filename = f"Visita_{branch_name_safe}_{area_name_safe}_{timezone.localtime(visit.completed_at):%Y%m%d}.pdf"
+
+        users = User.objects.filter(
+            Q(areas=visit.area)
+            | Q(branches=visit.area.branch)
+            | Q(clients=visit.area.branch.client)
+        ).filter(is_active=True).distinct()
+
+        for user in users:
+            if not user.email:
+                continue
+            
+            subject = f"Visita Realizada - {visit.area.branch.name} · {visit.area.name}"
+            body = (
+                f"Hola {user.get_full_name() or user.username},\n\n"
+                f"Se ha registrado y completado una visita en la plataforma:\n"
+                f"- Cliente/Marca: {visit.area.branch.client.name}\n"
+                f"- Sucursal: {visit.area.branch.name}\n"
+                f"- Área: {visit.area.name}\n"
+                f"- Inspector: {visit.user.get_full_name() or visit.user.username}\n"
+                f"- Fecha y Hora: {timezone.localtime(visit.completed_at):%Y-%m-%d %I:%M %p}\n\n"
+                f"Adjunto a este correo encontrarás el informe PDF correspondiente.\n\n"
+                f"Atentamente,\n"
+                f"El equipo de Trust"
+            )
+            send_gmail_notification(settings_obj, user.email, subject, body, pdf_bytes, pdf_filename)
+    except Exception as exc:
+        logger.exception("Error processing visit completed email: %s", exc)
+
+
+def _process_audit_completed_email(audit_id):
+    try:
+        from core.models import Audit, GmailAPISettings, User
+        audit = Audit.objects.get(id=audit_id)
+        settings_obj = GmailAPISettings.objects.filter(is_enabled=True).first()
+        if not settings_obj or not settings_obj.refresh_token:
+            logger.warning("Gmail API is not configured or disabled.")
+            return
+
+        pdf_bytes = _build_audit_pdf(audit)
+        branch_name_safe = audit.area.branch.name.replace(" ", "_")
+        area_name_safe = audit.area.name.replace(" ", "_")
+        pdf_filename = f"Auditoria_{branch_name_safe}_{area_name_safe}_{timezone.localtime(audit.completed_at):%Y%m%d}.pdf"
+
+        report = audit.audit_report or {}
+        ai_analysis = report.get("ai_analysis") or {}
+        score = ai_analysis.get("score", "N/A")
+        summary = ai_analysis.get("executive_summary", "Sin resumen ejecutivo.")
+
+        users = User.objects.filter(
+            Q(areas=audit.area)
+            | Q(branches=audit.area.branch)
+            | Q(clients=audit.area.branch.client)
+        ).filter(is_active=True).distinct()
+
+        for user in users:
+            if not user.email:
+                continue
+
+            subject = f"Auditoría Realizada - {audit.area.branch.name} · {audit.area.name}"
+            body = (
+                f"Hola {user.get_full_name() or user.username},\n\n"
+                f"Se ha registrado y completado una auditoría en la plataforma:\n"
+                f"- Cliente/Marca: {audit.area.branch.client.name}\n"
+                f"- Sucursal: {audit.area.branch.name}\n"
+                f"- Área: {audit.area.name}\n"
+                f"- Inspector: {audit.user.get_full_name() or audit.user.username}\n"
+                f"- Fecha y Hora: {timezone.localtime(audit.completed_at):%Y-%m-%d %I:%M %p}\n"
+                f"- Puntaje: {score}%\n"
+                f"- Resumen Ejecutivo: {summary}\n\n"
+                f"Adjunto a este correo encontrarás el informe PDF correspondiente.\n\n"
+                f"Atentamente,\n"
+                f"El equipo de Trust"
+            )
+            send_gmail_notification(settings_obj, user.email, subject, body, pdf_bytes, pdf_filename)
+    except Exception as exc:
+        logger.exception("Error processing audit completed email: %s", exc)
+
+
+def _process_incident_created_email(incident_id):
+    try:
+        from core.models import Incident, GmailAPISettings, User
+        incident = Incident.objects.get(id=incident_id)
+        settings_obj = GmailAPISettings.objects.filter(is_enabled=True).first()
+        if not settings_obj or not settings_obj.refresh_token:
+            logger.warning("Gmail API is not configured or disabled.")
+            return
+
+        users = User.objects.filter(
+            Q(areas=incident.area)
+            | Q(branches=incident.branch)
+            | Q(clients=incident.client)
+        ).filter(is_active=True).distinct()
+
+        dispenser_str = f"{incident.dispenser.identifier}" if incident.dispenser else "N/A"
+
+        for user in users:
+            if not user.email:
+                continue
+
+            subject = f"Nueva Incidencia Reportada - {incident.branch.name} · {incident.area.name}"
+            body = (
+                f"Hola {user.get_full_name() or user.username},\n\n"
+                f"Se ha reportado una nueva incidencia en la plataforma:\n"
+                f"- Cliente/Marca: {incident.client.name}\n"
+                f"- Sucursal: {incident.branch.name}\n"
+                f"- Área: {incident.area.name}\n"
+                f"- Dispensador: {dispenser_str}\n"
+                f"- Fecha y Hora: {timezone.localtime(incident.created_at):%Y-%m-%d %I:%M %p}\n\n"
+                f"Descripción de la incidencia:\n"
+                f"{incident.description}\n\n"
+                f"Atentamente,\n"
+                f"El equipo de Trust"
+            )
+            send_gmail_notification(settings_obj, user.email, subject, body)
+    except Exception as exc:
+        logger.exception("Error processing incident email: %s", exc)
+
+
 def _as_id_list(source, key: str):
     if hasattr(source, "getlist"):
         values = source.getlist(key)
@@ -3338,18 +3600,8 @@ def visit_mobile_flow(request, visit_id: int):
                 media_type = VisitMedia.MediaType.OTHER
             VisitMedia.objects.create(visit=visit, media_type=media_type, file=evidence)
 
-        visit_payload = _serialize_visit(visit)
-        visit_pdf_base64 = base64.b64encode(_build_visit_pdf(visit, public_report_url=None)).decode("utf-8")
-        _post_json_webhook(
-            N8N_VISIT_WEBHOOK_URL,
-            {
-                "event": "visit_completed",
-                "source": "flutter",
-                "visit": visit_payload,
-                "related_area_users": _collect_related_area_users(visit.area),
-                "visit_confirmation_pdf_base64": visit_pdf_base64,
-            },
-        )
+        # Replaced N8N webhook with Gmail API notifications
+        _send_email_async(_process_visit_completed_email, (visit.id,))
         _send_area_push_notification(
             area=visit.area,
             title="Visita finalizada",
@@ -3639,15 +3891,8 @@ def audit_mobile_flow(request, audit_id: int):
                 media_type = AuditMedia.MediaType.OTHER
             AuditMedia.objects.create(audit=audit, media_type=media_type, file=evidence)
 
-        _post_json_webhook(
-            N8N_AUDIT_WEBHOOK_URL,
-            {
-                "event": "audit_completed",
-                "source": "flutter",
-                "audit": _serialize_audit(audit),
-                "related_area_users": _collect_related_area_users(audit.area),
-            },
-        )
+        # Replaced N8N webhook with Gmail API notifications
+        _send_email_async(_process_audit_completed_email, (audit.id,))
         _send_area_push_notification(
             area=audit.area,
             title="Auditoría finalizada",
@@ -4182,15 +4427,8 @@ def incidents(request):
             file=evidence,
         )
 
-    _post_json_webhook(
-        N8N_INCIDENT_WEBHOOK_URL,
-        {
-            "event": "incident_created",
-            "source": "flutter_or_nextjs",
-            "incident": _serialize_incident(incident),
-            "related_area_users": _collect_related_area_users(area),
-        },
-    )
+    # Replaced N8N webhook with Gmail API notifications
+    _send_email_async(_process_incident_created_email, (incident.id,))
     _send_area_push_notification(
         area=area,
         title="Nueva incidencia",
