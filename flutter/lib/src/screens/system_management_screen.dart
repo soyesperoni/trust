@@ -40,6 +40,7 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
   List<Map<String, dynamic>> _dispensers = [];
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _dispenserModels = [];
+  List<Map<String, dynamic>> _nozzles = [];
 
   // Filter queries
   String _userSearch = '';
@@ -77,6 +78,7 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
         _repository.loadDispensers(widget.email),
         _repository.loadProducts(widget.email),
         _repository.loadDispenserModels(widget.email),
+        _repository.loadNozzles(widget.email),
       ]);
 
       if (!mounted) return;
@@ -89,6 +91,7 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
         _dispensers = results[4];
         _products = results[5];
         _dispenserModels = results[6];
+        _nozzles = results[7];
         _isLoading = false;
       });
     } catch (e) {
@@ -663,6 +666,7 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                 areas: _areas,
                 dispenserModels: _dispenserModels,
                 products: _products,
+                nozzles: _nozzles,
               ),
             ),
           );
@@ -717,6 +721,7 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                                   areas: _areas,
                                   dispenserModels: _dispenserModels,
                                   products: _products,
+                                  nozzles: _nozzles,
                                 ),
                               ),
                             );

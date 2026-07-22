@@ -9,6 +9,7 @@ class DispenserFormScreen extends StatefulWidget {
     required this.areas,
     required this.dispenserModels,
     required this.products,
+    required this.nozzles,
     super.key,
   });
 
@@ -17,6 +18,7 @@ class DispenserFormScreen extends StatefulWidget {
   final List<Map<String, dynamic>> areas;
   final List<Map<String, dynamic>> dispenserModels;
   final List<Map<String, dynamic>> products;
+  final List<Map<String, dynamic>> nozzles;
 
   @override
   State<DispenserFormScreen> createState() => _DispenserFormScreenState();
@@ -29,6 +31,7 @@ class _DispenserFormScreenState extends State<DispenserFormScreen> {
   late int _selectedAreaId;
   late int _selectedModelId;
   late List<int> _selectedProductIds;
+  final Map<int, int?> _selectedNozzleIds = {}; // Maps product_id -> nozzle_id
 
   bool _isSaving = false;
 
@@ -47,13 +50,45 @@ class _DispenserFormScreenState extends State<DispenserFormScreen> {
     _selectedProductIds = dispenser != null
         ? (dispenser['products'] as List<dynamic>? ?? []).map((p) => p['id'] as int).toList()
         : [];
+
+    if (dispenser != null) {
+      final prods = dispenser['products'] as List<dynamic>? ?? [];
+      for (final p in prods) {
+        final pid = p['id'] as int;
+        final nozzle = p['nozzle'];
+        if (nozzle != null) {
+          _selectedNozzleIds[pid] = nozzle['id'] as int;
+        }
+      }
+    }
   }
 
   Future<void> _save() async {
     if (widget.areas.isEmpty || widget.dispenserModels.isEmpty) return;
     if (!_formKey.currentState!.validate()) return;
 
+    // Enforce that a boquilla (nozzle) is selected for each product
+    for (final pid in _selectedProductIds) {
+      if (_selectedNozzleIds[pid] == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Debes seleccionar una boquilla para cada producto activado.'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
+
+    final assignments = _selectedProductIds.map((pid) {
+      return {
+        'product_id': pid,
+        'nozzle_id': _selectedNozzleIds[pid],
+      };
+    }).toList();
 
     try {
       final isEdit = widget.existingDispenser != null;
@@ -64,7 +99,7 @@ class _DispenserFormScreenState extends State<DispenserFormScreen> {
           body: {
             'area_id': _selectedAreaId,
             'model_id': _selectedModelId,
-            'product_ids': _selectedProductIds,
+            'product_assignments': assignments,
           },
         );
       } else {
@@ -72,7 +107,7 @@ class _DispenserFormScreenState extends State<DispenserFormScreen> {
           email: widget.email,
           areaId: _selectedAreaId,
           modelId: _selectedModelId,
-          productIds: _selectedProductIds,
+          productAssignments: assignments,
         );
       }
 
@@ -214,45 +249,93 @@ class _DispenserFormScreenState extends State<DispenserFormScreen> {
                         },
                       ),
                       const SizedBox(height: 28),
-                      _buildSectionTitle('Productos Asignados'),
+                      _buildSectionTitle('Productos y Boquillas Asignados'),
                       const SizedBox(height: 8),
-                      Card(
-                        elevation: 0,
-                        color: isDark ? AppColors.darkSurface : AppColors.gray50,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.08)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: widget.products.isEmpty
-                              ? const Padding(
-                                  padding: EdgeInsets.all(16.0),
-                                  child: Text('No hay productos creados en el catálogo.'),
-                                )
-                              : Column(
-                                  children: widget.products.map((p) {
-                                    final pid = p['id'] as int;
-                                    final isSel = _selectedProductIds.contains(pid);
-                                    return CheckboxListTile(
-                                      title: Text(p['name'] as String? ?? ''),
-                                      subtitle: Text(p['description'] as String? ?? 'Sin descripción'),
-                                      value: isSel,
-                                      activeColor: AppColors.primary,
-                                      onChanged: (v) {
-                                        setState(() {
-                                          if (v == true) {
-                                            _selectedProductIds.add(pid);
-                                          } else {
-                                            _selectedProductIds.remove(pid);
+                      if (widget.products.isEmpty)
+                        const Text('No hay productos creados en el catálogo.')
+                      else
+                        ...widget.products.map((p) {
+                          final pid = p['id'] as int;
+                          final isSel = _selectedProductIds.contains(pid);
+
+                          // Set a default nozzle if none selected and nozzles are available
+                          if (isSel && _selectedNozzleIds[pid] == null && widget.nozzles.isNotEmpty) {
+                            _selectedNozzleIds[pid] = widget.nozzles.first['id'] as int;
+                          }
+
+                          return Card(
+                            elevation: 0,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            color: isDark ? AppColors.darkSurface : AppColors.gray50,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.08)),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CheckboxListTile(
+                                    title: Text(
+                                      p['name'] as String? ?? '',
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    subtitle: Text(p['description'] as String? ?? 'Sin descripción'),
+                                    value: isSel,
+                                    activeColor: AppColors.primary,
+                                    contentPadding: EdgeInsets.zero,
+                                    onChanged: (v) {
+                                      setState(() {
+                                        if (v == true) {
+                                          _selectedProductIds.add(pid);
+                                          if (_selectedNozzleIds[pid] == null && widget.nozzles.isNotEmpty) {
+                                            _selectedNozzleIds[pid] = widget.nozzles.first['id'] as int;
                                           }
-                                        });
+                                        } else {
+                                          _selectedProductIds.remove(pid);
+                                        }
+                                      });
+                                    },
+                                  ),
+                                  if (isSel) ...[
+                                    const Divider(height: 16),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Boquilla',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    DropdownButtonFormField<int>(
+                                      value: _selectedNozzleIds[pid],
+                                      isExpanded: true,
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: isDark ? AppColors.darkBackground : Colors.white,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      items: widget.nozzles.map((n) {
+                                        return DropdownMenuItem<int>(
+                                          value: n['id'] as int,
+                                          child: Text(
+                                            n['name'] as String? ?? '',
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (v) {
+                                        if (v != null) {
+                                          setState(() => _selectedNozzleIds[pid] = v);
+                                        }
                                       },
-                                    );
-                                  }).toList(),
-                                ),
-                        ),
-                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
                       const SizedBox(height: 40),
                     ],
                   ),

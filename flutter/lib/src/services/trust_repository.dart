@@ -255,16 +255,22 @@ class TrustRepository {
     required int areaId,
     required int modelId,
     List<int> productIds = const [],
+    List<Map<String, dynamic>> productAssignments = const [],
   }) {
+    final body = <String, dynamic>{
+      'area_id': areaId,
+      'model_id': modelId,
+      'is_active': true,
+    };
+    if (productAssignments.isNotEmpty) {
+      body['product_assignments'] = productAssignments;
+    } else {
+      body['product_ids'] = productIds;
+    }
     return _apiClient.postJson(
       '/dispensers/',
       email: email,
-      body: {
-        'area_id': areaId,
-        'model_id': modelId,
-        'product_ids': productIds,
-        'is_active': true,
-      },
+      body: body,
     );
   }
 
@@ -466,6 +472,12 @@ class TrustRepository {
 
   Future<List<Map<String, dynamic>>> loadDispensers(String email) async {
     final json = await _apiClient.getJson('/dispensers/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  Future<List<Map<String, dynamic>>> loadNozzles(String email) async {
+    final json = await _apiClient.getJson('/nozzles/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);
     return results.whereType<Map<String, dynamic>>().toList(growable: false);
   }
