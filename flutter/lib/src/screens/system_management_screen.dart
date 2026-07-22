@@ -3,6 +3,14 @@ import 'package:flutter/material.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 
+// Import new full screen forms
+import 'user_form_screen.dart';
+import 'client_form_screen.dart';
+import 'branch_form_screen.dart';
+import 'area_form_screen.dart';
+import 'dispenser_form_screen.dart';
+import 'product_form_screen.dart';
+
 class SystemManagementScreen extends StatefulWidget {
   const SystemManagementScreen({
     required this.email,
@@ -121,7 +129,7 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
-          'Administración del Sistema',
+          'Administración',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -152,7 +160,7 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.error_outline_rounded, size: 64, color: AppColors.danger),
+                        const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.danger),
                         const SizedBox(height: 16),
                         Text(
                           _errorMessage!,
@@ -245,7 +253,18 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openUserFormDialog(null),
+        onPressed: () async {
+          final result = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) => UserFormScreen(
+                email: widget.email,
+                clients: _clients,
+                branches: _branches,
+              ),
+            ),
+          );
+          if (result == true) _loadAllData();
+        },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
@@ -283,7 +302,19 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                       children: [
                         IconButton(
                           icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
-                          onPressed: () => _openUserFormDialog(user),
+                          onPressed: () async {
+                            final result = await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => UserFormScreen(
+                                  email: widget.email,
+                                  existingUser: user,
+                                  clients: _clients,
+                                  branches: _branches,
+                                ),
+                              ),
+                            );
+                            if (result == true) _loadAllData();
+                          },
                         ),
                         if (!isSelf)
                           IconButton(
@@ -313,183 +344,6 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
     );
   }
 
-  void _openUserFormDialog(Map<String, dynamic>? existingUser) {
-    final isEdit = existingUser != null;
-    final formKey = GlobalKey<FormState>();
-
-    final nameController = TextEditingController(text: existingUser?['full_name'] as String? ?? '');
-    final emailController = TextEditingController(text: existingUser?['email'] as String? ?? '');
-    final passwordController = TextEditingController();
-
-    String selectedRole = existingUser?['role'] as String? ?? 'inspector';
-    final List<int> selectedClientIds = List<int>.from(existingUser?['client_ids'] as List<dynamic>? ?? []);
-    final List<int> selectedBranchIds = List<int>.from(existingUser?['branch_ids'] as List<dynamic>? ?? []);
-
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(isEdit ? 'Editar Usuario' : 'Crear Usuario'),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: nameController,
-                        decoration: const InputDecoration(labelText: 'Nombre Completo'),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
-                      ),
-                      TextFormField(
-                        controller: emailController,
-                        decoration: const InputDecoration(labelText: 'Correo Electrónico'),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
-                      ),
-                      TextFormField(
-                        controller: passwordController,
-                        decoration: InputDecoration(
-                          labelText: 'Contraseña',
-                          helperText: isEdit ? 'Dejar en blanco para no cambiar' : 'Requerido',
-                        ),
-                        obscureText: true,
-                        validator: (v) {
-                          if (!isEdit && (v == null || v.isEmpty)) {
-                            return 'Requerido';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: selectedRole,
-                        decoration: const InputDecoration(labelText: 'Rol'),
-                        items: const [
-                          DropdownMenuItem(value: 'general_admin', child: Text('Administrador General')),
-                          DropdownMenuItem(value: 'account_admin', child: Text('Administrador de Cuentas')),
-                          DropdownMenuItem(value: 'branch_admin', child: Text('Administrador de Sucursal')),
-                          DropdownMenuItem(value: 'inspector', child: Text('Inspector')),
-                        ],
-                        onChanged: (v) {
-                          if (v != null) {
-                            setDialogState(() => selectedRole = v);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Clientes Asignados',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                      ),
-                      ..._clients.map((c) {
-                        final cid = c['id'] as int;
-                        final isSel = selectedClientIds.contains(cid);
-                        return CheckboxListTile(
-                          title: Text(c['name'] as String? ?? ''),
-                          value: isSel,
-                          dense: true,
-                          onChanged: (v) {
-                            setDialogState(() {
-                              if (v == true) {
-                                selectedClientIds.add(cid);
-                              } else {
-                                selectedClientIds.remove(cid);
-                              }
-                            });
-                          },
-                        );
-                      }),
-                      const SizedBox(height: 16),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Sucursales Asignadas',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                      ),
-                      ..._branches.map((b) {
-                        final bid = b['id'] as int;
-                        final isSel = selectedBranchIds.contains(bid);
-                        return CheckboxListTile(
-                          title: Text('${b['name']} (${b['client']?['name'] ?? ''})'),
-                          value: isSel,
-                          dense: true,
-                          onChanged: (v) {
-                            setDialogState(() {
-                              if (v == true) {
-                                selectedBranchIds.add(bid);
-                              } else {
-                                selectedBranchIds.remove(bid);
-                              }
-                            });
-                          },
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      Navigator.of(context).pop();
-                      try {
-                        if (isEdit) {
-                          final body = <String, dynamic>{
-                            'full_name': nameController.text.trim(),
-                            'email': emailController.text.trim(),
-                            'role': selectedRole,
-                            'client_ids': selectedClientIds,
-                            'branch_ids': selectedBranchIds,
-                          };
-                          if (passwordController.text.isNotEmpty) {
-                            body['password'] = passwordController.text;
-                          }
-                          await _repository.updateUser(
-                            email: widget.email,
-                            userId: existingUser['id'] as int,
-                            body: body,
-                          );
-                          _showSuccessSnackBar('Usuario actualizado con éxito.');
-                        } else {
-                          await _repository.createUser(
-                            email: widget.email,
-                            fullName: nameController.text.trim(),
-                            userEmail: emailController.text.trim(),
-                            password: passwordController.text,
-                            role: selectedRole,
-                            clientIds: selectedClientIds,
-                            branchIds: selectedBranchIds,
-                          );
-                          _showSuccessSnackBar('Usuario creado con éxito.');
-                        }
-                        _loadAllData();
-                      } catch (e) {
-                        _showErrorSnackBar(e);
-                      }
-                    }
-                  },
-                  child: const Text('Guardar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   // ==========================================
   // TAB: CLIENTES
   // ==========================================
@@ -503,7 +357,14 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openClientFormDialog(null),
+        onPressed: () async {
+          final result = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) => ClientFormScreen(email: widget.email),
+            ),
+          );
+          if (result == true) _loadAllData();
+        },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
@@ -539,7 +400,17 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                       children: [
                         IconButton(
                           icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
-                          onPressed: () => _openClientFormDialog(client),
+                          onPressed: () async {
+                            final result = await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => ClientFormScreen(
+                                  email: widget.email,
+                                  existingClient: client,
+                                ),
+                              ),
+                            );
+                            if (result == true) _loadAllData();
+                          },
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
@@ -568,86 +439,6 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
     );
   }
 
-  void _openClientFormDialog(Map<String, dynamic>? existingClient) {
-    final isEdit = existingClient != null;
-    final formKey = GlobalKey<FormState>();
-
-    final nameController = TextEditingController(text: existingClient?['name'] as String? ?? '');
-    final codeController = TextEditingController(text: existingClient?['code'] as String? ?? '');
-    final notesController = TextEditingController(text: existingClient?['notes'] as String? ?? '');
-
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(isEdit ? 'Editar Cliente' : 'Crear Cliente'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Nombre del Cliente'),
-                  validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
-                ),
-                TextFormField(
-                  controller: codeController,
-                  decoration: const InputDecoration(labelText: 'Código'),
-                  validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
-                ),
-                TextFormField(
-                  controller: notesController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Notas'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (formKey.currentState!.validate()) {
-                  Navigator.of(context).pop();
-                  try {
-                    if (isEdit) {
-                      await _repository.updateClient(
-                        email: widget.email,
-                        clientId: existingClient['id'] as int,
-                        body: {
-                          'name': nameController.text.trim(),
-                          'code': codeController.text.trim(),
-                          'notes': notesController.text.trim(),
-                        },
-                      );
-                      _showSuccessSnackBar('Cliente actualizado con éxito.');
-                    } else {
-                      await _repository.createClient(
-                        email: widget.email,
-                        name: nameController.text.trim(),
-                        code: codeController.text.trim(),
-                        notes: notesController.text.trim(),
-                      );
-                      _showSuccessSnackBar('Cliente creado con éxito.');
-                    }
-                    _loadAllData();
-                  } catch (e) {
-                    _showErrorSnackBar(e);
-                  }
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   // ==========================================
   // TAB: SUCURSALES
   // ==========================================
@@ -661,7 +452,17 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openBranchFormDialog(null),
+        onPressed: () async {
+          final result = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) => BranchFormScreen(
+                email: widget.email,
+                clients: _clients,
+              ),
+            ),
+          );
+          if (result == true) _loadAllData();
+        },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
@@ -699,7 +500,18 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                       children: [
                         IconButton(
                           icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
-                          onPressed: () => _openBranchFormDialog(branch),
+                          onPressed: () async {
+                            final result = await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => BranchFormScreen(
+                                  email: widget.email,
+                                  existingBranch: branch,
+                                  clients: _clients,
+                                ),
+                              ),
+                            );
+                            if (result == true) _loadAllData();
+                          },
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
@@ -728,112 +540,6 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
     );
   }
 
-  void _openBranchFormDialog(Map<String, dynamic>? existingBranch) {
-    if (_clients.isEmpty) {
-      _showErrorSnackBar('Debes crear al menos un Cliente antes de agregar sucursales.');
-      return;
-    }
-
-    final isEdit = existingBranch != null;
-    final formKey = GlobalKey<FormState>();
-
-    final nameController = TextEditingController(text: existingBranch?['name'] as String? ?? '');
-    final addressController = TextEditingController(text: existingBranch?['address'] as String? ?? '');
-    final cityController = TextEditingController(text: existingBranch?['city'] as String? ?? '');
-
-    int selectedClientId = existingBranch?['client']?['id'] as int? ?? _clients.first['id'] as int;
-
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(isEdit ? 'Editar Sucursal' : 'Crear Sucursal'),
-              content: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<int>(
-                      value: selectedClientId,
-                      decoration: const InputDecoration(labelText: 'Cliente'),
-                      items: _clients.map((c) {
-                        return DropdownMenuItem<int>(
-                          value: c['id'] as int,
-                          child: Text(c['name'] as String? ?? ''),
-                        );
-                      }).toList(),
-                      onChanged: (v) {
-                        if (v != null) {
-                          setDialogState(() => selectedClientId = v);
-                        }
-                      },
-                    ),
-                    TextFormField(
-                      controller: nameController,
-                      decoration: const InputDecoration(labelText: 'Nombre de la Sucursal'),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
-                    ),
-                    TextFormField(
-                      controller: addressController,
-                      decoration: const InputDecoration(labelText: 'Dirección'),
-                    ),
-                    TextFormField(
-                      controller: cityController,
-                      decoration: const InputDecoration(labelText: 'Ciudad'),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      Navigator.of(context).pop();
-                      try {
-                        if (isEdit) {
-                          await _repository.updateBranch(
-                            email: widget.email,
-                            branchId: existingBranch['id'] as int,
-                            body: {
-                              'client_id': selectedClientId,
-                              'name': nameController.text.trim(),
-                              'address': addressController.text.trim(),
-                              'city': cityController.text.trim(),
-                            },
-                          );
-                          _showSuccessSnackBar('Sucursal actualizada con éxito.');
-                        } else {
-                          await _repository.createBranch(
-                            email: widget.email,
-                            clientId: selectedClientId,
-                            name: nameController.text.trim(),
-                            address: addressController.text.trim(),
-                            city: cityController.text.trim(),
-                          );
-                          _showSuccessSnackBar('Sucursal creada con éxito.');
-                        }
-                        _loadAllData();
-                      } catch (e) {
-                        _showErrorSnackBar(e);
-                      }
-                    }
-                  },
-                  child: const Text('Guardar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   // ==========================================
   // TAB: AREAS
   // ==========================================
@@ -847,7 +553,17 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openAreaFormDialog(null),
+        onPressed: () async {
+          final result = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) => AreaFormScreen(
+                email: widget.email,
+                branches: _branches,
+              ),
+            ),
+          );
+          if (result == true) _loadAllData();
+        },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
@@ -885,7 +601,18 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                       children: [
                         IconButton(
                           icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
-                          onPressed: () => _openAreaFormDialog(area),
+                          onPressed: () async {
+                            final result = await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => AreaFormScreen(
+                                  email: widget.email,
+                                  existingArea: area,
+                                  branches: _branches,
+                                ),
+                              ),
+                            );
+                            if (result == true) _loadAllData();
+                          },
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
@@ -914,105 +641,6 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
     );
   }
 
-  void _openAreaFormDialog(Map<String, dynamic>? existingArea) {
-    if (_branches.isEmpty) {
-      _showErrorSnackBar('Debes crear al menos una Sucursal antes de agregar áreas.');
-      return;
-    }
-
-    final isEdit = existingArea != null;
-    final formKey = GlobalKey<FormState>();
-
-    final nameController = TextEditingController(text: existingArea?['name'] as String? ?? '');
-    final descController = TextEditingController(text: existingArea?['description'] as String? ?? '');
-
-    int selectedBranchId = existingArea?['branch']?['id'] as int? ?? _branches.first['id'] as int;
-
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(isEdit ? 'Editar Área' : 'Crear Área'),
-              content: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<int>(
-                      value: selectedBranchId,
-                      decoration: const InputDecoration(labelText: 'Sucursal'),
-                      items: _branches.map((b) {
-                        return DropdownMenuItem<int>(
-                          value: b['id'] as int,
-                          child: Text('${b['name']} (${b['client']?['name'] ?? ''})'),
-                        );
-                      }).toList(),
-                      onChanged: (v) {
-                        if (v != null) {
-                          setDialogState(() => selectedBranchId = v);
-                        }
-                      },
-                    ),
-                    TextFormField(
-                      controller: nameController,
-                      decoration: const InputDecoration(labelText: 'Nombre del Área'),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
-                    ),
-                    TextFormField(
-                      controller: descController,
-                      decoration: const InputDecoration(labelText: 'Descripción'),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      Navigator.of(context).pop();
-                      try {
-                        if (isEdit) {
-                          await _repository.updateArea(
-                            email: widget.email,
-                            areaId: existingArea['id'] as int,
-                            body: {
-                              'branch_id': selectedBranchId,
-                              'name': nameController.text.trim(),
-                              'description': descController.text.trim(),
-                            },
-                          );
-                          _showSuccessSnackBar('Área actualizada con éxito.');
-                        } else {
-                          await _repository.createArea(
-                            email: widget.email,
-                            branchId: selectedBranchId,
-                            name: nameController.text.trim(),
-                            description: descController.text.trim(),
-                          );
-                          _showSuccessSnackBar('Área creada con éxito.');
-                        }
-                        _loadAllData();
-                      } catch (e) {
-                        _showErrorSnackBar(e);
-                      }
-                    }
-                  },
-                  child: const Text('Guardar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   // ==========================================
   // TAB: DOSIFICADORES
   // ==========================================
@@ -1027,7 +655,19 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openDispenserFormDialog(null),
+        onPressed: () async {
+          final result = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) => DispenserFormScreen(
+                email: widget.email,
+                areas: _areas,
+                dispenserModels: _dispenserModels,
+                products: _products,
+              ),
+            ),
+          );
+          if (result == true) _loadAllData();
+        },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
@@ -1068,7 +708,20 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                       children: [
                         IconButton(
                           icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
-                          onPressed: () => _openDispenserFormDialog(dispenser),
+                          onPressed: () async {
+                            final result = await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => DispenserFormScreen(
+                                  email: widget.email,
+                                  existingDispenser: dispenser,
+                                  areas: _areas,
+                                  dispenserModels: _dispenserModels,
+                                  products: _products,
+                                ),
+                              ),
+                            );
+                            if (result == true) _loadAllData();
+                          },
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
@@ -1097,146 +750,6 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
     );
   }
 
-  void _openDispenserFormDialog(Map<String, dynamic>? existingDispenser) {
-    if (_areas.isEmpty || _dispenserModels.isEmpty) {
-      _showErrorSnackBar('Debes tener áreas y modelos de dosificador creados.');
-      return;
-    }
-
-    final isEdit = existingDispenser != null;
-    final formKey = GlobalKey<FormState>();
-
-    int selectedAreaId = existingDispenser?['area']?['id'] as int? ?? _areas.first['id'] as int;
-    int selectedModelId = existingDispenser?['model']?['id'] as int? ?? _dispenserModels.first['id'] as int;
-
-    // Load selected product ids
-    final List<int> selectedProductIds = isEdit
-        ? (existingDispenser['products'] as List<dynamic>? ?? []).map((p) => p['id'] as int).toList()
-        : [];
-
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(isEdit ? 'Editar Dosificador' : 'Crear Dosificador'),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      DropdownButtonFormField<int>(
-                        value: selectedAreaId,
-                        decoration: const InputDecoration(labelText: 'Área'),
-                        items: _areas.map((a) {
-                          return DropdownMenuItem<int>(
-                            value: a['id'] as int,
-                            child: Text('${a['name']} (${a['branch']?['name'] ?? ''})'),
-                          );
-                        }).toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setDialogState(() => selectedAreaId = v);
-                          }
-                        },
-                      ),
-                      DropdownButtonFormField<int>(
-                        value: selectedModelId,
-                        decoration: const InputDecoration(labelText: 'Modelo'),
-                        items: _dispenserModels.map((m) {
-                          return DropdownMenuItem<int>(
-                            value: m['id'] as int,
-                            child: Text(m['name'] as String? ?? ''),
-                          );
-                        }).toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setDialogState(() => selectedModelId = v);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Productos Asignados',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_products.isEmpty)
-                        const Text('No hay productos disponibles para asignar.')
-                      else
-                        ..._products.map((p) {
-                          final pid = p['id'] as int;
-                          final isSel = selectedProductIds.contains(pid);
-                          return CheckboxListTile(
-                            title: Text(p['name'] as String? ?? ''),
-                            value: isSel,
-                            dense: true,
-                            onChanged: (v) {
-                              setDialogState(() {
-                                if (v == true) {
-                                  selectedProductIds.add(pid);
-                                } else {
-                                  selectedProductIds.remove(pid);
-                                }
-                              });
-                            },
-                          );
-                        }),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      Navigator.of(context).pop();
-                      try {
-                        if (isEdit) {
-                          await _repository.updateDispenser(
-                            email: widget.email,
-                            dispenserId: existingDispenser['id'] as int,
-                            body: {
-                              'area_id': selectedAreaId,
-                              'model_id': selectedModelId,
-                              'product_ids': selectedProductIds,
-                            },
-                          );
-                          _showSuccessSnackBar('Dosificador actualizado con éxito.');
-                        } else {
-                          await _repository.createDispenser(
-                            email: widget.email,
-                            areaId: selectedAreaId,
-                            modelId: selectedModelId,
-                            productIds: selectedProductIds,
-                          );
-                          _showSuccessSnackBar('Dosificador creado con éxito.');
-                        }
-                        _loadAllData();
-                      } catch (e) {
-                        _showErrorSnackBar(e);
-                      }
-                    }
-                  },
-                  child: const Text('Guardar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   // ==========================================
   // TAB: PRODUCTOS
   // ==========================================
@@ -1250,7 +763,14 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openProductFormDialog(null),
+        onPressed: () async {
+          final result = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) => ProductFormScreen(email: widget.email),
+            ),
+          );
+          if (result == true) _loadAllData();
+        },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
@@ -1286,7 +806,17 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                       children: [
                         IconButton(
                           icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
-                          onPressed: () => _openProductFormDialog(product),
+                          onPressed: () async {
+                            final result = await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => ProductFormScreen(
+                                  email: widget.email,
+                                  existingProduct: product,
+                                ),
+                              ),
+                            );
+                            if (result == true) _loadAllData();
+                          },
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
@@ -1312,77 +842,6 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
           ),
         ],
       ),
-    );
-  }
-
-  void _openProductFormDialog(Map<String, dynamic>? existingProduct) {
-    final isEdit = existingProduct != null;
-    final formKey = GlobalKey<FormState>();
-
-    final nameController = TextEditingController(text: existingProduct?['name'] as String? ?? '');
-    final descController = TextEditingController(text: existingProduct?['description'] as String? ?? '');
-
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(isEdit ? 'Editar Producto' : 'Crear Producto'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Nombre del Producto'),
-                  validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
-                ),
-                TextFormField(
-                  controller: descController,
-                  decoration: const InputDecoration(labelText: 'Descripción'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (formKey.currentState!.validate()) {
-                  Navigator.of(context).pop();
-                  try {
-                    if (isEdit) {
-                      await _repository.updateProduct(
-                        email: widget.email,
-                        productId: existingProduct['id'] as int,
-                        body: {
-                          'name': nameController.text.trim(),
-                          'description': descController.text.trim(),
-                        },
-                      );
-                      _showSuccessSnackBar('Producto actualizado con éxito.');
-                    } else {
-                      await _repository.createProduct(
-                        email: widget.email,
-                        name: nameController.text.trim(),
-                        description: descController.text.trim(),
-                      );
-                      _showSuccessSnackBar('Producto creado con éxito.');
-                    }
-                    _loadAllData();
-                  } catch (e) {
-                    _showErrorSnackBar(e);
-                  }
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        );
-      },
     );
   }
 }
