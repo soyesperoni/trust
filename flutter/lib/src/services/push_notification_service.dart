@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
@@ -25,9 +26,32 @@ class PushNotificationService {
       );
       debugPrint('Permiso de notificaciones: ${settings.authorizationStatus.name}');
 
-      _cachedToken = await messaging.getToken();
+      String? token;
+      if (Platform.isIOS) {
+        debugPrint('Esperando que el token APNS esté disponible...');
+        String? apnsToken = await messaging.getAPNSToken();
+        int retries = 0;
+        // Reintentar durante 15 segundos si el token APNS es nulo
+        while (apnsToken == null && retries < 15) {
+          await Future.delayed(const Duration(seconds: 1));
+          apnsToken = await messaging.getAPNSToken();
+          retries++;
+          debugPrint('Esperando APNS... Reintento $retries/15 (Token APNS: $apnsToken)');
+        }
+        
+        if (apnsToken != null) {
+          debugPrint('Token APNS obtenido con éxito: $apnsToken');
+          token = await messaging.getToken();
+        } else {
+          debugPrint('ADVERTENCIA: No se pudo obtener el token APNS a tiempo.');
+        }
+      } else {
+        token = await messaging.getToken();
+      }
+
+      _cachedToken = token;
       debugPrint('-------------------------------------------------------');
-      debugPrint('TOKEN OBTENIDO: ${_cachedToken ?? 'null'}');
+      debugPrint('TOKEN FCM OBTENIDO: ${_cachedToken ?? 'null'}');
       debugPrint('-------------------------------------------------------');
 
       messaging.onTokenRefresh.listen((newToken) {
@@ -61,6 +85,13 @@ class PushNotificationService {
     }
 
     try {
+      if (Platform.isIOS) {
+        String? apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+        if (apnsToken == null) {
+          debugPrint('Error: El token APNS no está disponible en este momento.');
+          return null;
+        }
+      }
       _cachedToken = await FirebaseMessaging.instance.getToken();
       return _cachedToken;
     } catch (error) {

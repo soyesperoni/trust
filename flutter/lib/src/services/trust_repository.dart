@@ -293,6 +293,159 @@ class TrustRepository {
     );
   }
 
+  Future<List<Map<String, dynamic>>> loadUsers(String email) async {
+    final json = await _apiClient.getJson('/users/', email: email);
+    final results = (json['results'] as List<dynamic>? ?? []);
+    return results.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  Future<Map<String, dynamic>> updateUser({
+    required String email,
+    required int userId,
+    required Map<String, dynamic> body,
+  }) {
+    return _apiClient.putJson(
+      '/users/$userId/',
+      email: email,
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteUser({
+    required String email,
+    required int userId,
+  }) {
+    return _apiClient.deleteJson(
+      '/users/$userId/',
+      email: email,
+    );
+  }
+
+  Future<Map<String, dynamic>> updateClient({
+    required String email,
+    required int clientId,
+    required Map<String, dynamic> body,
+  }) {
+    return _apiClient.putJson(
+      '/clients/$clientId/',
+      email: email,
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteClient({
+    required String email,
+    required int clientId,
+  }) {
+    return _apiClient.deleteJson(
+      '/clients/$clientId/',
+      email: email,
+    );
+  }
+
+  Future<Map<String, dynamic>> updateBranch({
+    required String email,
+    required int branchId,
+    required Map<String, dynamic> body,
+  }) {
+    return _apiClient.putJson(
+      '/branches/$branchId/',
+      email: email,
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteBranch({
+    required String email,
+    required int branchId,
+  }) {
+    return _apiClient.deleteJson(
+      '/branches/$branchId/',
+      email: email,
+    );
+  }
+
+  Future<Map<String, dynamic>> updateArea({
+    required String email,
+    required int areaId,
+    required Map<String, dynamic> body,
+  }) {
+    return _apiClient.putJson(
+      '/areas/$areaId/',
+      email: email,
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteArea({
+    required String email,
+    required int areaId,
+  }) {
+    return _apiClient.deleteJson(
+      '/areas/$areaId/',
+      email: email,
+    );
+  }
+
+  Future<Map<String, dynamic>> updateDispenser({
+    required String email,
+    required int dispenserId,
+    required Map<String, dynamic> body,
+  }) {
+    return _apiClient.putJson(
+      '/dispensers/$dispenserId/',
+      email: email,
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteDispenser({
+    required String email,
+    required int dispenserId,
+  }) {
+    return _apiClient.deleteJson(
+      '/dispensers/$dispenserId/',
+      email: email,
+    );
+  }
+
+  Future<Map<String, dynamic>> createProduct({
+    required String email,
+    required String name,
+    required String description,
+  }) {
+    return _apiClient.postJson(
+      '/products/',
+      email: email,
+      body: {
+        'name': name,
+        'description': description,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> updateProduct({
+    required String email,
+    required int productId,
+    required Map<String, dynamic> body,
+  }) {
+    return _apiClient.putJson(
+      '/products/$productId/',
+      email: email,
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteProduct({
+    required String email,
+    required int productId,
+  }) {
+    return _apiClient.deleteJson(
+      '/products/$productId/',
+      email: email,
+    );
+  }
+
   Future<List<Map<String, dynamic>>> loadClients(String email) async {
     final json = await _apiClient.getJson('/clients/', email: email);
     final results = (json['results'] as List<dynamic>? ?? []);

@@ -11,6 +11,7 @@ import 'tabs/visits_tab.dart';
 import 'notifications_screen.dart';
 import 'dashboard_quick_setup_screen.dart';
 import 'dashboard_quick_user_screen.dart';
+import 'system_management_screen.dart';
 import 'profile_screen.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
@@ -110,13 +111,29 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(widget.isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round),
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-          if (widget.role == UserRole.generalAdmin || widget.role == UserRole.inspector)
+          if (widget.role == UserRole.generalAdmin || widget.role == UserRole.inspector) ...[
+            _TopBarIconButton(
+              tooltip: 'Administración del Sistema',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SystemManagementScreen(
+                      email: widget.email,
+                      isDarkMode: widget.isDarkMode,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.business_rounded),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             _TopBarIconButton(
               tooltip: 'Más opciones',
               onPressed: _openQuickCreateMenu,
               icon: const Icon(Icons.add_rounded),
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
+          ],
           const SizedBox(width: 2),
           _TopBarIconButton(
             onPressed: () {

@@ -306,6 +306,31 @@ class ApiClient {
     return decoded;
   }
 
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    required String email,
+  }) async {
+    await _ensureCsrfToken();
+    final uri = Uri.parse('$_normalizedBaseUrl$path');
+    final response = await _client.delete(
+      uri,
+      headers: _authHeaders(email, includeCsrf: true),
+    );
+
+    if (response.statusCode == 204) {
+      return {'status': 'success'};
+    }
+
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError: 'Error ${response.statusCode} al eliminar $path',
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(decoded['error'] ?? 'Error ${response.statusCode} al eliminar $path');
+    }
+    return decoded;
+  }
+
   Future<http.Response> getRaw(
     String path, {
     required String email,

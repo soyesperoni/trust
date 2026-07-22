@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -91,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: email,
         password: _passwordController.text,
         fcmToken: fcmToken,
-        deviceType: 'android',
+        deviceType: Platform.isIOS ? 'ios' : 'android',
       );
       final user = response['user'] as Map<String, dynamic>?;
       final resolvedEmail = (user?['email'] as String?)?.trim();
@@ -159,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: storedEmail,
         password: storedPassword,
         fcmToken: fcmToken,
-        deviceType: 'android',
+        deviceType: Platform.isIOS ? 'ios' : 'android',
       );
       final user = response['user'] as Map<String, dynamic>?;
       final resolvedEmail = (user?['email'] as String?)?.trim();
