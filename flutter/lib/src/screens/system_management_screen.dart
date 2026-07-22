@@ -877,7 +877,7 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      'Sucursal: ${area['branch']?['name'] ?? ''} (${area['branch']?['client']?['name'] ?? ''})\nDescripción: ${area['description'] ?? ''}',
+                      'Sucursal: ${area['branch']?['name'] ?? ''} (${area['branch']?['client'] ?? ''})\nDescripción: ${area['description'] ?? ''}',
                     ),
                     isThreeLine: true,
                     trailing: Row(
@@ -1019,7 +1019,7 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
   Widget _buildDispensersTab() {
     final filtered = _dispensers.where((d) {
       final area = (d['area']?['name'] as String? ?? '').toLowerCase();
-      final branch = (d['area']?['branch']?['name'] as String? ?? '').toLowerCase();
+      final branch = (d['area']?['branch'] as String? ?? '').toLowerCase();
       final model = (d['model']?['name'] as String? ?? '').toLowerCase();
       final query = _dispenserSearch.toLowerCase();
       return area.contains(query) || branch.contains(query) || model.contains(query);
@@ -1060,7 +1060,7 @@ class _SystemManagementScreenState extends State<SystemManagementScreen> with Si
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      'Ubicación: ${dispenser['area']?['name'] ?? ''} (${dispenser['area']?['branch']?['name'] ?? ''})\nProductos: ${productsList.isEmpty ? "Ninguno" : productsList}',
+                      'Ubicación: ${dispenser['area']?['name'] ?? ''} (${dispenser['area']?['branch'] ?? ''})\nProductos: ${productsList.isEmpty ? "Ninguno" : productsList}',
                     ),
                     isThreeLine: true,
                     trailing: Row(
