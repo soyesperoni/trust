@@ -1,3 +1,4 @@
+
 from django.contrib import admin
 from django.contrib import messages
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
@@ -339,8 +340,8 @@ class DeepSeekAPISettingsAdmin(admin.ModelAdmin):
 @admin.register(GmailAPISettings)
 class GmailAPISettingsAdmin(admin.ModelAdmin):
     list_display = ("email", "is_enabled", "is_connected_display", "updated_at")
-    readonly_fields = ("redirect_url", "connection_status")
-    fields = ("email", "client_id", "client_secret", "is_enabled", "redirect_url", "connection_status")
+    readonly_fields = ("redirect_url", "connection_status", "test_email_button")
+    fields = ("email", "client_id", "client_secret", "is_enabled", "redirect_url", "connection_status", "test_email_button")
 
     def has_add_permission(self, request):
         if GmailAPISettings.objects.exists():
@@ -376,6 +377,63 @@ class GmailAPISettingsAdmin(admin.ModelAdmin):
                 auth_url
             )
     connection_status.short_description = "Estado de la Vinculación"
+
+    def test_email_button(self, obj):
+        from django.utils.html import format_html
+        if not obj.id or not obj.refresh_token:
+            return "Primero debes guardar la configuración y vincular tu cuenta con Google."
+        
+        test_url = f"/admin/core/gmailapisettings/{obj.id}/test-email/"
+        return format_html(
+            '<a href="{}" class="button" style="background-color: #28a745; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold;">Probar Envío de Correo</a>',
+            test_url
+        )
+    test_email_button.short_description = "Probar Envío"
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<object_id>/test-email/',
+                self.admin_site.admin_view(self.test_email_view),
+                name='gmailapisettings-test-email',
+            ),
+        ]
+        return custom_urls + urls
+
+    def test_email_view(self, request, object_id):
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        from core.views import send_gmail_notification
+        
+        obj = self.get_object(request, object_id)
+        if not obj:
+            messages.error(request, "Configuración no encontrada.")
+            return redirect("/admin/core/gmailapisettings/")
+            
+        recipient = request.user.email or obj.email
+        if not recipient:
+            messages.error(request, "No hay destinatario válido para el correo de prueba.")
+            return redirect(f"/admin/core/gmailapisettings/{object_id}/change/")
+            
+        subject = "Correo de Prueba - Trust Gmail API"
+        body_text = (
+            f"¡Hola!\n\n"
+            f"Esta es una prueba de envío de correo electrónico desde el sistema Trust.\n\n"
+            f"Configuración de origen: {obj.email}\n"
+            f"Destinatario: {recipient}\n"
+            f"Estado: Funcionando correctamente.\n"
+        )
+        
+        success = send_gmail_notification(obj, recipient, subject, body_text)
+        if success:
+            messages.success(request, f"El correo de prueba ha sido enviado con éxito a {recipient}.")
+        else:
+            messages.error(request, "Error al enviar el correo de prueba. Por favor, verifica que la vinculación con Google esté activa y que las credenciales sean correctas.")
+            
+        return redirect(f"/admin/core/gmailapisettings/{object_id}/change/")
+
 
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):

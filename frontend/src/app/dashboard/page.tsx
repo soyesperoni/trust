@@ -186,6 +186,7 @@ export default function DashboardPage() {
   const completedVisitsTotal = useMemo(() => stats?.completed_visits ?? 0, [stats?.completed_visits]);
   const completedAuditsTotal = useMemo(() => stats?.completed_audits ?? 0, [stats?.completed_audits]);
   const incidentsTotal = useMemo(() => stats?.incidents ?? 0, [stats?.incidents]);
+
   const scoreBars = useMemo(() => {
     const sanitized = dailyComplianceScoreHistory
       .map((entry) => {
@@ -319,7 +320,7 @@ export default function DashboardPage() {
     if (isLoading) return;
 
     let animationFrame = 0;
-    const duration = 1100;
+    const duration = 1000;
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {
@@ -353,202 +354,400 @@ export default function DashboardPage() {
     return () => window.cancelAnimationFrame(animationFrame);
   }, [complianceScore, completedAuditsTotal, completedVisitsTotal, incidentsTotal, isLoading, overdueAuditsTotal, overdueVisitsTotal, pendingVisitsTotal, scheduledAuditsTotal]);
 
+  // Circle circumference for 52 radius = 2 * PI * 52 = 326.726
+  const gaugeCircumference = 326.73;
+  const gaugeOffset = gaugeCircumference - (animatedComplianceScore / 100) * gaugeCircumference;
+
   return (
     <>
       <DashboardHeader
         title="Panel General"
-        description="Vista ejecutiva sin saltos visuales, con foco en visitas, incidencias y auditorías."
+        description="Resumen operativo de cumplimiento, visitas técnicas y auditorías de calidad."
       />
 
-      <PageTransition className="relative flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="dashboard-lights-motion pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.42)_0%,rgba(146,185,59,0.33)_34%,rgba(255,255,255,0)_68%)] dark:bg-[radial-gradient(circle_at_50%_118%,rgba(46,49,146,0.36)_0%,rgba(146,185,59,0.2)_38%,rgba(10,15,20,0)_68%)]" />
-        <section className="relative z-10 w-full space-y-5">
+      <PageTransition className="relative flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+        <div className="mx-auto max-w-7xl space-y-6">
           {error && !isLoading && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
-              {error}
+            <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
+              <span className="material-symbols-outlined text-[20px] text-red-500">error</span>
+              <p>{error}</p>
             </div>
           )}
 
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch xl:gap-5">
-            <article className="w-full rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-5 xl:w-[440px] xl:flex-shrink-0 dark:border-slate-700/70 dark:bg-slate-900/55">
-              <div className="flex h-full flex-col rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 p-4 text-center sm:p-5 dark:border-slate-700/70 dark:from-slate-900/55 dark:to-slate-900/35">
-                <div className="flex flex-1 flex-col items-center justify-center">
-                  <div className="mt-2 flex w-full flex-col gap-3">
-                    <div className="flex h-full w-full flex-col">
-                      <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-slate-200/80 bg-white/70 px-3 py-4 dark:border-slate-700/70 dark:bg-slate-900/45">
-                        <div className="flex items-end gap-1">
-                          <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[5.2rem] font-black leading-none text-transparent min-[420px]:text-[6rem] md:text-[6.8rem] xl:text-[7.8rem]">
-                            {isLoading ? "..." : animatedComplianceScore}
-                          </span>
-                          <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-1 text-[2.4rem] font-bold text-transparent min-[420px]:text-[3rem] md:pb-2 md:text-[3.4rem] xl:text-[3.8rem]">%</span>
-                        </div>
-                        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-sm sm:tracking-[0.22em] dark:text-slate-300">Score de cumplimiento</p>
-                      </div>
-                    </div>
-                    <Link href={metricCardRoutes.pendingVisits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
-                          {isLoading ? "..." : animatedPendingVisits}
-                        </span>
-                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">visitas programadas</span>
-                      </div>
-                    </Link>
-                    <Link href={metricCardRoutes.scheduledAudits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
-                          {isLoading ? "..." : animatedScheduledAudits}
-                        </span>
-                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">auditorías pendientes</span>
-                      </div>
-                    </Link>
-                    <Link href={metricCardRoutes.completedVisits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
-                          {isLoading ? "..." : animatedCompletedVisits}
-                        </span>
-                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">visitas realizadas</span>
-                      </div>
-                    </Link>
-                    <Link href={metricCardRoutes.completedAudits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
-                          {isLoading ? "..." : animatedCompletedAudits}
-                        </span>
-                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">auditorías realizadas</span>
-                      </div>
-                    </Link>
-                    <Link href={metricCardRoutes.overdueVisits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
-                          {isLoading ? "..." : animatedOverdueVisits}
-                        </span>
-                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">visitas vencidas</span>
-                      </div>
-                    </Link>
-                    <Link href={metricCardRoutes.overdueAudits} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
-                          {isLoading ? "..." : animatedOverdueAudits}
-                        </span>
-                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">auditorías vencidas</span>
-                      </div>
-                    </Link>
-                    <Link href={metricCardRoutes.incidents} className="rounded-xl border border-slate-200/80 bg-white/72 px-3 py-3.5 transition hover:-translate-y-0.5 hover:border-professional-green/40 dark:border-slate-700/70 dark:bg-slate-900/45">
-                      <div className="flex flex-col items-start gap-1 bg-gradient-to-t from-primary to-professional-green bg-clip-text text-left text-transparent">
-                        <span className="text-2xl font-black leading-none min-[420px]:text-3xl sm:text-4xl">
-                          {isLoading ? "..." : animatedIncidents}
-                        </span>
-                        <span className="text-left text-xs font-black uppercase leading-tight min-[420px]:text-sm sm:text-base">incidencias activas</span>
-                      </div>
-                    </Link>
-                  </div>
+          {/* Fila superior: KPIs Principales estilo Google Minimalist */}
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* KPI 1: Visitas Programadas */}
+            <Link
+              href={metricCardRoutes.pendingVisits}
+              className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 transition-all hover:border-blue-400 hover:shadow-xs dark:border-slate-800 dark:bg-[#161e27] dark:hover:border-blue-500/50"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100 dark:bg-blue-950/50 dark:text-blue-400 dark:group-hover:bg-blue-900/50">
+                  <span className="material-symbols-outlined text-[22px]">calendar_today</span>
                 </div>
+                <span className="material-symbols-outlined text-[18px] text-slate-300 transition-colors group-hover:translate-x-0.5 group-hover:text-blue-600 dark:text-slate-600 dark:group-hover:text-blue-400">
+                  arrow_forward
+                </span>
+              </div>
+              <div className="mt-4">
+                <span className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+                  {isLoading ? "..." : animatedPendingVisits}
+                </span>
+                <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Visitas Programadas
+                </p>
+                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  Pendientes en agenda mensual
+                </p>
+              </div>
+            </Link>
+
+            {/* KPI 2: Visitas Realizadas */}
+            <Link
+              href={metricCardRoutes.completedVisits}
+              className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 transition-all hover:border-emerald-400 hover:shadow-xs dark:border-slate-800 dark:bg-[#161e27] dark:hover:border-emerald-500/50"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-400 dark:group-hover:bg-emerald-900/50">
+                  <span className="material-symbols-outlined text-[22px]">check_circle</span>
+                </div>
+                <span className="material-symbols-outlined text-[18px] text-slate-300 transition-colors group-hover:translate-x-0.5 group-hover:text-emerald-600 dark:text-slate-600 dark:group-hover:text-emerald-400">
+                  arrow_forward
+                </span>
+              </div>
+              <div className="mt-4">
+                <span className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+                  {isLoading ? "..." : animatedCompletedVisits}
+                </span>
+                <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Visitas Realizadas
+                </p>
+                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  Completadas exitosamente
+                </p>
+              </div>
+            </Link>
+
+            {/* KPI 3: Auditorías */}
+            <Link
+              href={metricCardRoutes.completedAudits}
+              className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 transition-all hover:border-indigo-400 hover:shadow-xs dark:border-slate-800 dark:bg-[#161e27] dark:hover:border-indigo-500/50"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 transition-colors group-hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-400 dark:group-hover:bg-indigo-900/50">
+                  <span className="material-symbols-outlined text-[22px]">assignment_turned_in</span>
+                </div>
+                <span className="material-symbols-outlined text-[18px] text-slate-300 transition-colors group-hover:translate-x-0.5 group-hover:text-indigo-600 dark:text-slate-600 dark:group-hover:text-indigo-400">
+                  arrow_forward
+                </span>
+              </div>
+              <div className="mt-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+                    {isLoading ? "..." : animatedCompletedAudits}
+                  </span>
+                  <span className="text-xs font-medium text-slate-400">
+                    / {isLoading ? "..." : animatedCompletedAudits + animatedScheduledAudits}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Auditorías Realizadas
+                </p>
+                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  {isLoading ? "..." : animatedScheduledAudits} pendientes de evaluación
+                </p>
+              </div>
+            </Link>
+
+            {/* KPI 4: Incidencias y Vencidas */}
+            <Link
+              href={metricCardRoutes.incidents}
+              className={`group relative flex flex-col justify-between rounded-2xl border bg-white p-5 transition-all hover:shadow-xs dark:bg-[#161e27] ${
+                animatedIncidents > 0 || animatedOverdueVisits > 0
+                  ? "border-rose-200 hover:border-rose-400 dark:border-rose-900/40 dark:hover:border-rose-500/50"
+                  : "border-slate-200/80 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+                    animatedIncidents > 0 || animatedOverdueVisits > 0
+                      ? "bg-rose-50 text-rose-600 group-hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-400"
+                      : "bg-slate-100 text-slate-600 group-hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[22px]">report_problem</span>
+                </div>
+                <span className="material-symbols-outlined text-[18px] text-slate-300 transition-colors group-hover:translate-x-0.5 group-hover:text-rose-600 dark:text-slate-600 dark:group-hover:text-rose-400">
+                  arrow_forward
+                </span>
+              </div>
+              <div className="mt-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+                    {isLoading ? "..." : animatedIncidents}
+                  </span>
+                  {animatedOverdueVisits > 0 && (
+                    <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600 dark:bg-rose-950/60 dark:text-rose-300">
+                      +{animatedOverdueVisits} vencidas
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Incidencias Activas
+                </p>
+                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  {animatedOverdueVisits > 0
+                    ? `${animatedOverdueVisits} visitas requieren atención`
+                    : "Todo en orden operativo"}
+                </p>
+              </div>
+            </Link>
+          </section>
+
+          {/* Sección Media: Score de Calidad + Gráfico de Tendencias */}
+          <section className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+            {/* Columna Izquierda: Score de Cumplimiento */}
+            <article className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-[#161e27] lg:col-span-5 xl:col-span-4">
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Score de Cumplimiento
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Evaluación integral del periodo
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      complianceScore >= 90
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                        : complianceScore >= 70
+                        ? "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
+                        : "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                    }`}
+                  >
+                    {complianceScore >= 90 ? "Óptimo" : complianceScore >= 70 ? "Adecuado" : "En Seguimiento"}
+                  </span>
+                </div>
+
+                {/* Donut Gauge SVG Google Style */}
+                <div className="my-6 flex flex-col items-center justify-center">
+                  <div className="relative flex items-center justify-center">
+                    <svg className="h-36 w-36 -rotate-90 transform" viewBox="0 0 120 120">
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="52"
+                        className="stroke-slate-100 dark:stroke-slate-800"
+                        strokeWidth="10"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="52"
+                        className="transition-all duration-1000 ease-out"
+                        stroke={complianceScore >= 80 ? "#22c55e" : complianceScore >= 60 ? "#3b82f6" : "#f59e0b"}
+                        strokeWidth="10"
+                        strokeDasharray={gaugeCircumference}
+                        strokeDashoffset={isLoading ? gaugeCircumference : gaugeOffset}
+                        strokeLinecap="round"
+                        fill="transparent"
+                      />
+                    </svg>
+                    <div className="absolute flex flex-col items-center justify-center text-center">
+                      <span className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                        {isLoading ? "..." : animatedComplianceScore}%
+                      </span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                        Índice
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
+                    Basado en auditorías realizadas
+                  </p>
+                </div>
+              </div>
+
+              {/* Sub-métricas de riesgo */}
+              <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 dark:border-slate-800/80">
+                <Link
+                  href={metricCardRoutes.overdueVisits}
+                  className="group flex flex-col rounded-xl bg-slate-50/80 p-3 transition hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                >
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <span className={`material-symbols-outlined text-[16px] ${animatedOverdueVisits > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+                      history_toggle_off
+                    </span>
+                    <span>Visitas Vencidas</span>
+                  </div>
+                  <span className={`mt-1 text-lg font-bold ${animatedOverdueVisits > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-800 dark:text-slate-200"}`}>
+                    {isLoading ? "..." : animatedOverdueVisits}
+                  </span>
+                </Link>
+
+                <Link
+                  href={metricCardRoutes.overdueAudits}
+                  className="group flex flex-col rounded-xl bg-slate-50/80 p-3 transition hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                >
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <span className={`material-symbols-outlined text-[16px] ${animatedOverdueAudits > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+                      schedule
+                    </span>
+                    <span>Auditorías Vencidas</span>
+                  </div>
+                  <span className={`mt-1 text-lg font-bold ${animatedOverdueAudits > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-800 dark:text-slate-200"}`}>
+                    {isLoading ? "..." : animatedOverdueAudits}
+                  </span>
+                </Link>
               </div>
             </article>
 
-            <article className="w-full rounded-3xl border border-white/65 bg-white/80 p-4 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:p-6 xl:min-w-0 xl:flex-1 dark:border-slate-700/70 dark:bg-slate-900/55">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-slate-900 sm:text-lg dark:text-white">Tendencia diaria de cumplimiento</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: "month", label: "6 meses" },
-                    { value: "week", label: "6 semanas" },
-                    { value: "last6days", label: "6 días" },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setScoreRange(option.value as ScoreRange)}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${scoreRange === option.value
-                        ? "bg-primary text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+            {/* Columna Derecha: Gráfico de Tendencias */}
+            <article className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-[#161e27] lg:col-span-7 xl:col-span-8">
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Tendencia de Cumplimiento
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Evolución histórica según auditorías
+                    </p>
+                  </div>
+                  {/* Selector estilo Google Segmented Pill */}
+                  <div className="inline-flex rounded-full bg-slate-100 p-0.5 dark:bg-slate-800">
+                    {[
+                      { value: "month", label: "6 meses" },
+                      { value: "week", label: "6 semanas" },
+                      { value: "last6days", label: "6 días" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setScoreRange(option.value as ScoreRange)}
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                          scoreRange === option.value
+                            ? "bg-white text-slate-900 shadow-xs dark:bg-slate-700 dark:text-white"
+                            : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                         }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-5 overflow-x-auto rounded-2xl bg-gradient-to-b from-white to-slate-50 p-2 sm:p-3 dark:from-slate-900/55 dark:to-slate-900/35">
-                <div className="relative h-64 w-full min-w-[460px] sm:h-72 sm:min-w-[520px] lg:min-w-0">
-                  <div className="absolute inset-0">
+                {/* Contenedor del gráfico minimalista */}
+                <div className="relative mt-6 h-56 w-full sm:h-64">
+                  {/* Líneas guía de fondo */}
+                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
                     {[100, 75, 50, 25, 0].map((tick) => (
-                      <div key={tick} className="absolute inset-x-0" style={{ bottom: `${tick}%` }}>
-                        <div className="border-t border-dashed border-slate-300/75 dark:border-slate-700/70" />
-                        <span className="absolute -top-3 left-0 text-[10px] font-semibold text-slate-400 dark:text-slate-500">{tick}%</span>
+                      <div key={tick} className="relative flex items-center border-b border-dashed border-slate-100 dark:border-slate-800/80 w-full">
+                        <span className="absolute -top-2.5 right-0 text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                          {tick}%
+                        </span>
                       </div>
                     ))}
                   </div>
 
-                  <div key={scoreChartAnimationKey} className="relative z-10 flex h-full items-end gap-1.5 px-4 pb-1 sm:gap-2 sm:px-6">
+                  {/* Barras de datos */}
+                  <div
+                    key={scoreChartAnimationKey}
+                    className="relative z-10 flex h-full items-end justify-around gap-2 px-6 pb-1"
+                  >
                     {scoreBars.map((item, index) => (
-                      <div key={`${item.label}-${index}`} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                        <span className={`mb-1 text-[10px] font-bold ${item.isPlaceholder ? "text-slate-400 dark:text-slate-500" : "text-slate-600 dark:text-slate-200"}`}>
+                      <div
+                        key={`${item.label}-${index}`}
+                        className="group relative flex h-full flex-1 flex-col items-center justify-end max-w-[48px]"
+                      >
+                        <span className="mb-1 text-[11px] font-semibold text-slate-600 transition-opacity dark:text-slate-300">
                           {item.score}%
                         </span>
                         <div
-                          className={`w-full rounded-t-md ${item.isPlaceholder
-                            ? "bg-slate-300 dark:bg-slate-700"
-                            : "bg-gradient-to-t from-primary to-professional-green shadow-[0_6px_15px_-8px_rgba(22,163,74,0.65)]"
-                            }`}
+                          className={`w-full rounded-t-lg transition-all duration-300 ${
+                            item.isPlaceholder
+                              ? "bg-slate-200 dark:bg-slate-700"
+                              : "bg-gradient-to-t from-primary to-[#4338ca] hover:brightness-110 dark:from-primary dark:to-[#6366f1]"
+                          }`}
                           style={{
-                            height: `${Math.max(item.score, 2)}%`,
+                            height: `${Math.max(item.score, 3)}%`,
                             opacity: barAnimationProgress,
                             transform: `scaleY(${barAnimationProgress})`,
                             transformOrigin: "bottom",
-                            transition: `transform 520ms ease ${index * 45}ms, opacity 420ms ease ${index * 45}ms`,
+                            transition: `transform 480ms ease ${index * 40}ms, opacity 360ms ease ${index * 40}ms`,
                           }}
                         />
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="mt-2 grid min-w-[460px] grid-cols-6 gap-2 sm:min-w-[520px] lg:min-w-0">
+
+                {/* Etiquetas de fechas en eje X */}
+                <div className="mt-2 flex justify-around gap-2 px-6">
                   {scoreBars.map((item, index) => (
-                    <span key={`${item.label}-${index}`} className="truncate text-center text-[11px] font-semibold text-slate-500 dark:text-slate-300">
+                    <span
+                      key={`${item.label}-${index}`}
+                      className="max-w-[48px] flex-1 text-center text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate"
+                    >
                       {item.label}
                     </span>
                   ))}
                 </div>
+              </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-4 xl:grid-cols-8">
-                  {statsCards.map((item, index) => (
-                    <Link
-                      key={item.label}
-                      href={cardRoutes[item.label as keyof typeof cardRoutes] ?? "/dashboard"}
-                      className="apple-card-enter group relative overflow-hidden rounded-xl border border-primary/20 bg-white/85 px-2 py-2 shadow-[0_16px_35px_-30px_rgba(46,49,146,0.75)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-professional-green/40 min-[480px]:px-2.5 min-[480px]:py-2.5 dark:border-primary/30 dark:bg-slate-900/65"
-                      style={{ animationDelay: `${index * 70}ms` }}
-                    >
-                      {isLoading ? (
-                        <div className="flex flex-col items-center justify-center gap-1.5">
-                          <div className="h-6 w-6 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
-                          <div className="h-5 w-8 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-                          <div className="h-3 w-14 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center gap-1">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <span className="material-symbols-outlined bg-gradient-to-t from-primary to-professional-green bg-clip-text text-[20px] text-transparent min-[480px]:text-[22px]">{item.icon}</span>
-                            <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-lg font-black leading-none text-transparent min-[480px]:text-xl">
-                              {item.value}
-                            </span>
-                          </div>
-                          <span className="w-full truncate text-center text-[10px] font-bold uppercase tracking-[0.06em] text-slate-600 min-[480px]:text-[11px] dark:text-slate-200">
-                            {item.label}
-                          </span>
-                        </div>
-                      )}
-                    </Link>
-                  ))}
-                </div>
+              <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800/80 dark:text-slate-400">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                  Score alcanzado en auditorías
+                </span>
+                <Link
+                  href="/clientes/auditorias"
+                  className="font-medium text-primary hover:underline dark:text-indigo-400"
+                >
+                  Ver detalle de auditorías →
+                </Link>
               </div>
             </article>
-          </div>
+          </section>
 
-        </section>
+          {/* Sección Inferior: Módulos y Catálogos Operativos */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Módulos y Catálogos
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Acceso directo a las entidades y registros del sistema
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+              {statsCards.map((item) => (
+                <Link
+                  key={item.label}
+                  href={cardRoutes[item.label as keyof typeof cardRoutes] ?? "/dashboard"}
+                  className="group flex flex-col items-center justify-center rounded-2xl border border-slate-200/80 bg-white p-3.5 text-center transition-all hover:border-slate-300 hover:bg-slate-50/50 hover:shadow-xs dark:border-slate-800 dark:bg-[#161e27] dark:hover:border-slate-700 dark:hover:bg-slate-800/50"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors group-hover:bg-primary/10 group-hover:text-primary dark:bg-slate-800 dark:text-slate-400 dark:group-hover:bg-primary/20 dark:group-hover:text-primary">
+                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                  </div>
+                  <span className="mt-2 text-base font-bold text-slate-900 group-hover:text-primary dark:text-white dark:group-hover:text-primary">
+                    {isLoading ? "..." : item.value}
+                  </span>
+                  <span className="w-full truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                    {item.label}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </div>
       </PageTransition>
     </>
   );
