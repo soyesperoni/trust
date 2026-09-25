@@ -447,10 +447,20 @@ class SupportTicket(models.Model):
         COMPLETED = "completed", _("Resuelto")
         REJECTED = "rejected", _("Descartado")
 
+    class TargetSystem(models.TextChoices):
+        PLATFORM = "platform", _("Plataforma Web")
+        MOBILE = "mobile", _("App Móvil")
+        BOTH = "both", _("Plataforma y Móvil")
+
     ticket_number = models.CharField(max_length=50, unique=True, db_index=True)
     title = models.CharField(max_length=255)
     description = models.TextField()
     category = models.CharField(max_length=80, default="general")
+    target_system = models.CharField(
+        max_length=40,
+        choices=TargetSystem.choices,
+        default=TargetSystem.PLATFORM
+    )
     priority = models.CharField(max_length=30, choices=Priority.choices, default=Priority.MEDIUM)
     status = models.CharField(max_length=40, choices=Status.choices, default=Status.PENDING)
     reporter_name = models.CharField(max_length=150, default="administrador")

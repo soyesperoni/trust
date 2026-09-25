@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBackendBaseUrl } from "../../lib/backend";
+import { getBackendBaseUrl } from "../../../lib/backend";
 
 const backendBaseUrl = getBackendBaseUrl();
 

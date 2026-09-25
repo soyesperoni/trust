@@ -4717,6 +4717,7 @@ def _serialize_support_ticket(ticket: SupportTicket) -> dict:
         "title": ticket.title,
         "description": ticket.description,
         "category": ticket.category,
+        "target_system": getattr(ticket, "target_system", "platform") or "platform",
         "priority": ticket.priority,
         "status": ticket.status,
         "reporter_name": ticket.reporter_name,
@@ -4738,6 +4739,13 @@ def _dispatch_ticket_to_vida(ticket: SupportTicket):
     import threading
     def _worker():
         try:
+            attachments = []
+            if ticket.attachments:
+                try:
+                    attachments = json.loads(ticket.attachments)
+                except Exception:
+                    attachments = []
+
             vida_payload = {
                 "platform_slug": "trust",
                 "local_ticket_id": ticket.id,
@@ -4745,10 +4753,11 @@ def _dispatch_ticket_to_vida(ticket: SupportTicket):
                 "title": ticket.title,
                 "description": ticket.description,
                 "category": ticket.category,
+                "target_system": getattr(ticket, "target_system", "platform") or "platform",
                 "priority": ticket.priority,
                 "reporter_name": ticket.reporter_name,
                 "reporter_email": ticket.reporter_email,
-                "attachments": []
+                "attachments": attachments
             }
             req = Request(
                 "https://vida.dayronesperon.com/api/support/external-ticket",
@@ -4778,32 +4787,51 @@ def _dispatch_ticket_to_vida(ticket: SupportTicket):
 @csrf_exempt
 def support_tickets(request):
     """
-    Listado y creación de tickets de soporte técnico de la plataforma Trust.
+    Listado, creación y eliminación de tickets de soporte técnico de la plataforma Trust.
     """
     if request.method == "GET":
         queryset = SupportTicket.objects.all().order_by("-id")
         return JsonResponse({"results": [_serialize_support_ticket(t) for t in queryset]})
 
+    if request.method == "DELETE":
+        ticket_id = request.GET.get("id")
+        if not ticket_id and request.body:
+            try:
+                body = json.loads(request.body.decode("utf-8"))
+                ticket_id = body.get("id")
+            except Exception:
+                pass
+        if ticket_id:
+            deleted_count, _ = SupportTicket.objects.filter(pk=ticket_id).delete()
+            if deleted_count > 0:
+                return JsonResponse({"success": True, "message": "Ticket eliminado correctamente."})
+            return JsonResponse({"error": "Ticket no encontrado."}, status=404)
+        return JsonResponse({"error": "ID de ticket requerido para eliminar."}, status=400)
+
     if request.method == "POST":
         data, files = _extract_user_data(request)
-        if not data:
+        if not data and not request.POST:
             return JsonResponse({"error": "Datos inválidos o cuerpo vacío."}, status=400)
 
-        title = str(data.get("title") or "").strip()
-        description = str(data.get("description") or "").strip()
+        title = str(data.get("title") or request.POST.get("title") or "").strip()
+        description = str(data.get("description") or request.POST.get("description") or "").strip()
         if not title:
             return JsonResponse({"error": "El título de la petición es obligatorio."}, status=400)
         if not description:
             return JsonResponse({"error": "La descripción del requerimiento es obligatoria."}, status=400)
 
-        category = str(data.get("category") or "general").strip()
-        priority = str(data.get("priority") or "medium").strip()
+        category = str(data.get("category") or request.POST.get("category") or "general").strip()
+        target_system = str(data.get("target_system") or request.POST.get("target_system") or "platform").strip()
+        if target_system not in ("platform", "mobile", "both"):
+            target_system = "platform"
+
+        priority = str(data.get("priority") or request.POST.get("priority") or "medium").strip()
         if priority not in [p[0] for p in SupportTicket.Priority.choices]:
             priority = "medium"
 
         current_user = _get_current_user(request)
-        reporter_name = str(data.get("reporter_name") or "").strip()
-        reporter_email = str(data.get("reporter_email") or "").strip()
+        reporter_name = str(data.get("reporter_name") or request.POST.get("reporter_name") or "").strip()
+        reporter_email = str(data.get("reporter_email") or request.POST.get("reporter_email") or "").strip()
 
         if current_user:
             if not reporter_name:
@@ -4813,6 +4841,41 @@ def support_tickets(request):
 
         if not reporter_name:
             reporter_name = "Administrador"
+
+        # Manejo de archivos adjuntos (multipart/form-data o base64)
+        saved_attachments = []
+        for key in request.FILES:
+            for f in request.FILES.getlist(key):
+                try:
+                    unique_name = f"support/attachments/{uuid.uuid4().hex[:12]}_{f.name}"
+                    saved_path = default_storage.save(unique_name, f)
+                    saved_attachments.append({
+                        "name": f.name,
+                        "url": f"/media/{saved_path}",
+                        "size": f.size,
+                        "content_type": getattr(f, "content_type", "")
+                    })
+                except Exception as upload_err:
+                    logger.warning(f"Error guardando archivo adjunto de soporte: {upload_err}")
+
+        raw_attachments = data.get("attachments") if data else None
+        if isinstance(raw_attachments, list):
+            for item in raw_attachments:
+                if isinstance(item, dict) and item.get("data") and item.get("name"):
+                    try:
+                        file_bytes = base64.b64decode(item["data"].split(",")[-1])
+                        unique_name = f"support/attachments/{uuid.uuid4().hex[:12]}_{item['name']}"
+                        saved_path = default_storage.save(unique_name, ContentFile(file_bytes))
+                        saved_attachments.append({
+                            "name": item["name"],
+                            "url": f"/media/{saved_path}",
+                            "size": len(file_bytes),
+                            "content_type": item.get("type", "")
+                        })
+                    except Exception as b64_err:
+                        logger.warning(f"Error decodificando adjunto base64: {b64_err}")
+                elif isinstance(item, dict) and item.get("url"):
+                    saved_attachments.append(item)
 
         # Generar correlativo secuencial TK-XXXX
         last = SupportTicket.objects.order_by("-id").first()
@@ -4827,17 +4890,39 @@ def support_tickets(request):
             title=title,
             description=description,
             category=category,
+            target_system=target_system,
             priority=priority,
             status=SupportTicket.Status.PENDING,
             reporter_name=reporter_name,
             reporter_email=reporter_email,
-            user=current_user
+            user=current_user,
+            attachments=json.dumps(saved_attachments)
         )
 
         # Disparar sincronización asíncrona hacia Vida
         _dispatch_ticket_to_vida(ticket)
 
         return JsonResponse(_serialize_support_ticket(ticket), status=201)
+
+    return JsonResponse({"error": "Método no permitido."}, status=405)
+
+
+@csrf_exempt
+def support_ticket_detail(request, ticket_id):
+    """
+    Detalle y eliminación directa de un ticket por ID.
+    """
+    try:
+        ticket = SupportTicket.objects.get(pk=ticket_id)
+    except SupportTicket.DoesNotExist:
+        return JsonResponse({"error": "Ticket no encontrado."}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_support_ticket(ticket))
+
+    if request.method == "DELETE":
+        ticket.delete()
+        return JsonResponse({"success": True, "message": "Ticket eliminado correctamente."})
 
     return JsonResponse({"error": "Método no permitido."}, status=405)
 
