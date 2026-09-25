@@ -8,7 +8,7 @@ REMOTE_EXEC="$BASE/remote_exec.py"
 echo "Iniciando despliegue de Trust en trust.supplymax.net..."
 
 # 1. Pull de cambios y compilacion en el servidor remoto
-python3 "$REMOTE_EXEC" "cd /opt/trust && git pull origin main && npm --prefix frontend run build && systemctl restart trust-backend.service trust-frontend.service"
+python3 "$REMOTE_EXEC" "cd /opt/trust && sudo -u deploy git pull origin main && sudo -u deploy npm --prefix frontend run build && systemctl restart trust-backend.service trust-frontend.service"
 
 # 2. Verificar estado de servicios
 echo "Verificando servicios systemd..."
