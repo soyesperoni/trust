@@ -365,8 +365,8 @@ export default function DashboardPage() {
         description="Resumen operativo de cumplimiento, visitas técnicas y auditorías de calidad."
       />
 
-      <PageTransition className="relative flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <PageTransition className="relative flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full">
+        <div className="w-full space-y-6">
           {error && !isLoading && (
             <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
               <span className="material-symbols-outlined text-[20px] text-red-500">error</span>
@@ -508,7 +508,7 @@ export default function DashboardPage() {
           {/* Sección Media: Score de Calidad + Gráfico de Tendencias */}
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-12">
             {/* Columna Izquierda: Score de Cumplimiento */}
-            <article className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-[#161e27] lg:col-span-5 xl:col-span-4">
+            <article className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-[#161e27] lg:col-span-4 xl:col-span-4">
               <div>
                 <div className="flex items-center justify-between">
                   <div>
@@ -607,7 +607,7 @@ export default function DashboardPage() {
             </article>
 
             {/* Columna Derecha: Gráfico de Tendencias */}
-            <article className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-[#161e27] lg:col-span-7 xl:col-span-8">
+            <article className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-[#161e27] lg:col-span-8 xl:col-span-8">
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

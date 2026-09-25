@@ -427,15 +427,15 @@ export default function AuditoriasPage() {
         <div className="hidden shrink-0 px-4 pb-2 pt-6 md:block md:px-8">
           <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#161e27]">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
-              <div className="flex w-full flex-col justify-center rounded-xl border border-slate-100 bg-gradient-to-b from-white to-slate-50 px-4 py-5 text-center dark:border-slate-700/60 dark:from-slate-900/60 dark:to-slate-900/30 xl:max-w-[290px]">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Score general</p>
-                <div className="mt-3 flex items-end justify-center gap-1">
-                  <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text text-6xl font-black leading-none text-transparent">
+              <div className="flex w-full flex-col justify-center rounded-xl border border-slate-200/80 bg-white px-4 py-4 text-center dark:border-slate-800 dark:bg-slate-900/40 xl:max-w-[260px]">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Score general</p>
+                <div className="mt-2 flex items-baseline justify-center gap-0.5">
+                  <span className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
                     {isLoading ? "..." : animatedAverageScore}
                   </span>
-                  <span className="bg-gradient-to-t from-primary to-professional-green bg-clip-text pb-1 text-2xl font-bold text-transparent">%</span>
+                  <span className="text-base font-bold text-slate-400">%</span>
                 </div>
-                <span className="mt-2 text-xs text-slate-500 dark:text-slate-400">Según auditorías visibles por tus permisos</span>
+                <span className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Según auditorías visibles por permisos</span>
               </div>
               <div className="flex-1 rounded-xl border border-slate-100 p-3 dark:border-slate-700/60">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">

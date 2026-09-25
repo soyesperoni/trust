@@ -41,13 +41,6 @@ const navItems: NavItem[] = [
   { icon: "fact_check", label: "Plantillas", href: "/clientes/auditorias/plantillas" },
 ];
 
-const linkClassName = (isActive: boolean, collapsed: boolean) =>
-  `flex items-center ${collapsed ? "justify-center" : "gap-2"} px-3 py-2.5 text-[16px] text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer ${
-    isActive ? "bg-yellow-50 border-r-4 border-primary font-semibold" : ""
-  }`;
-
-const activeGradientTextClassName = "bg-gradient-to-t from-primary to-professional-green bg-clip-text text-transparent";
-
 export default function DashboardSidebar({ activePath }: DashboardSidebarProps) {
   const { user } = useCurrentUser();
   const isAccountAdmin = user?.role === ACCOUNT_ADMIN_ROLE;
@@ -74,30 +67,86 @@ export default function DashboardSidebar({ activePath }: DashboardSidebarProps) 
   });
 
   return (
-    <aside className={`menu-lights-surface relative hidden shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-all duration-300 dark:border-slate-800 dark:bg-[#161e27] md:flex ${collapsed ? "w-16" : "w-48"}`}>
-      <div className="menu-lights-motion pointer-events-none absolute inset-y-0 -left-28 z-0 w-56" />
+    <aside
+      className={`relative hidden shrink-0 flex-col border-r border-slate-200/80 bg-white transition-all duration-200 dark:border-slate-800 dark:bg-[#161e27] md:flex ${
+        collapsed ? "w-16" : "w-60"
+      }`}
+    >
       <div
-        className={`relative z-10 flex h-16 items-center border-b border-slate-100 px-3 dark:border-slate-800 ${
-          collapsed ? "justify-center" : "justify-start"
+        className={`relative z-10 flex h-16 items-center border-b border-slate-100 px-3.5 dark:border-slate-800 ${
+          collapsed ? "justify-center" : "justify-between"
         }`}
       >
-        <BrandLogo compact={collapsed} size={collapsed ? "lg" : "xl"} className={collapsed ? "" : "origin-left scale-110"} />
+        <BrandLogo
+          compact={collapsed}
+          size={collapsed ? "lg" : "xl"}
+          className={collapsed ? "" : "origin-left scale-100"}
+        />
         <button
           aria-label={collapsed ? "Expandir menú" : "Minimizar menú"}
-          className="absolute right-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 ${
+            collapsed ? "hidden" : ""
+          }`}
           onClick={toggleCollapsed}
           type="button"
         >
-          <span className="material-symbols-outlined text-[18px]">{collapsed ? "chevron_right" : "chevron_left"}</span>
+          <span className="material-symbols-outlined text-[18px]">menu_open</span>
         </button>
       </div>
-      <nav className="relative z-10 flex flex-1 flex-col gap-1 overflow-y-auto py-6">
+
+      {collapsed && (
+        <div className="flex justify-center border-b border-slate-100 py-2 dark:border-slate-800">
+          <button
+            aria-label="Expandir menú"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            onClick={toggleCollapsed}
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+          </button>
+        </div>
+      )}
+
+      <nav className="relative z-10 flex flex-1 flex-col gap-0.5 overflow-y-auto py-3">
         {visibleNavItems.map((item) => {
           const isActive = item.href === activePath;
+          if (collapsed) {
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                title={item.label}
+                className={`mx-auto my-0.5 flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                  isActive
+                    ? "bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-200"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+              </Link>
+            );
+          }
+
           return (
-            <Link key={item.label} className={linkClassName(isActive, collapsed)} href={item.href} title={collapsed ? item.label : undefined}>
-              <span className={`material-symbols-outlined text-[21px] ${isActive ? activeGradientTextClassName : ""}`}>{item.icon}</span>
-              {!collapsed && <span className={isActive ? activeGradientTextClassName : ""}>{item.label}</span>}
+            <Link
+              key={item.label}
+              href={item.href}
+              className={`mx-2.5 my-0.5 flex items-center gap-3.5 rounded-full px-3.5 py-2 text-[13px] transition-colors ${
+                isActive
+                  ? "bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
+                  : "font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-200"
+              }`}
+            >
+              <span
+                className={`material-symbols-outlined text-[20px] ${
+                  isActive
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-slate-500 dark:text-slate-400"
+                }`}
+              >
+                {item.icon}
+              </span>
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
