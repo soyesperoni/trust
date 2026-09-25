@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
   { icon: "report_problem", label: "Incidencias", href: "/clientes/incidencias", accountAdminOnly: true, branchAdminOnly: true },
   { icon: "assignment_turned_in", label: "Auditorías", href: "/clientes/auditorias", accountAdminOnly: true, branchAdminOnly: true },
   { icon: "fact_check", label: "Plantillas", href: "/clientes/auditorias/plantillas" },
+  { icon: "support_agent", label: "Soporte", href: "/soporte" },
 ];
 
 export default function DashboardSidebar({ activePath }: DashboardSidebarProps) {

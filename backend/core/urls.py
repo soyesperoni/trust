@@ -38,6 +38,8 @@ from .views import (
     visit_report_public_pdf,
     gmail_authorize,
     gmail_oauth2callback,
+    support_tickets,
+    support_ticket_status_update,
 )
 
 urlpatterns = [
@@ -84,4 +86,10 @@ urlpatterns = [
     path("incidents/<int:incident_id>/schedule-visit/", incident_schedule_visit, name="incident_schedule_visit"),
     path("users/", users, name="users"),
     path("users/<int:user_id>/", user_detail, name="user_detail"),
+    path("support/tickets/", support_tickets, name="support_tickets"),
+    path("support/tickets", support_tickets, name="support_tickets_noslash"),
+    path("support/", support_tickets, name="support_short"),
+    path("support", support_tickets, name="support_short_noslash"),
+    path("support/tickets/<int:ticket_id>/status-update/", support_ticket_status_update, name="support_ticket_status_update"),
+    path("support/tickets/<int:ticket_id>/status-update", support_ticket_status_update, name="support_ticket_status_update_noslash"),
 ]

@@ -432,3 +432,48 @@ class FCMDevice(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user_id} - {self.device_type or 'unknown'}"
+
+
+class SupportTicket(models.Model):
+    class Priority(models.TextChoices):
+        LOW = "low", _("Baja")
+        MEDIUM = "medium", _("Media")
+        HIGH = "high", _("Alta")
+        URGENT = "urgent", _("Urgente")
+
+    class Status(models.TextChoices):
+        PENDING = "pending_validation", _("Pendiente de validación")
+        IN_DIRECTOR = "in_director", _("En proceso")
+        COMPLETED = "completed", _("Resuelto")
+        REJECTED = "rejected", _("Descartado")
+
+    ticket_number = models.CharField(max_length=50, unique=True, db_index=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    category = models.CharField(max_length=80, default="general")
+    priority = models.CharField(max_length=30, choices=Priority.choices, default=Priority.MEDIUM)
+    status = models.CharField(max_length=40, choices=Status.choices, default=Status.PENDING)
+    reporter_name = models.CharField(max_length=150, default="administrador")
+    reporter_email = models.CharField(max_length=150, blank=True, default="")
+    user = models.ForeignKey(
+        'core.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='support_tickets'
+    )
+    vida_ticket_id = models.IntegerField(null=True, blank=True)
+    vida_ticket_number = models.CharField(max_length=50, blank=True, default="")
+    attachments = models.TextField(default="[]")
+    resolution_notes = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-id"]
+        verbose_name = "Ticket de Soporte"
+        verbose_name_plural = "Tickets de Soporte"
+
+    def __str__(self) -> str:
+        return f"{self.ticket_number} - {self.title} ({self.get_status_display()})"
+

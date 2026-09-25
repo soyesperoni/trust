@@ -23,6 +23,7 @@ type AppShellProps = {
 };
 
 const navigationPriority = [
+  "/soporte",
   "/ajustes",
   "/clientes/auditorias/plantillas",
   "/clientes/auditorias",

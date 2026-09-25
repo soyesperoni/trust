@@ -38,7 +38,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 from .fcm_manager import send_push_notification_to_devices
-from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, IncidentMedia, Nozzle, Product, User, Visit, VisitMedia
+from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, IncidentMedia, Nozzle, Product, SupportTicket, User, Visit, VisitMedia
 from .report_templates import build_audit_report_html, build_visit_report_html
 
 
@@ -4702,3 +4702,194 @@ def user_detail(request, user_id: int):
 
     user.save()
     return JsonResponse(_serialize_user(user))
+
+
+def _serialize_support_ticket(ticket: SupportTicket) -> dict:
+    attachments = []
+    if ticket.attachments:
+        try:
+            attachments = json.loads(ticket.attachments)
+        except Exception:
+            attachments = []
+    return {
+        "id": ticket.id,
+        "ticket_number": ticket.ticket_number,
+        "title": ticket.title,
+        "description": ticket.description,
+        "category": ticket.category,
+        "priority": ticket.priority,
+        "status": ticket.status,
+        "reporter_name": ticket.reporter_name,
+        "reporter_email": ticket.reporter_email,
+        "vida_ticket_id": ticket.vida_ticket_id,
+        "vida_ticket_number": ticket.vida_ticket_number,
+        "attachments": attachments,
+        "resolution_notes": ticket.resolution_notes or "",
+        "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
+        "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
+    }
+
+
+def _dispatch_ticket_to_vida(ticket: SupportTicket):
+    """
+    Sincroniza el ticket de soporte hacia Vida (vida.dayronesperon.com)
+    de forma asíncrona para no bloquear la respuesta al usuario.
+    """
+    import threading
+    def _worker():
+        try:
+            vida_payload = {
+                "platform_slug": "trust",
+                "local_ticket_id": ticket.id,
+                "ticket_number": ticket.ticket_number,
+                "title": ticket.title,
+                "description": ticket.description,
+                "category": ticket.category,
+                "priority": ticket.priority,
+                "reporter_name": ticket.reporter_name,
+                "reporter_email": ticket.reporter_email,
+                "attachments": []
+            }
+            req = Request(
+                "https://vida.dayronesperon.com/api/support/external-ticket",
+                data=json.dumps(vida_payload).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "Trust-Platform-Sync/1.0"
+                },
+                method="POST"
+            )
+            with urlopen(req, timeout=10) as resp:
+                if resp.status in (200, 201):
+                    data = json.loads(resp.read().decode("utf-8"))
+                    v_id = data.get("vida_ticket_id")
+                    v_num = data.get("ticket_number") or data.get("vida_ticket_number")
+                    if v_id or v_num:
+                        SupportTicket.objects.filter(pk=ticket.pk).update(
+                            vida_ticket_id=v_id,
+                            vida_ticket_number=v_num or ""
+                        )
+        except Exception as e:
+            logger.warning(f"Error sincronizando ticket {ticket.ticket_number} con Vida: {e}")
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+
+@csrf_exempt
+def support_tickets(request):
+    """
+    Listado y creación de tickets de soporte técnico de la plataforma Trust.
+    """
+    if request.method == "GET":
+        queryset = SupportTicket.objects.all().order_by("-id")
+        return JsonResponse({"results": [_serialize_support_ticket(t) for t in queryset]})
+
+    if request.method == "POST":
+        data, files = _extract_user_data(request)
+        if not data:
+            return JsonResponse({"error": "Datos inválidos o cuerpo vacío."}, status=400)
+
+        title = str(data.get("title") or "").strip()
+        description = str(data.get("description") or "").strip()
+        if not title:
+            return JsonResponse({"error": "El título de la petición es obligatorio."}, status=400)
+        if not description:
+            return JsonResponse({"error": "La descripción del requerimiento es obligatoria."}, status=400)
+
+        category = str(data.get("category") or "general").strip()
+        priority = str(data.get("priority") or "medium").strip()
+        if priority not in [p[0] for p in SupportTicket.Priority.choices]:
+            priority = "medium"
+
+        current_user = _get_current_user(request)
+        reporter_name = str(data.get("reporter_name") or "").strip()
+        reporter_email = str(data.get("reporter_email") or "").strip()
+
+        if current_user:
+            if not reporter_name:
+                reporter_name = current_user.get_full_name() or current_user.username
+            if not reporter_email:
+                reporter_email = current_user.email or ""
+
+        if not reporter_name:
+            reporter_name = "Administrador"
+
+        # Generar correlativo secuencial TK-XXXX
+        last = SupportTicket.objects.order_by("-id").first()
+        next_id = (last.id + 1) if last else 1
+        ticket_number = f"TK-{1000 + next_id}"
+        while SupportTicket.objects.filter(ticket_number=ticket_number).exists():
+            next_id += 1
+            ticket_number = f"TK-{1000 + next_id}"
+
+        ticket = SupportTicket.objects.create(
+            ticket_number=ticket_number,
+            title=title,
+            description=description,
+            category=category,
+            priority=priority,
+            status=SupportTicket.Status.PENDING,
+            reporter_name=reporter_name,
+            reporter_email=reporter_email,
+            user=current_user
+        )
+
+        # Disparar sincronización asíncrona hacia Vida
+        _dispatch_ticket_to_vida(ticket)
+
+        return JsonResponse(_serialize_support_ticket(ticket), status=201)
+
+    return JsonResponse({"error": "Método no permitido."}, status=405)
+
+
+@csrf_exempt
+def support_ticket_status_update(request, ticket_id):
+    """
+    Webhook / endpoint para actualizar el estado del ticket cuando el Director de Proyectos
+    de Vida lo resuelva o modifique su estado.
+    """
+    if request.method not in ("POST", "PATCH", "PUT"):
+        return JsonResponse({"error": "Método no permitido."}, status=405)
+
+    ticket = None
+    try:
+        ticket = SupportTicket.objects.get(pk=ticket_id)
+    except (SupportTicket.DoesNotExist, ValueError):
+        pass
+
+    if not ticket:
+        ticket = SupportTicket.objects.filter(vida_ticket_id=ticket_id).first()
+
+    if not ticket:
+        return JsonResponse({"error": f"Ticket {ticket_id} no encontrado."}, status=404)
+
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        body = {}
+
+    new_status = str(body.get("status") or "").strip().lower()
+    resolution_notes = str(body.get("resolution_notes") or "").strip()
+
+    if new_status:
+        if new_status in ("completed", "resolved", "resuelto"):
+            ticket.status = SupportTicket.Status.COMPLETED
+        elif new_status in ("in_director", "in_progress", "en_proceso"):
+            ticket.status = SupportTicket.Status.IN_DIRECTOR
+        elif new_status in ("rejected", "descartado"):
+            ticket.status = SupportTicket.Status.REJECTED
+        else:
+            ticket.status = new_status
+
+    if resolution_notes:
+        ticket.resolution_notes = resolution_notes
+
+    ticket.save()
+    return JsonResponse({
+        "success": True,
+        "ticket_id": ticket.id,
+        "ticket_number": ticket.ticket_number,
+        "status": ticket.status,
+        "resolution_notes": ticket.resolution_notes
+    })
+

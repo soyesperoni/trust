@@ -29,6 +29,7 @@ const INSPECTOR_BLOCKED_PATH_PREFIXES = [
 ];
 
 export const ACCOUNT_ADMIN_ALLOWED_PATH_PREFIXES = [
+  "/soporte",
   "/ajustes",
   "/dashboard",
   "/clientes/auditorias",
@@ -42,6 +43,7 @@ export const ACCOUNT_ADMIN_ALLOWED_PATH_PREFIXES = [
 ];
 
 export const BRANCH_ADMIN_ALLOWED_PATH_PREFIXES = [
+  "/soporte",
   "/ajustes",
   "/dashboard",
   "/clientes/auditorias",
@@ -54,6 +56,7 @@ export const BRANCH_ADMIN_ALLOWED_PATH_PREFIXES = [
 ];
 
 export const INSPECTOR_ALLOWED_PATH_PREFIXES = [
+  "/soporte",
   "/ajustes",
   "/dashboard",
   "/clientes/auditorias",

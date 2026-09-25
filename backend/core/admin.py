@@ -24,6 +24,7 @@ from .models import (
     IncidentMedia,
     Nozzle,
     Product,
+    SupportTicket,
     User,
     Visit,
     VisitMedia,
@@ -480,3 +481,11 @@ class UserAdmin(DjangoUserAdmin):
     list_display = ("username", "email", "role", "is_staff", "is_active")
     list_filter = ("role", "is_staff", "is_active")
     filter_horizontal = ("groups", "user_permissions", "clients", "branches", "areas")
+
+
+@admin.register(SupportTicket)
+class SupportTicketAdmin(admin.ModelAdmin):
+    list_display = ("ticket_number", "title", "category", "priority", "status", "reporter_name", "created_at")
+    list_filter = ("status", "priority", "category")
+    search_fields = ("ticket_number", "title", "description", "reporter_name")
+    readonly_fields = ("created_at", "updated_at")
