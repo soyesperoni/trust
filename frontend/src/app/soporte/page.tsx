@@ -548,208 +548,225 @@ export default function SupportPage() {
           )}
         </div>
 
-        {/* Modal: Crear Ticket con soporte para Ámbito y Archivos Adjuntos */}
+        {/* Modal: Crear Ticket con soporte para Ámbito y Archivos Adjuntos (Horizontal Widescreen) */}
         {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-            <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-[#161e27]">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
-                    <span className="material-symbols-outlined text-[20px]">add_task</span>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-xs">
+            <div className="w-full max-w-4xl lg:max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-[#161e27]">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
+                    <span className="material-symbols-outlined text-[22px]">add_task</span>
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-slate-900 dark:text-white">
                       Nueva Petición de Soporte
                     </h2>
-                    <p className="text-[11px] text-slate-400">Especifica el ámbito y adjunta evidencias</p>
+                    <p className="text-[11px] text-slate-400">
+                      Especifica el entorno, detalles y adjunta evidencias de tu requerimiento
+                    </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
                   type="button"
                 >
                   <span className="material-symbols-outlined text-[20px]">close</span>
                 </button>
               </div>
 
-              <form onSubmit={handleCreateSubmit} className="mt-4 space-y-4">
+              <form onSubmit={handleCreateSubmit} className="mt-4">
                 {formError && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
+                  <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
                     {formError}
                   </div>
                 )}
 
-                {/* Selector de Ámbito: Plataforma Web vs App Móvil */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    ¿Para qué entorno es este cambio / requerimiento? *
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {TARGET_SYSTEMS.map((sys) => {
-                      const isSelected = formTargetSystem === sys.value;
-                      return (
-                        <button
-                          key={sys.value}
-                          type="button"
-                          onClick={() => setFormTargetSystem(sys.value as "platform" | "mobile")}
-                          className={`flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-all ${
-                            isSelected
-                              ? "border-blue-500 bg-blue-50/50 ring-2 ring-blue-500/20 dark:border-blue-500 dark:bg-blue-950/30"
-                              : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800/40"
-                          }`}
+                {/* 2-Column Horizontal Grid for Laptops */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+                  {/* Columna Izquierda: Entorno, Título, Categoría y Prioridad */}
+                  <div className="md:col-span-5 space-y-3.5">
+                    {/* Selector de Ámbito: Plataforma Web vs App Móvil */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        ¿Para qué entorno es este requerimiento? *
+                      </label>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {TARGET_SYSTEMS.map((sys) => {
+                          const isSelected = formTargetSystem === sys.value;
+                          return (
+                            <button
+                              key={sys.value}
+                              type="button"
+                              onClick={() => setFormTargetSystem(sys.value as "platform" | "mobile")}
+                              className={`flex flex-col sm:flex-row items-start gap-2 rounded-2xl border p-3 text-left transition-all ${
+                                isSelected
+                                  ? "border-blue-500 bg-blue-50/50 ring-2 ring-blue-500/20 dark:border-blue-500 dark:bg-blue-950/30"
+                                  : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800/40"
+                              }`}
+                            >
+                              <div
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                                  isSelected
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                }`}
+                              >
+                                <span className="material-symbols-outlined text-[18px]">{sys.icon}</span>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                                  {sys.label}
+                                </span>
+                                <span className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-tight block mt-0.5">
+                                  {sys.description}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Título */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Título de la petición *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formTitle}
+                        onChange={(e) => setFormTitle(e.target.value)}
+                        placeholder="Ej: Corrección en dosificadores / Ajuste vista móvil..."
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-900/60 dark:text-white"
+                      />
+                    </div>
+
+                    {/* Categoría y Prioridad */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          Categoría
+                        </label>
+                        <select
+                          value={formCategory}
+                          onChange={(e) => setFormCategory(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
                         >
-                          <div
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                              isSelected
-                                ? "bg-blue-600 text-white"
-                                : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                            }`}
-                          >
-                            <span className="material-symbols-outlined text-[20px]">{sys.icon}</span>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                              {sys.label}
-                            </span>
-                            <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight block mt-0.5">
-                              {sys.description}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                          {CATEGORIES.map((c) => (
+                            <option key={c.value} value={c.value}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Título del requerimiento *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formTitle}
-                    onChange={(e) => setFormTitle(e.target.value)}
-                    placeholder="Ej: Corrección en registro de dosificadores / Ajuste en vista móvil..."
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-900/60 dark:text-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Categoría
-                    </label>
-                    <select
-                      value={formCategory}
-                      onChange={(e) => setFormCategory(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Prioridad
-                    </label>
-                    <select
-                      value={formPriority}
-                      onChange={(e) => setFormPriority(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
-                    >
-                      {PRIORITIES.map((p) => (
-                        <option key={p.value} value={p.value}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Descripción detallada del requerimiento *
-                  </label>
-                  <textarea
-                    required
-                    rows={4}
-                    value={formDescription}
-                    onChange={(e) => setFormDescription(e.target.value)}
-                    placeholder="Describe los pasos para reproducir el problema, el comportamiento esperado o las especificaciones del ajuste requerido..."
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-900/60 dark:text-white"
-                  />
-                </div>
-
-                {/* Zona de Archivos Adjuntos */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Archivos adjuntos (capturas, PDFs o evidencias)
-                  </label>
-
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-200 p-4 text-center transition hover:border-blue-400 hover:bg-slate-50/50 dark:border-slate-700 dark:hover:border-blue-500/50 dark:hover:bg-slate-900/40"
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      onChange={handleFileSelect}
-                      className="hidden"
-                      accept="image/*,.pdf,.doc,.docx,.txt,.csv,.json"
-                    />
-                    <div className="flex flex-col items-center justify-center gap-1.5">
-                      <span className="material-symbols-outlined text-[26px] text-slate-400">
-                        cloud_upload
-                      </span>
-                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
-                        Haz clic o arrastra archivos aquí para adjuntar
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        Imágenes (PNG, JPG), documentos (PDF, DOCX) o logs
-                      </p>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          Prioridad
+                        </label>
+                        <select
+                          value={formPriority}
+                          onChange={(e) => setFormPriority(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
+                        >
+                          {PRIORITIES.map((p) => (
+                            <option key={p.value} value={p.value}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Lista de archivos seleccionados */}
-                  {formFiles.length > 0 && (
-                    <div className="mt-2.5 space-y-1.5">
-                      {formFiles.map((file, idx) => (
-                        <div
-                          key={`${file.name}-${idx}`}
-                          className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs border border-slate-200/80 dark:bg-slate-800/60 dark:border-slate-700"
-                        >
-                          <div className="flex items-center gap-2 truncate">
-                            <span className="material-symbols-outlined text-blue-600 text-[18px]">
-                              {file.type.startsWith("image/") ? "image" : "description"}
-                            </span>
-                            <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[280px]">
-                              {file.name}
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              ({formatFileSize(file.size)})
-                            </span>
+                  {/* Columna Derecha: Descripción detallada y Zona de Archivos */}
+                  <div className="md:col-span-7 space-y-3.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Descripción detallada *
+                      </label>
+                      <textarea
+                        required
+                        rows={4}
+                        value={formDescription}
+                        onChange={(e) => setFormDescription(e.target.value)}
+                        placeholder="Explica qué sucede, el comportamiento deseado o los requerimientos técnicos..."
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-900/60 dark:text-white"
+                      />
+                    </div>
+
+                    {/* Zona de Archivos Adjuntos */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Archivos adjuntos (capturas, PDFs o evidencias)
+                      </label>
+
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-200 p-3.5 text-center transition hover:border-blue-400 hover:bg-slate-50/50 dark:border-slate-700 dark:hover:border-blue-500/50 dark:hover:bg-slate-900/40"
+                      >
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          onChange={handleFileSelect}
+                          className="hidden"
+                          accept="image/*,.pdf,.doc,.docx,.txt,.csv,.json"
+                        />
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="material-symbols-outlined text-[24px] text-slate-400">
+                            cloud_upload
+                          </span>
+                          <div className="text-left">
+                            <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                              Haz clic o arrastra archivos aquí para adjuntar
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              Imágenes (PNG, JPG), documentos (PDF, DOCX) o logs
+                            </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(idx)}
-                            className="rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">close</span>
-                          </button>
                         </div>
-                      ))}
+                      </div>
+
+                      {/* Lista de archivos seleccionados */}
+                      {formFiles.length > 0 && (
+                        <div className="mt-2 max-h-32 overflow-y-auto space-y-1.5 pr-1">
+                          {formFiles.map((file, idx) => (
+                            <div
+                              key={`${file.name}-${idx}`}
+                              className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-1.5 text-xs border border-slate-200/80 dark:bg-slate-800/60 dark:border-slate-700"
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <span className="material-symbols-outlined text-blue-600 text-[18px]">
+                                  {file.type.startsWith("image/") ? "image" : "description"}
+                                </span>
+                                <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[280px]">
+                                  {file.name}
+                                </span>
+                                <span className="text-[10px] text-slate-400">
+                                  ({formatFileSize(file.size)})
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(idx)}
+                                className="rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">close</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4 dark:border-slate-800">
+                {/* Footer Buttons */}
+                <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-slate-100 pt-3.5 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
@@ -777,13 +794,13 @@ export default function SupportPage() {
           </div>
         )}
 
-        {/* Modal: Detalle del Ticket */}
+        {/* Modal: Detalle del Ticket (Horizontal Widescreen) */}
         {selectedTicket && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-            <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-[#161e27]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-xs">
+            <div className="w-full max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-[#161e27]">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">
                       {selectedTicket.ticket_number}
                     </span>
@@ -825,7 +842,7 @@ export default function SupportPage() {
               </div>
 
               <div className="mt-4 space-y-4 text-xs">
-                <div className="grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-900/50">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
                   <div>
                     <span className="text-slate-400">Ámbito:</span>
                     <p className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1 mt-0.5">
@@ -855,55 +872,57 @@ export default function SupportPage() {
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="font-semibold text-slate-800 dark:text-slate-200">
-                    Descripción del Requerimiento
-                  </h4>
-                  <div className="mt-1.5 whitespace-pre-wrap rounded-xl border border-slate-200 bg-white p-3.5 text-slate-700 shadow-inner dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
-                    {selectedTicket.description}
-                  </div>
-                </div>
-
-                {/* Archivos Adjuntos en Detalle */}
-                {selectedTicket.attachments && selectedTicket.attachments.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[16px]">attach_file</span>
-                      Archivos Adjuntos ({selectedTicket.attachments.length})
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                  <div className={selectedTicket.attachments && selectedTicket.attachments.length > 0 ? "md:col-span-7" : "md:col-span-12"}>
+                    <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-1.5">
+                      Descripción del Requerimiento
                     </h4>
-                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {selectedTicket.attachments.map((att, index) => {
-                        const isImage = att.content_type?.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)$/i.test(att.name || att.url);
-                        return (
-                          <a
-                            key={`${att.url}-${index}`}
-                            href={att.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-2.5 transition hover:border-blue-400 hover:bg-blue-50/30 dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-blue-500/50"
-                          >
-                            <span className="material-symbols-outlined text-blue-600 text-[20px]">
-                              {isImage ? "image" : "description"}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium text-slate-800 group-hover:text-blue-600 dark:text-slate-200 dark:group-hover:text-blue-400">
-                                {att.name || `Adjunto ${index + 1}`}
-                              </p>
-                              {att.size && (
-                                <span className="text-[10px] text-slate-400">
-                                  {formatFileSize(att.size)}
-                                </span>
-                              )}
-                            </div>
-                            <span className="material-symbols-outlined text-slate-400 text-[16px] group-hover:text-blue-600">
-                              open_in_new
-                            </span>
-                          </a>
-                        );
-                      })}
+                    <div className="whitespace-pre-wrap rounded-2xl border border-slate-200 bg-white p-3.5 text-slate-700 shadow-inner dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+                      {selectedTicket.description}
                     </div>
                   </div>
-                )}
+
+                  {/* Archivos Adjuntos en Detalle */}
+                  {selectedTicket.attachments && selectedTicket.attachments.length > 0 && (
+                    <div className="md:col-span-5">
+                      <h4 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 mb-1.5">
+                        <span className="material-symbols-outlined text-[16px]">attach_file</span>
+                        Archivos Adjuntos ({selectedTicket.attachments.length})
+                      </h4>
+                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                        {selectedTicket.attachments.map((att, index) => {
+                          const isImage = att.content_type?.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)$/i.test(att.name || att.url);
+                          return (
+                            <a
+                              key={`${att.url}-${index}`}
+                              href={att.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-2.5 transition hover:border-blue-400 hover:bg-blue-50/30 dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-blue-500/50"
+                            >
+                              <span className="material-symbols-outlined text-blue-600 text-[20px]">
+                                {isImage ? "image" : "description"}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium text-slate-800 group-hover:text-blue-600 dark:text-slate-200 dark:group-hover:text-blue-400">
+                                  {att.name || `Adjunto ${index + 1}`}
+                                </p>
+                                {att.size && (
+                                  <span className="text-[10px] text-slate-400">
+                                    {formatFileSize(att.size)}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="material-symbols-outlined text-slate-400 text-[16px] group-hover:text-blue-600">
+                                open_in_new
+                              </span>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {selectedTicket.resolution_notes && (
                   <div>
@@ -940,6 +959,7 @@ export default function SupportPage() {
             </div>
           </div>
         )}
+
       </div>
     </PageTransition>
   );
