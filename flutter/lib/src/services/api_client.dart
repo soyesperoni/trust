@@ -77,6 +77,30 @@ class ApiClient {
     return decoded;
   }
 
+  Future<Map<String, dynamic>> loadGmailStatus() async {
+    final uri = Uri.parse('$_normalizedBaseUrl/gmail/status/');
+    final response = await _client.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    );
+
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError:
+          'No fue posible consultar el estado de la cuenta de correo.',
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        decoded['error'] ??
+            'No fue posible consultar el estado de la cuenta de correo.',
+      );
+    }
+
+    return decoded;
+  }
+
   Future<Map<String, dynamic>> _loginWithUsersFallback({required String email}) async {
     final uri = Uri.parse('$_normalizedBaseUrl/users/');
     final response = await _client.get(

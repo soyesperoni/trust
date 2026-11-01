@@ -6,6 +6,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'home_screen.dart';
+import '../services/api_client.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 import '../models/user_role.dart';
@@ -16,22 +17,25 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({
     required this.isDarkMode,
     required this.onToggleThemeMode,
+    this.sessionExpired = false,
     super.key,
   });
 
   final bool isDarkMode;
   final VoidCallback onToggleThemeMode;
+  final bool sessionExpired;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   static const _biometricEnabledKey = 'biometric_enabled';
   static const _biometricEmailKey = 'biometric_email';
   static const _biometricPasswordKey = 'biometric_password';
 
   final _emailController = TextEditingController();
+  final _emailFocusNode = FocusNode();
   final _passwordController = TextEditingController();
   final _passwordFocusNode = FocusNode();
   final _formKey = GlobalKey<FormState>();
@@ -43,19 +47,95 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isBiometricLoading = true;
   bool _isBiometricLoginEnabled = false;
   String? _biometricUnavailableMessage;
+  bool _emailNeedsAuthorization = false;
+  bool _emailNeedsConfiguration = false;
+  bool _emailAlertDismissed = false;
+  String _emailStatusMessage = '';
+  String? _emailAuthorizeUrl;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadBiometricStatus();
+    _loadEmailStatus();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _emailController.dispose();
+    _emailFocusNode.dispose();
     _passwordController.dispose();
     _passwordFocusNode.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        (_emailNeedsAuthorization || _emailNeedsConfiguration)) {
+      _loadEmailStatus();
+    }
+  }
+
+  Future<void> _loadEmailStatus() async {
+    try {
+      final status = await _repository.loadGmailStatus();
+      if (!mounted) {
+        return;
+      }
+      final configured = status['configured'] == true;
+      final authorized = status['authorized'] == true;
+      final email = (status['email'] as String? ?? '').trim();
+      final authorizeUrl =
+          (status['authorize_url'] as String? ?? '/gmail/authorize/').trim();
+
+      setState(() {
+        _emailNeedsConfiguration = !configured;
+        _emailNeedsAuthorization = configured && !authorized;
+        _emailAlertDismissed = false;
+        _emailStatusMessage = _emailNeedsConfiguration
+            ? 'La cuenta de correo de la plataforma aun no esta configurada. '
+                'Un administrador debe completar la configuracion para enviar '
+                'notificaciones y reportes.'
+            : 'La cuenta de correo${email.isEmpty ? '' : ' $email'} no esta '
+                'autorizada para enviar mensajes. Autorizala para reanudar el '
+                'envio de notificaciones y reportes.';
+        _emailAuthorizeUrl = _resolveAuthorizeUrl(authorizeUrl);
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _emailNeedsAuthorization = false;
+        _emailNeedsConfiguration = false;
+      });
+    }
+  }
+
+  String _resolveAuthorizeUrl(String value) {
+    final parsed = Uri.tryParse(value);
+    if (parsed != null && parsed.hasScheme) {
+      return parsed.toString();
+    }
+    return Uri.parse(ApiClient.baseUrl).resolve(value).toString();
+  }
+
+  Future<void> _openEmailAuthorization() async {
+    final url = _emailAuthorizeUrl;
+    if (url == null || url.isEmpty) {
+      return;
+    }
+    await _openExternalUrl(
+      url,
+      'No se pudo abrir la autorizacion de la cuenta de correo.',
+    );
+  }
+
+  void _focusEmail() {
+    _emailFocusNode.requestFocus();
   }
 
   Future<void> _loadBiometricStatus() async {
@@ -456,6 +536,31 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 28),
+                        if (widget.sessionExpired) ...[
+                          StatusAlert.sessionExpired(onLogin: _focusEmail),
+                          const SizedBox(height: 16),
+                        ],
+                        if (!_emailAlertDismissed &&
+                            (_emailNeedsConfiguration ||
+                                _emailNeedsAuthorization)) ...[
+                          if (_emailNeedsConfiguration)
+                            StatusAlert(
+                              type: StatusAlertType.warning,
+                              title: 'Correo no configurado',
+                              message: _emailStatusMessage,
+                              actionLabel: 'Reintentar',
+                              onAction: _loadEmailStatus,
+                            )
+                          else
+                            StatusAlert.emailUnauthorized(
+                              message: _emailStatusMessage,
+                              onAuthorize: _openEmailAuthorization,
+                              onDismiss: () => setState(
+                                () => _emailAlertDismissed = true,
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                        ],
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -472,6 +577,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               TextFormField(
                                 controller: _emailController,
+                                focusNode: _emailFocusNode,
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: InputDecoration(
                                   labelText: 'Correo electrónico',

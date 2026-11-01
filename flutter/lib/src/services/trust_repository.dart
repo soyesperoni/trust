@@ -28,6 +28,10 @@ class TrustRepository {
     );
   }
 
+  Future<Map<String, dynamic>> loadGmailStatus() {
+    return _apiClient.loadGmailStatus();
+  }
+
   Future<DashboardStats> loadDashboardStats(String email) async {
     final json = await _apiClient.getJson('/dashboard/', email: email);
     return DashboardStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {});

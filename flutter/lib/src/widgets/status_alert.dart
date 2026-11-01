@@ -60,6 +60,7 @@ class StatusAlert extends StatelessWidget {
   /// Aviso cuando la cuenta de correo no esta autorizada para enviar.
   factory StatusAlert.emailUnauthorized({
     required VoidCallback onAuthorize,
+    String? message,
     VoidCallback? onDismiss,
     Key? key,
   }) {
@@ -67,9 +68,9 @@ class StatusAlert extends StatelessWidget {
       key: key,
       type: StatusAlertType.warning,
       title: 'Correo no autorizado',
-      message:
+      message: message ??
           'La cuenta de correo de la plataforma no esta autorizada para enviar mensajes. '
-          'Autorizala para reanudar el envio de notificaciones y reportes.',
+              'Autorizala para reanudar el envio de notificaciones y reportes.',
       actionLabel: 'Autorizar correo',
       onAction: onAuthorize,
       dismissible: onDismiss != null,
