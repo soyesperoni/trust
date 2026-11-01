@@ -285,7 +285,11 @@ export default function CorrectiveActionPanel({
   const startCreate = () => {
     setFormMode("create");
     setEditingId(null);
-    setOriginKey(originOptions[0]?.value ?? "");
+    setOriginKey(
+      fixedOriginType && fixedOriginId
+        ? `${fixedOriginType}:${fixedOriginId}`
+        : originOptions[0]?.value ?? "",
+    );
     setFormDescription("");
     setResponsibleId("");
     setDueDate("");
