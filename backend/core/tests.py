@@ -2,11 +2,13 @@ import json
 import shutil
 import tempfile
 from datetime import timedelta
+from io import StringIO
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.core import signing
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
 from django.db import IntegrityError
 from django.db.models.deletion import ProtectedError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -1703,3 +1705,124 @@ class CorrectiveActionApiTests(TestCase):
         self.assertEqual(action.status, CorrectiveAction.Status.CLOSED)
         self.assertTrue(action.closure_evidence.name.startswith("corrective_actions/"))
         self.assertTrue(response.json()["closure_evidence"])
+
+
+class CorrectiveActionReminderCommandTests(TestCase):
+    def setUp(self):
+        self.client_entity = Client.objects.create(name="Cliente Recordatorios", code="CL-REM")
+        self.branch = Branch.objects.create(client=self.client_entity, name="Sucursal Recordatorios")
+        self.area = Area.objects.create(branch=self.branch, name="Area Recordatorios")
+        self.responsible = User.objects.create_user(
+            username="resp-reminders",
+            email="resp-reminders@test.com",
+            password="secret123",
+            role=User.Role.INSPECTOR,
+        )
+        self.incident = Incident.objects.create(
+            client=self.client_entity,
+            branch=self.branch,
+            area=self.area,
+            description="zz-e2e-recordatorio",
+        )
+
+    def _create_action(self, *, due_offset=0, status=CorrectiveAction.Status.OPEN, **overrides):
+        values = {
+            "origin_type": CorrectiveAction.OriginType.INCIDENT,
+            "incident": self.incident,
+            "description": "zz-e2e-recordatorio",
+            "responsible": self.responsible,
+            "due_date": timezone.localdate() + timedelta(days=due_offset),
+            "status": status,
+        }
+        values.update(overrides)
+        return CorrectiveAction.objects.create(**values)
+
+    @patch("core.management.commands.send_corrective_action_reminders.send_corrective_action_due_reminder")
+    def test_sends_due_and_overdue_once_and_marks_reminder(self, notify_mock):
+        notify_mock.return_value = 1
+        due_today = self._create_action(due_offset=0)
+        overdue = self._create_action(
+            due_offset=-1,
+            status=CorrectiveAction.Status.IN_PROGRESS,
+        )
+        future = self._create_action(due_offset=2)
+        closed = self._create_action(
+            due_offset=0,
+            status=CorrectiveAction.Status.CLOSED,
+        )
+        already_reminded = self._create_action(
+            due_offset=-2,
+            reminder_sent_at=timezone.now(),
+        )
+
+        first_output = StringIO()
+        call_command("send_corrective_action_reminders", stdout=first_output)
+
+        self.assertEqual(notify_mock.call_count, 2)
+        notified = {
+            (call.args[0].id, call.kwargs.get("overdue"))
+            for call in notify_mock.call_args_list
+        }
+        self.assertEqual(notified, {(due_today.id, False), (overdue.id, True)})
+        self.assertIn("Recordatorios enviados: 2", first_output.getvalue())
+
+        for action in (due_today, overdue):
+            action.refresh_from_db()
+            self.assertIsNotNone(action.reminder_sent_at)
+        future.refresh_from_db()
+        closed.refresh_from_db()
+        already_reminded.refresh_from_db()
+        self.assertIsNone(future.reminder_sent_at)
+        self.assertIsNone(closed.reminder_sent_at)
+        self.assertIsNotNone(already_reminded.reminder_sent_at)
+
+        second_output = StringIO()
+        call_command("send_corrective_action_reminders", stdout=second_output)
+
+        self.assertEqual(notify_mock.call_count, 2)
+        self.assertIn("Recordatorios enviados: 0", second_output.getvalue())
+
+    @patch("core.management.commands.send_corrective_action_reminders.send_corrective_action_due_reminder")
+    def test_dry_run_does_not_notify_or_mark(self, notify_mock):
+        action = self._create_action(due_offset=-1)
+
+        output = StringIO()
+        call_command("send_corrective_action_reminders", "--dry-run", stdout=output)
+
+        notify_mock.assert_not_called()
+        action.refresh_from_db()
+        self.assertIsNone(action.reminder_sent_at)
+        self.assertIn("[dry-run] Recordatorios pendientes: 1", output.getvalue())
+
+    @patch("core.management.commands.send_corrective_action_reminders.send_corrective_action_due_reminder")
+    def test_marks_reminder_when_no_device_is_available(self, notify_mock):
+        notify_mock.return_value = 0
+        action = self._create_action(due_offset=0)
+
+        call_command("send_corrective_action_reminders", stdout=StringIO())
+
+        action.refresh_from_db()
+        self.assertIsNotNone(action.reminder_sent_at)
+
+        call_command("send_corrective_action_reminders", stdout=StringIO())
+        self.assertEqual(notify_mock.call_count, 1)
+
+    @patch("core.management.commands.send_corrective_action_reminders.send_corrective_action_due_reminder")
+    def test_notification_failure_leaves_reminder_for_retry(self, notify_mock):
+        notify_mock.side_effect = RuntimeError("FCM no disponible")
+        action = self._create_action(due_offset=0)
+
+        stderr = StringIO()
+        call_command("send_corrective_action_reminders", stdout=StringIO(), stderr=stderr)
+
+        action.refresh_from_db()
+        self.assertIsNone(action.reminder_sent_at)
+        self.assertIn("error al notificar", stderr.getvalue())
+
+        notify_mock.side_effect = None
+        notify_mock.return_value = 1
+        call_command("send_corrective_action_reminders", stdout=StringIO())
+
+        action.refresh_from_db()
+        self.assertIsNotNone(action.reminder_sent_at)
+        self.assertEqual(notify_mock.call_count, 2)

@@ -356,61 +356,118 @@ una foto y registrar quien la subio.
 
 ### 5.1 Asignacion
 
-Se dispara al crear la accion y cuando cambia `responsible`.
+Implementado en la fase 2. Se dispara al crear la accion y cuando cambia
+`responsible` mediante `PATCH /api/corrective-actions/<id>/`.
 
 - Destinatario: solo `action.responsible`; no se reutiliza
   `_send_area_push_notification()` porque notificaria a toda el area.
+- Funcion: `fcm_manager.send_corrective_action_assignment_notification(action)`.
 - Push: `send_push_notification(responsible, title, body, data)` con
   `data={"event": "corrective_action_assigned", "action_id": str(action.id)}`.
-- Correo: nuevo `_process_corrective_action_assigned_email(action_id)` dentro de
-  `_send_email_async`, con el patron de `_process_incident_created_email()`.
-  Debe comprobar `GmailAPISettings.objects.filter(is_enabled=True).first()` y
-  `refresh_token`, y no bloquear la respuesta HTTP.
-- Si el responsable no tiene `FCMDevice` o correo, la accion se crea igual y se
-  registra el fallo en log. No se debe fallar la transaccion por una notificacion.
-- Marcar `assigned_notified_at` solo si al menos un canal tuvo exito; si no, dejar
-  `NULL` para permitir reintento.
+- Si el responsable no tiene `FCMDevice`, la accion se crea o actualiza igual y
+  el fallo se registra en el log. La notificacion nunca revierte la transaccion.
+- No se envia correo en esta fase. El canal de asignacion es push FCM.
 
-Texto sugerido:
+Texto:
 
 ```text
-Titulo: Nueva accion correctiva asignada
-Cuerpo: <descripcion corta> · vence <dd/mm/aaaa>
+Titulo: Nueva acción correctiva asignada
+Cuerpo: <descripcion corta> - vence <dd/mm/aaaa>
 ```
 
 ### 5.2 Vencimiento
 
-Comando nuevo: `backend/core/management/commands/send_corrective_due_reminders.py`.
+Implementado en `backend/core/management/commands/send_corrective_action_reminders.py`.
+El comando anterior `send_corrective_due_reminders` se conserva como alias de
+compatibilidad y ejecuta la misma logica.
 
-Seleccion:
+Seleccion exacta:
 
 ```python
 today = timezone.localdate()
-due = CorrectiveAction.objects.filter(
-    status__in=[CorrectiveAction.Status.OPEN, CorrectiveAction.Status.IN_PROGRESS],
-    due_date=today,
-    due_reminder_sent_at__isnull=True,
-)
-overdue = CorrectiveAction.objects.filter(
-    status__in=[CorrectiveAction.Status.OPEN, CorrectiveAction.Status.IN_PROGRESS],
-    due_date__lt=today,
-    overdue_notified_at__isnull=True,
-)
+pending = CorrectiveAction.objects.filter(
+    due_date__lte=today,
+    reminder_sent_at__isnull=True,
+).exclude(status=CorrectiveAction.Status.CLOSED)
 ```
 
-Para cada accion: push al responsable con `event=corrective_action_due` o
-`corrective_action_overdue`, correo con el mismo patron y `update()` del campo de
-marca correspondiente. El comando debe ser idempotente y aceptar `--dry-run`.
+Incluye las acciones que vencen hoy y las vencidas, en estado abierta o en curso.
+Para cada accion se envia
+`fcm_manager.send_corrective_action_due_reminder(action, overdue=...)`:
 
-Programacion recomendada (zona horaria de operacion, no la UTC de Django):
+- `overdue=False` y evento `corrective_action_due` cuando `due_date == today`.
+- `overdue=True` y evento `corrective_action_overdue` cuando `due_date < today`.
+
+Idempotencia:
+
+- `reminder_sent_at` se marca con `update()` despues de que la funcion de
+  notificacion termina sin excepcion, incluso si el responsable no tiene
+  dispositivos FCM (`success_count == 0`). Asi una segunda ejecucion no reintenta
+  ni duplica el recordatorio.
+- Si la notificacion lanza una excepcion, `reminder_sent_at` queda en `NULL` para
+  permitir el reintento en la siguiente ejecucion.
+- Las acciones cerradas, futuras o ya recordadas no se seleccionan.
+- `--dry-run` lista las acciones pendientes sin enviar ni modificar la base.
+
+Prueba manual local:
+
+```bash
+cd /opt/trust/backend
+.venv/bin/python manage.py send_corrective_action_reminders --dry-run
+.venv/bin/python manage.py send_corrective_action_reminders
+# Segunda ejecucion: debe informar "Recordatorios enviados: 0".
+.venv/bin/python manage.py send_corrective_action_reminders
+```
+
+Programacion diaria a las 08:00 de Panama. El servidor usa UTC, por lo que se
+recomienda un systemd timer con zona horaria explicita:
+
+```ini
+# /etc/systemd/system/trust-corrective-reminders.service
+[Unit]
+Description=Trust - recordatorios de acciones correctivas
+After=network.target
+
+[Service]
+Type=oneshot
+User=deploy
+WorkingDirectory=/opt/trust/backend
+ExecStart=/opt/trust/backend/.venv/bin/python manage.py send_corrective_action_reminders
+```
+
+```ini
+# /etc/systemd/system/trust-corrective-reminders.timer
+[Unit]
+Description=Trust - recordatorios diarios de acciones correctivas
+
+[Timer]
+OnCalendar=*-*-* 08:00:00 America/Panama
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+```bash
+systemctl daemon-reload
+systemctl enable --now trust-corrective-reminders.timer
+systemctl list-timers trust-corrective-reminders.timer
+journalctl -u trust-corrective-reminders.service
+```
+
+Alternativa con cron (crear `/var/log/trust` antes de usarlo):
 
 ```cron
-0 12 * * * cd /opt/trust/backend && .venv/bin/python manage.py send_corrective_due_reminders >> /var/log/trust/corrective_reminders.log 2>&1
+# /etc/cron.d/trust-corrective-reminders
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+CRON_TZ=America/Panama
+0 8 * * * deploy cd /opt/trust/backend && .venv/bin/python manage.py send_corrective_action_reminders >> /var/log/trust/corrective_reminders.log 2>&1
 ```
 
-12:00 UTC equivale a 07:00 en Panama. Alternativa equivalente: systemd timer
-diario. La fase de despliegue debe instalar el cron o el timer; el comando por si
-solo no envia nada.
+Si el cron del servidor no admite `CRON_TZ`, programar `0 13 * * *` en UTC, que
+equivale a las 08:00 de Panama. La fase de despliegue debe instalar el timer o el
+cron; el comando por si solo no se ejecuta.
 
 ### 5.3 Bandeja de notificaciones
 
