@@ -13,6 +13,7 @@ import 'dashboard_quick_setup_screen.dart';
 import 'dashboard_quick_user_screen.dart';
 import 'system_management_screen.dart';
 import 'profile_screen.dart';
+import 'sync_log_screen.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 
@@ -109,6 +110,16 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: widget.isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro',
             onPressed: widget.onToggleThemeMode,
             icon: Icon(widget.isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          _TopBarIconButton(
+            tooltip: 'Cola de sincronizacion',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SyncLogScreen()),
+              );
+            },
+            icon: const Icon(Icons.sync_rounded),
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           if (widget.role == UserRole.generalAdmin || widget.role == UserRole.inspector) ...[

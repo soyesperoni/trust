@@ -19,6 +19,7 @@ import '../services/printer_service.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 import '../widgets/status_alert.dart';
+import '../widgets/sync_status_badge.dart';
 import 'audit_report_screen.dart';
 
 class AuditExecutionScreen extends StatefulWidget {
@@ -105,7 +106,19 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Realizar auditoría')),
+      appBar: AppBar(
+        title: const Text('Realizar auditoría'),
+        actions: [
+          Center(
+            child: SyncStatusBadge(
+              entityType: 'audit',
+              entityId: '${widget.audit.id}',
+              compact: true,
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),

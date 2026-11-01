@@ -46,6 +46,7 @@ class SyncQueueEntry {
     required this.lastError,
     required this.technicianUpdatedAt,
     required this.nextRetryAt,
+    this.updatedAt = '',
   });
 
   final int id;
@@ -57,6 +58,7 @@ class SyncQueueEntry {
   final String lastError;
   final String technicianUpdatedAt;
   final String? nextRetryAt;
+  final String updatedAt;
 
   factory SyncQueueEntry.fromMap(Map<String, Object?> map) {
     return SyncQueueEntry(
@@ -69,6 +71,7 @@ class SyncQueueEntry {
       lastError: map['last_error'] as String? ?? '',
       technicianUpdatedAt: map['technician_updated_at'] as String? ?? '',
       nextRetryAt: map['next_retry_at'] as String?,
+      updatedAt: map['updated_at'] as String? ?? '',
     );
   }
 
@@ -468,6 +471,17 @@ class LocalDbService {
           : "status IN ('pending', 'error') AND retries < ? AND (next_retry_at IS NULL OR next_retry_at <= ?)",
       whereArgs: force ? [maxRetries] : [maxRetries, now],
       orderBy: 'id ASC',
+      limit: limit,
+    );
+    return rows.map(SyncQueueEntry.fromMap).toList(growable: false);
+  }
+
+  Future<List<SyncQueueEntry>> loadQueueEntries({int limit = 200}) async {
+    final db = await database;
+    final rows = await db.query(
+      'sync_queue',
+      orderBy:
+          "CASE status WHEN 'error' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END, id DESC",
       limit: limit,
     );
     return rows.map(SyncQueueEntry.fromMap).toList(growable: false);

@@ -39,7 +39,12 @@ class TrustRepository {
       return false;
     }
     try {
-      return await _localDb.hasPendingOperation(entityType, '$entityId');
+      final pending =
+          await _localDb.hasPendingOperation(entityType, '$entityId');
+      if (pending) {
+        _syncQueue.notifyQueued(entityType, '$entityId');
+      }
+      return pending;
     } catch (_) {
       return false;
     }
@@ -58,6 +63,29 @@ class TrustRepository {
     }
     return _syncQueue.retryFailed();
   }
+
+  Future<List<SyncQueueEntry>> loadSyncQueueEntries({int limit = 200}) async {
+    if (!await _ensureOfflineReady()) {
+      return const <SyncQueueEntry>[];
+    }
+    try {
+      return await _localDb.loadQueueEntries(limit: limit);
+    } catch (_) {
+      return const <SyncQueueEntry>[];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> loadSyncLogs({int limit = 50}) async {
+    if (!await _ensureOfflineReady()) {
+      return const <Map<String, dynamic>>[];
+    }
+    try {
+      return await _localDb.loadSyncLogs(limit: limit);
+    } catch (_) {
+      return const <Map<String, dynamic>>[];
+    }
+  }
+
 
 
   Future<void> _cacheReceipt({

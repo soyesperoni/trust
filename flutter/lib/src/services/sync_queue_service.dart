@@ -135,6 +135,20 @@ class SyncQueueService {
     return db.queueSummary();
   }
 
+  /// Notifica a los badges que una entidad quedo guardada en la cola local.
+  void notifyQueued(String entityType, String entityId) {
+    if (_events.isClosed) return;
+    _events.add(
+      SyncQueueEvent(
+        queueId: 0,
+        entityType: entityType,
+        entityId: entityId,
+        status: SyncQueueStatus.pending,
+        message: '',
+      ),
+    );
+  }
+
   Future<String?> statusFor(String entityType, String entityId) async {
     final db = _localDb;
     if (db == null) {

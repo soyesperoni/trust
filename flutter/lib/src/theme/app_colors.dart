@@ -28,6 +28,13 @@ class AppColors {
   static const Color gray50 = Color(0xFFF8F8F8);
 
   static const Color danger = Color(0xFFDC2626);
+  static const Color dangerSoft = Color(0xFFFEE2E2);
+
+  static const Color warning = Color(0xFFD97706);
+  static const Color warningSoft = Color(0xFFFEF3C7);
+
+  static const Color success = Color(0xFF16A34A);
+  static const Color successSoft = Color(0xFFDCFCE7);
 
   // Dark palette aligned with Next.js mobile frontend.
   static const Color darkBackground = Color(0xFF020617);

@@ -21,6 +21,7 @@ import '../services/printer_service.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 import '../widgets/status_alert.dart';
+import '../widgets/sync_status_badge.dart';
 import 'visit_report_screen.dart';
 
 class VisitExecutionScreen extends StatefulWidget {
@@ -79,7 +80,19 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Realizar visita')),
+      appBar: AppBar(
+        title: const Text('Realizar visita'),
+        actions: [
+          Center(
+            child: SyncStatusBadge(
+              entityType: 'visit',
+              entityId: '${widget.visit.id}',
+              compact: true,
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
