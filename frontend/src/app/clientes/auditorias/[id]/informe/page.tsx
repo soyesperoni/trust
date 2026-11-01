@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardHeader from "../../../../components/DashboardHeader";
+import PdfUnavailableNotice from "../../../../components/PdfUnavailableNotice";
 import { getSessionUserEmail } from "../../../../lib/session";
 
 type AuditMedia = { id: number; type: string; file: string | null };
@@ -14,6 +15,7 @@ type ExecutiveSection = {
 };
 type Audit = {
   id: number;
+  status?: string;
   client: string;
   branch: string;
   area: string;
@@ -247,11 +249,22 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             Regresar a auditorías
           </Link>
-          <button className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700" onClick={downloadAuditReport} type="button">
+          <button
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400 dark:disabled:bg-slate-700"
+            disabled={audit.status !== "completed"}
+            onClick={downloadAuditReport}
+            type="button"
+          >
             <span className="material-symbols-outlined text-[18px]">download</span>
             Descargar PDF
           </button>
         </div>
+
+        <PdfUnavailableNotice
+          className="mb-6"
+          entity="auditoria"
+          isRegistered={audit.status === "completed"}
+        />
 
         <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(14,165,233,0.06)_48%,rgba(16,185,129,0.08)_100%)] p-6 shadow-[0_22px_55px_-26px_rgba(15,23,42,0.35)] backdrop-blur-sm dark:border-slate-700/80 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.94)_0%,rgba(37,99,235,0.14)_50%,rgba(16,185,129,0.14)_100%)] md:p-7">
           <div className="flex w-full flex-col items-start gap-3">

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+import AlertBanner from "../components/AlertBanner";
 import DashboardHeader from "../components/DashboardHeader";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { ACCOUNT_ADMIN_ROLE, BRANCH_ADMIN_ROLE } from "../lib/permissions";
@@ -73,6 +74,41 @@ export default function DashboardPage() {
   const [animatedIncidents, setAnimatedIncidents] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gmailStatus, setGmailStatus] = useState<{
+    authorized: boolean;
+    authorizeUrl: string;
+    email: string;
+  } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadGmailStatus = async () => {
+      try {
+        const response = await fetch("/api/gmail/status", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = (await response.json()) as {
+          authorized?: boolean;
+          authorize_url?: string;
+          email?: string;
+        };
+        if (!isMounted || typeof data.authorized !== "boolean") return;
+        setGmailStatus({
+          authorized: data.authorized,
+          authorizeUrl: data.authorize_url ?? "/api/gmail/authorize/",
+          email: data.email ?? "",
+        });
+      } catch {
+        if (!isMounted) return;
+        setGmailStatus(null);
+      }
+    };
+
+    loadGmailStatus();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -367,6 +403,18 @@ export default function DashboardPage() {
 
       <PageTransition className="relative flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full">
         <div className="w-full space-y-6">
+          {gmailStatus && !gmailStatus.authorized ? (
+            <AlertBanner
+              actionLabel="Autorizar cuenta"
+              dismissible
+              message={`La cuenta de correo${gmailStatus.email ? ` ${gmailStatus.email}` : ""} no está autorizada. Las notificaciones por correo están en pausa hasta que vincules Gmail.`}
+              onAction={() => {
+                window.location.assign(gmailStatus.authorizeUrl);
+              }}
+              type="warning"
+            />
+          ) : null}
+
           {error && !isLoading && (
             <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
               <span className="material-symbols-outlined text-[20px] text-red-500">error</span>

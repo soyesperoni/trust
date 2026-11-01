@@ -6,6 +6,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { useSessionExpiry } from "../hooks/useSessionExpiry";
 import {
   ACCOUNT_ADMIN_ROLE,
   BRANCH_ADMIN_ROLE,
@@ -17,6 +18,7 @@ import {
 import { hasSessionUser, SESSION_USER_UPDATED_EVENT } from "../lib/session";
 import DashboardSidebar from "./DashboardSidebar";
 import MobileBottomNav from "./MobileBottomNav";
+import SessionExpiredModal from "./SessionExpiredModal";
 
 type AppShellProps = {
   children: ReactNode;
@@ -85,6 +87,9 @@ export default function AppShell({ children }: AppShellProps) {
     () => (isPublicPage ? true : hasSessionUser()),
     () => true,
   );
+  const { isExpired, redirectToLogin } = useSessionExpiry({
+    enabled: Boolean(pathname) && !isPublicPage && hasSession,
+  });
 
   useEffect(() => {
     if (!isHydrated || !pathname || isLoading || isPublicPage) return;
@@ -130,6 +135,8 @@ export default function AppShell({ children }: AppShellProps) {
       <div className={isMobileIncidentCreation || isMobileVisitFlow ? "hidden md:block" : "block"}>
         <MobileBottomNav activePath={activePath} />
       </div>
+
+      <SessionExpiredModal open={isExpired} onRedirect={redirectToLogin} />
     </div>
   );
 }
