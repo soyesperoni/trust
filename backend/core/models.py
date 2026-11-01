@@ -186,6 +186,7 @@ class Visit(models.Model):
     end_latitude = models.FloatField(blank=True, null=True)
     end_longitude = models.FloatField(blank=True, null=True)
     visit_report = models.JSONField(blank=True, null=True)
+    client_updated_at = models.DateTimeField(blank=True, null=True, db_index=True)
 
     class Meta:
         ordering = ["-visited_at"]
@@ -204,6 +205,7 @@ class VisitMedia(models.Model):
     media_type = models.CharField(max_length=20, choices=MediaType.choices, default=MediaType.PHOTO)
     file = models.FileField(upload_to="visits/media/")
     description = models.CharField(max_length=255, blank=True)
+    client_updated_at = models.DateTimeField(blank=True, null=True, db_index=True)
 
     def __str__(self) -> str:
         return f"{self.get_media_type_display()} - {self.visit}"
@@ -251,6 +253,7 @@ class Audit(models.Model):
     end_latitude = models.FloatField(blank=True, null=True)
     end_longitude = models.FloatField(blank=True, null=True)
     audit_report = models.JSONField(blank=True, null=True)
+    client_updated_at = models.DateTimeField(blank=True, null=True, db_index=True)
 
     class Meta:
         ordering = ["-audited_at"]
@@ -269,6 +272,7 @@ class AuditMedia(models.Model):
     media_type = models.CharField(max_length=20, choices=MediaType.choices, default=MediaType.PHOTO)
     file = models.FileField(upload_to="audits/media/")
     description = models.CharField(max_length=255, blank=True)
+    client_updated_at = models.DateTimeField(blank=True, null=True, db_index=True)
 
     def __str__(self) -> str:
         return f"{self.get_media_type_display()} - {self.audit}"
@@ -565,3 +569,39 @@ class SupportTicket(models.Model):
     def __str__(self) -> str:
         return f"{self.ticket_number} - {self.title} ({self.get_status_display()})"
 
+
+class SyncLog(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", _("Pendiente")
+        SYNCED = "synced", _("Sincronizado")
+        ERROR = "error", _("Error")
+        CONFLICT = "conflict", _("Conflicto")
+
+    device_id = models.CharField(max_length=128, db_index=True)
+    entity_type = models.CharField(max_length=50, db_index=True)
+    entity_id = models.CharField(max_length=100, blank=True, default="")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    payload_hash = models.CharField(max_length=64, db_index=True)
+    technician_updated_at = models.DateTimeField(blank=True, null=True)
+    server_updated_at = models.DateTimeField(blank=True, null=True)
+    error_message = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        verbose_name = "Log de sincronización"
+        verbose_name_plural = "Logs de sincronización"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["device_id", "payload_hash"],
+                name="synclog_unique_device_payload",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.device_id} - {self.entity_type} #{self.entity_id} ({self.status})"

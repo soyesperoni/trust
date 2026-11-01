@@ -46,6 +46,8 @@ from .views import (
     support_tickets,
     support_ticket_detail,
     support_ticket_status_update,
+    sync_batch,
+    sync_logs,
 )
 
 urlpatterns = [
@@ -115,4 +117,6 @@ urlpatterns = [
     path("support", support_tickets, name="support_short_noslash"),
     path("support/tickets/<int:ticket_id>/status-update/", support_ticket_status_update, name="support_ticket_status_update"),
     path("support/tickets/<int:ticket_id>/status-update", support_ticket_status_update, name="support_ticket_status_update_noslash"),
+    path("sync/batch/", sync_batch, name="sync_batch"),
+    path("sync/logs/", sync_logs, name="sync_logs"),
 ]

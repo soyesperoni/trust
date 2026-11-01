@@ -23,7 +23,7 @@ from django.utils import timezone
 from config import settings_prod
 from .admin import DispenserAdmin, ProductAdmin
 from .fcm_manager import send_push_notification_to_devices
-from .models import Area, Audit, AuditForm, Branch, Client, CorrectiveAction, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, Product, User, Visit
+from .models import Area, Audit, AuditForm, Branch, Client, CorrectiveAction, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, Product, SyncLog, User, Visit, VisitMedia
 from .report_templates import build_visit_report_html
 from .views import _fallback_audit_ai_analysis
 
@@ -1826,3 +1826,128 @@ class CorrectiveActionReminderCommandTests(TestCase):
         action.refresh_from_db()
         self.assertIsNotNone(action.reminder_sent_at)
         self.assertEqual(notify_mock.call_count, 2)
+
+
+class SyncBatchApiTests(TestCase):
+    def setUp(self):
+        self.client_entity = Client.objects.create(name="Cliente Sync", code="zz-e2e-sync")
+        self.branch = Branch.objects.create(client=self.client_entity, name="Sucursal Sync")
+        self.area = Area.objects.create(branch=self.branch, name="Area Sync")
+        self.inspector = User.objects.create_user(
+            username="zz-e2e-inspector",
+            email="zz-e2e-inspector@test.com",
+            role=User.Role.INSPECTOR,
+        )
+        self.visit = Visit.objects.create(area=self.area, inspector=self.inspector)
+        self.media_dir = tempfile.mkdtemp()
+        self.media_override = override_settings(MEDIA_ROOT=self.media_dir)
+        self.media_override.enable()
+        self.addCleanup(self.media_override.disable)
+        self.addCleanup(shutil.rmtree, self.media_dir, True)
+
+    def _post(self, operations, device_id="zz-e2e-device"):
+        return self.client.post(
+            "/api/sync/batch/",
+            data=json.dumps({"device_id": device_id, "operations": operations}),
+            content_type="application/json",
+        )
+
+    def test_empty_batch_is_idempotent_and_logs_empty(self):
+        response = self._post([])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["processed"], 0)
+        self.assertEqual(response.json()["results"], [])
+        logs = self.client.get("/api/sync/logs/?device_id=zz-e2e-device")
+        self.assertEqual(logs.status_code, 200)
+        self.assertEqual(logs.json()["count"], 0)
+
+    def test_batch_updates_visit_and_duplicate_does_not_reapply(self):
+        operation = {
+            "entity_type": "visit",
+            "entity_id": self.visit.id,
+            "technician_updated_at": "2026-10-30T10:00:00Z",
+            "data": {"notes": "Nota offline", "status": "completed"},
+        }
+        first = self._post([operation])
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(first.json()["results"][0]["status"], "synced")
+        self.visit.refresh_from_db()
+        self.assertEqual(self.visit.notes, "Nota offline")
+        self.assertEqual(self.visit.status, Visit.Status.COMPLETED)
+
+        self.visit.notes = "Cambio posterior en servidor"
+        self.visit.save(update_fields=["notes"])
+        second = self._post([operation])
+        self.assertEqual(second.status_code, 200)
+        self.assertTrue(second.json()["results"][0]["duplicate"])
+        self.visit.refresh_from_db()
+        self.assertEqual(self.visit.notes, "Cambio posterior en servidor")
+
+    def test_older_technician_version_is_conflict_and_newer_wins(self):
+        base = {
+            "entity_type": "visit",
+            "entity_id": self.visit.id,
+            "data": {"notes": "Version nueva"},
+            "technician_updated_at": "2026-10-30T12:00:00Z",
+        }
+        self.assertEqual(self._post([base]).json()["results"][0]["status"], "synced")
+
+        older = dict(base)
+        older["data"] = {"notes": "Version vieja"}
+        older["technician_updated_at"] = "2026-10-30T11:00:00Z"
+        response = self._post([older])
+        self.assertEqual(response.json()["results"][0]["status"], "conflict")
+        self.visit.refresh_from_db()
+        self.assertEqual(self.visit.notes, "Version nueva")
+
+        newer = dict(base)
+        newer["data"] = {"notes": "Version mas nueva"}
+        newer["technician_updated_at"] = "2026-10-30T13:00:00Z"
+        response = self._post([newer])
+        self.assertEqual(response.json()["results"][0]["status"], "synced")
+        self.visit.refresh_from_db()
+        self.assertEqual(self.visit.notes, "Version mas nueva")
+
+    def test_offline_audit_is_created_with_server_assigning_id(self):
+        form = AuditForm.objects.create(name="Checklist sync", schema={"questions": []})
+        operation = {
+            "entity_type": "audit",
+            "technician_updated_at": "2026-10-30T10:00:00Z",
+            "data": {
+                "area_id": self.area.id,
+                "form_id": form.id,
+                "notes": "Auditoria creada offline",
+                "status": "completed",
+                "audit_report": {"answers": []},
+            },
+        }
+        response = self._post([operation])
+        self.assertEqual(response.status_code, 200)
+        result = response.json()["results"][0]
+        self.assertEqual(result["status"], "synced")
+        audit = Audit.objects.get(pk=result["entity_id"])
+        self.assertEqual(audit.notes, "Auditoria creada offline")
+        self.assertEqual(audit.status, Audit.Status.COMPLETED)
+        self.assertEqual(audit.client_updated_at.isoformat(), "2026-10-30T10:00:00+00:00")
+
+    def test_offline_photo_can_be_created_and_log_is_filtered(self):
+        import base64 as b64
+        operation = {
+            "entity_type": "visit_media",
+            "technician_updated_at": "2026-10-30T10:00:00Z",
+            "data": {
+                "visit_id": self.visit.id,
+                "file_name": "zz-e2e-photo.png",
+                "file_base64": b64.b64encode(b"zz-e2e-image").decode("ascii"),
+                "media_type": "photo",
+            },
+        }
+        response = self._post([operation])
+        self.assertEqual(response.status_code, 200)
+        result = response.json()["results"][0]
+        self.assertEqual(result["status"], "synced")
+        self.assertTrue(VisitMedia.objects.filter(pk=result["entity_id"]).exists())
+
+        logs = self.client.get("/api/sync/logs/?device_id=zz-e2e-device&entity_type=visit_media")
+        self.assertEqual(logs.json()["count"], 1)
+        self.assertEqual(logs.json()["results"][0]["status"], SyncLog.Status.SYNCED)

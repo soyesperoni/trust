@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import logging
 import re
@@ -19,6 +20,7 @@ from django.conf import settings
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.core.signing import BadSignature, SignatureExpired
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.middleware.csrf import get_token
 from django.http import HttpResponse, JsonResponse
@@ -43,7 +45,7 @@ from .fcm_manager import (
     send_corrective_action_assignment_notification,
     send_push_notification_to_devices,
 )
-from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, CorrectiveAction, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, IncidentMedia, Nozzle, Product, SupportTicket, User, Visit, VisitMedia
+from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, CorrectiveAction, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, IncidentMedia, Nozzle, Product, SupportTicket, SyncLog, User, Visit, VisitMedia
 from .report_templates import build_audit_report_html, build_visit_report_html
 
 
@@ -5432,3 +5434,432 @@ def support_ticket_status_update(request, ticket_id):
         "resolution_notes": ticket.resolution_notes
     })
 
+
+
+# ---------------------------------------------------------------------------
+# Sincronizacion offline por lotes
+# ---------------------------------------------------------------------------
+
+SYNC_ENTITY_ALIASES = {
+    "visit": "visit",
+    "visits": "visit",
+    "visita": "visit",
+    "audit": "audit",
+    "audits": "audit",
+    "auditoria": "audit",
+    "visit_media": "visit_media",
+    "visitmedia": "visit_media",
+    "audit_media": "audit_media",
+    "auditmedia": "audit_media",
+}
+
+def _sync_parse_datetime(value: Any):
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        text = str(value).strip()
+        if text.endswith("Z"):
+            text = f"{text[:-1]}+00:00"
+        try:
+            parsed = datetime.fromisoformat(text)
+        except (TypeError, ValueError):
+            return None
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
+    return parsed
+
+
+def _sync_parse_float(value: Any):
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _sync_technician_timestamp(operation: dict, data: dict):
+    raw = (
+        operation.get("technician_updated_at")
+        or operation.get("client_updated_at")
+        or data.get("technician_updated_at")
+        or data.get("client_updated_at")
+    )
+    parsed = _sync_parse_datetime(raw)
+    return parsed or timezone.now()
+
+
+def _sync_payload_hash(operation: dict) -> str:
+    cleaned = {key: value for key, value in operation.items() if key != "payload_hash"}
+    canonical = json.dumps(cleaned, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _sync_operation_data(operation: dict) -> dict:
+    for key in ("data", "payload", "fields"):
+        value = operation.get(key)
+        if isinstance(value, dict):
+            return value
+    return operation
+
+
+def _sync_apply_visit(data: dict, entity_id, technician_updated_at):
+    visit = Visit.objects.filter(pk=entity_id).first() if entity_id else None
+    created = visit is None
+    if created:
+        area_id = data.get("area_id")
+        area = Area.objects.filter(pk=area_id).first() if area_id else None
+        if area is None:
+            raise ValueError("El área es obligatoria para crear una visita.")
+        visit = Visit(area=area)
+
+    if visit.client_updated_at and technician_updated_at < visit.client_updated_at:
+        return visit, False, "La versión del servidor es más reciente."
+
+    if "area_id" in data:
+        area = Area.objects.filter(pk=data.get("area_id")).first()
+        if area is None:
+            raise ValueError("Área no válida.")
+        visit.area = area
+    if "dispenser_id" in data:
+        dispenser_id = data.get("dispenser_id")
+        visit.dispenser_id = dispenser_id or None
+    if "inspector_id" in data:
+        visit.inspector_id = data.get("inspector_id") or None
+    if "visited_at" in data:
+        visit.visited_at = _sync_parse_datetime(data.get("visited_at")) or visit.visited_at
+    if "notes" in data:
+        visit.notes = str(data.get("notes") or "")
+    if "visit_type" in data:
+        visit_type = str(data.get("visit_type") or "").strip()
+        if visit_type not in Visit.VisitType.values:
+            raise ValueError("Tipo de visita no válido.")
+        visit.visit_type = visit_type
+    if "status" in data:
+        status = str(data.get("status") or "").strip()
+        if status not in Visit.Status.values:
+            raise ValueError("Estado de visita no válido.")
+        visit.status = status
+    for field in ("started_at", "completed_at"):
+        if field in data:
+            setattr(visit, field, _sync_parse_datetime(data.get(field)))
+    for field in ("start_latitude", "start_longitude", "end_latitude", "end_longitude"):
+        if field in data:
+            setattr(visit, field, _sync_parse_float(data.get(field)))
+    if "visit_report" in data:
+        report = data.get("visit_report")
+        if report is not None and not isinstance(report, (dict, list)):
+            raise ValueError("El informe de la visita debe ser JSON.")
+        visit.visit_report = report
+    visit.client_updated_at = technician_updated_at
+    if not visit.visited_at:
+        visit.visited_at = technician_updated_at
+    visit.save()
+    return visit, created, ""
+
+
+def _sync_apply_audit(data: dict, entity_id, technician_updated_at):
+    audit = Audit.objects.filter(pk=entity_id).first() if entity_id else None
+    created = audit is None
+    if created:
+        area_id = data.get("area_id")
+        form_id = data.get("form_id")
+        area = Area.objects.filter(pk=area_id).first() if area_id else None
+        form = AuditForm.objects.filter(pk=form_id).first() if form_id else None
+        if area is None:
+            raise ValueError("El área es obligatoria para crear una auditoría.")
+        if form is None:
+            raise ValueError("La plantilla es obligatoria para crear una auditoría.")
+        audit = Audit(area=area, form=form)
+
+    if audit.client_updated_at and technician_updated_at < audit.client_updated_at:
+        return audit, False, "La versión del servidor es más reciente."
+
+    if "area_id" in data:
+        area = Area.objects.filter(pk=data.get("area_id")).first()
+        if area is None:
+            raise ValueError("Área no válida.")
+        audit.area = area
+    if "form_id" in data:
+        form = AuditForm.objects.filter(pk=data.get("form_id")).first()
+        if form is None:
+            raise ValueError("Plantilla de auditoría no válida.")
+        audit.form = form
+    if "form_name" in data:
+        audit.form_name = str(data.get("form_name") or "")
+    if "form_schema" in data:
+        schema = data.get("form_schema")
+        if schema is not None and not isinstance(schema, dict):
+            raise ValueError("El esquema del formulario debe ser un objeto JSON.")
+        audit.form_schema = schema or {}
+    if "inspector_id" in data:
+        audit.inspector_id = data.get("inspector_id") or None
+    if "audited_at" in data:
+        audit.audited_at = _sync_parse_datetime(data.get("audited_at")) or audit.audited_at
+    if "notes" in data:
+        audit.notes = str(data.get("notes") or "")
+    if "status" in data:
+        status = str(data.get("status") or "").strip()
+        if status not in Audit.Status.values:
+            raise ValueError("Estado de auditoría no válido.")
+        audit.status = status
+    for field in ("started_at", "completed_at"):
+        if field in data:
+            setattr(audit, field, _sync_parse_datetime(data.get(field)))
+    for field in ("start_latitude", "start_longitude", "end_latitude", "end_longitude"):
+        if field in data:
+            setattr(audit, field, _sync_parse_float(data.get(field)))
+    if "audit_report" in data:
+        report = data.get("audit_report")
+        if report is not None and not isinstance(report, (dict, list)):
+            raise ValueError("El informe de la auditoría debe ser JSON.")
+        audit.audit_report = report
+    audit.client_updated_at = technician_updated_at
+    if not audit.audited_at:
+        audit.audited_at = technician_updated_at
+    audit.save()
+    return audit, created, ""
+
+
+def _sync_apply_media(data: dict, entity_id, technician_updated_at, media_type: str):
+    model = VisitMedia if media_type == "visit_media" else AuditMedia
+    media = model.objects.filter(pk=entity_id).first() if entity_id else None
+    created = media is None
+    if created:
+        parent_id = data.get("visit_id") if media_type == "visit_media" else data.get("audit_id")
+        parent_model = Visit if media_type == "visit_media" else Audit
+        parent = parent_model.objects.filter(pk=parent_id).first() if parent_id else None
+        if parent is None:
+            raise ValueError("El elemento padre es obligatorio para crear el archivo.")
+        media = model(visit=parent) if media_type == "visit_media" else model(audit=parent)
+
+    if media.client_updated_at and technician_updated_at < media.client_updated_at:
+        return media, False, "La versión del servidor es más reciente."
+
+    if "description" in data:
+        media.description = str(data.get("description") or "")
+    if "media_type" in data:
+        raw_media_type = str(data.get("media_type") or "").strip()
+        if raw_media_type not in model.MediaType.values:
+            raise ValueError("Tipo de archivo no válido.")
+        media.media_type = raw_media_type
+    encoded = data.get("file_base64") or data.get("base64")
+    if encoded:
+        filename = str(data.get("file_name") or data.get("filename") or "offline-upload.bin")
+        if "," in encoded and encoded.strip().startswith("data:"):
+            encoded = encoded.split(",", 1)[1]
+        try:
+            content = base64.b64decode(encoded, validate=True)
+        except Exception as exc:
+            raise ValueError("El archivo adjunto no es base64 válido.") from exc
+        media.file.save(filename, ContentFile(content), save=False)
+    elif created:
+        raise ValueError("El archivo adjunto es obligatorio.")
+    media.client_updated_at = technician_updated_at
+    media.save()
+    return media, created, ""
+
+
+def _sync_apply_operation(operation: dict):
+    data = _sync_operation_data(operation)
+    raw_type = str(operation.get("entity_type") or operation.get("type") or "").strip().lower()
+    entity_type = SYNC_ENTITY_ALIASES.get(raw_type)
+    if not entity_type:
+        raise ValueError("entity_type no válido.")
+
+    entity_id = (
+        operation.get("entity_id")
+        or operation.get("id")
+        or data.get("entity_id")
+        or data.get("id")
+    )
+    technician_updated_at = _sync_technician_timestamp(operation, data)
+
+    if entity_type == "visit":
+        entity, created, conflict_message = _sync_apply_visit(data, entity_id, technician_updated_at)
+    elif entity_type == "audit":
+        entity, created, conflict_message = _sync_apply_audit(data, entity_id, technician_updated_at)
+    else:
+        entity, created, conflict_message = _sync_apply_media(data, entity_id, technician_updated_at, entity_type)
+
+    if conflict_message:
+        return entity, "conflict", conflict_message
+    return entity, "synced", ""
+
+
+def _serialize_sync_log(log: SyncLog) -> dict:
+    return {
+        "id": log.id,
+        "device_id": log.device_id,
+        "entity_type": log.entity_type,
+        "entity_id": log.entity_id,
+        "status": log.status,
+        "payload_hash": log.payload_hash,
+        "technician_updated_at": log.technician_updated_at.isoformat() if log.technician_updated_at else None,
+        "server_updated_at": log.server_updated_at.isoformat() if log.server_updated_at else None,
+        "error_message": log.error_message,
+        "created_at": log.created_at.isoformat(),
+    }
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def sync_batch(request):
+    """
+    POST /api/sync/batch/
+    Body: {"device_id": "...", "operations": [{"entity_type": "visit", ...}]}
+
+    Cada operacion se identifica por device_id + payload_hash. Un hash ya
+    sincronizado se responde como duplicado; si el intento anterior fallo se
+    reintenta. Los conflictos se resuelven por technician_updated_at: gana la
+    marca mas reciente del tecnico y una marca anterior no sobrescribe el servidor.
+    """
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+    if not isinstance(body, dict):
+        return JsonResponse({"error": "El cuerpo debe ser un objeto JSON."}, status=400)
+
+    device_id = str(body.get("device_id") or "").strip()
+    operations = body.get("operations")
+    if not device_id:
+        return JsonResponse({"error": "device_id es obligatorio."}, status=400)
+    if operations is None:
+        operations = []
+    if not isinstance(operations, list):
+        return JsonResponse({"error": "operations debe ser una lista."}, status=400)
+    if len(device_id) > 128:
+        return JsonResponse({"error": "device_id supera la longitud máxima."}, status=400)
+    if len(operations) > 500:
+        return JsonResponse({"error": "El lote supera el máximo de 500 operaciones."}, status=400)
+
+    results = []
+    summary = {"synced": 0, "duplicates": 0, "conflicts": 0, "errors": 0}
+
+    for index, operation in enumerate(operations):
+        if not isinstance(operation, dict):
+            results.append({
+                "index": index,
+                "entity_type": "",
+                "entity_id": "",
+                "status": "error",
+                "error_message": "Cada operación debe ser un objeto JSON.",
+            })
+            summary["errors"] += 1
+            continue
+
+        payload_hash = _sync_payload_hash(operation)
+        raw_type = str(operation.get("entity_type") or operation.get("type") or "").strip().lower()
+        entity_type = SYNC_ENTITY_ALIASES.get(raw_type, raw_type or "unknown")
+        data = _sync_operation_data(operation)
+        technician_updated_at = _sync_technician_timestamp(operation, data)
+
+        existing_log = SyncLog.objects.filter(device_id=device_id, payload_hash=payload_hash).first()
+        if existing_log and existing_log.status != SyncLog.Status.ERROR:
+            results.append({
+                "index": index,
+                "log_id": existing_log.id,
+                "entity_type": existing_log.entity_type,
+                "entity_id": existing_log.entity_id,
+                "status": existing_log.status,
+                "duplicate": True,
+                "error_message": existing_log.error_message,
+            })
+            summary["duplicates"] += 1
+            continue
+
+        log = existing_log
+        if log is None:
+            try:
+                log = SyncLog.objects.create(
+                    device_id=device_id,
+                    entity_type=entity_type,
+                    payload_hash=payload_hash,
+                    technician_updated_at=technician_updated_at,
+                    status=SyncLog.Status.PENDING,
+                )
+            except IntegrityError:
+                log = SyncLog.objects.filter(device_id=device_id, payload_hash=payload_hash).first()
+                if log is None:
+                    raise
+
+        try:
+            with transaction.atomic():
+                entity, status, message = _sync_apply_operation(operation)
+                log.entity_type = entity_type
+                log.entity_id = str(entity.pk)
+                log.status = status
+                log.technician_updated_at = technician_updated_at
+                log.server_updated_at = timezone.now()
+                log.error_message = message
+                log.save(update_fields=[
+                    "entity_type", "entity_id", "status", "technician_updated_at",
+                    "server_updated_at", "error_message",
+                ])
+            results.append({
+                "index": index,
+                "log_id": log.id,
+                "entity_type": entity_type,
+                "entity_id": str(entity.pk),
+                "status": status,
+                "duplicate": False,
+                "error_message": message,
+            })
+            summary["synced" if status == SyncLog.Status.SYNCED else "conflicts"] += 1
+        except Exception as exc:
+            message = str(exc) or exc.__class__.__name__
+            log.entity_type = entity_type
+            log.status = SyncLog.Status.ERROR
+            log.technician_updated_at = technician_updated_at
+            log.server_updated_at = timezone.now()
+            log.error_message = message
+            log.save(update_fields=[
+                "entity_type", "status", "technician_updated_at",
+                "server_updated_at", "error_message",
+            ])
+            results.append({
+                "index": index,
+                "log_id": log.id,
+                "entity_type": entity_type,
+                "entity_id": log.entity_id,
+                "status": SyncLog.Status.ERROR,
+                "duplicate": False,
+                "error_message": message,
+            })
+            summary["errors"] += 1
+
+    return JsonResponse({
+        "success": True,
+        "device_id": device_id,
+        "processed": len(operations),
+        "summary": summary,
+        "results": results,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def sync_logs(request):
+    """GET /api/sync/logs/?device_id=...&status=...&entity_type=..."""
+    logs = SyncLog.objects.all()
+    device_id = str(request.GET.get("device_id") or "").strip()
+    status = str(request.GET.get("status") or "").strip().lower()
+    entity_type = str(request.GET.get("entity_type") or "").strip().lower()
+    if device_id:
+        logs = logs.filter(device_id=device_id)
+    if status:
+        logs = logs.filter(status=status)
+    if entity_type:
+        logs = logs.filter(entity_type=SYNC_ENTITY_ALIASES.get(entity_type, entity_type))
+    try:
+        limit = min(max(int(request.GET.get("limit") or 200), 1), 500)
+    except (TypeError, ValueError):
+        limit = 200
+    payload = list(logs[:limit])
+    return JsonResponse({
+        "count": len(payload),
+        "results": [_serialize_sync_log(log) for log in payload],
+    })
