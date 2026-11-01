@@ -17,8 +17,11 @@ import 'package:video_compress/video_compress.dart';
 
 import '../models/visit.dart';
 import '../services/api_client.dart';
+import '../services/printer_service.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
+import '../widgets/status_alert.dart';
+import 'visit_report_screen.dart';
 
 class VisitExecutionScreen extends StatefulWidget {
   const VisitExecutionScreen({required this.visit, required this.email, super.key});
@@ -39,6 +42,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
   final TextEditingController _responsibleNameController = TextEditingController();
   final MapController _mapController = MapController();
   final TrustRepository _repository = TrustRepository();
+  final PrinterService _printerService = const PrinterService();
 
   static const int _maxEvidenceItems = 4;
   static const int _maxEvidenceBytes = 10 * 1024 * 1024;
@@ -420,7 +424,7 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
       );
       if (capturedFile == null) return null;
 
-      return _compressPhoto(File(capturedFile.path));
+      return await _compressPhoto(File(capturedFile.path));
     } catch (error) {
       if (!mounted) return null;
       setState(() => _error = _toError(error));
@@ -882,6 +886,8 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
 
       if (!mounted) return;
       messenger.showSnackBar(const SnackBar(content: Text('Visita finalizada correctamente.')));
+      await _offerReport();
+      if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
@@ -889,6 +895,60 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Future<void> _offerReport() async {
+    final openReport = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Visita finalizada'),
+        content: const Text(
+          'El registro se guardó correctamente. ¿Deseas abrir el informe PDF para imprimirlo o compartirlo?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cerrar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Abrir informe'),
+          ),
+        ],
+      ),
+    );
+    if (openReport != true || !mounted) {
+      return;
+    }
+    await _openReportWithPrinterCheck();
+  }
+
+  Future<void> _openReportWithPrinterCheck() async {
+    final availability = await _printerService.checkAvailability();
+    if (!mounted) return;
+    if (!availability.available) {
+      final retry = await StatusAlert.show(
+        context,
+        title: 'Impresora no disponible',
+        message: availability.message,
+        instructions: 'La visita ya quedó registrada. Verifica que la impresora esté encendida, con papel y conectada por Bluetooth o USB. Si el problema continúa, puedes abrir el informe desde el resumen de la visita cuando el servicio esté disponible.',
+        retryLabel: 'Reintentar',
+        secondaryLabel: 'Cerrar',
+      );
+      if (retry && mounted) {
+        await _openReportWithPrinterCheck();
+      }
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VisitReportScreen(
+          visitId: widget.visit.id,
+          email: widget.email,
+          openWithDownload: true,
+        ),
+      ),
+    );
   }
 
   Future<void> _requestCameraPermissions({required bool requireMicrophone}) async {

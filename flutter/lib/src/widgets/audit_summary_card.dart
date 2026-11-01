@@ -243,7 +243,7 @@ class AuditSummaryCard extends StatelessWidget {
 
     if (rawScore == null) return null;
     final normalized = rawScore <= 1 ? rawScore * 100 : rawScore;
-    return normalized.round().clamp(0, 100) as int;
+    return normalized.round().clamp(0, 100);
   }
 
   String _scoreLabel(int? score) {

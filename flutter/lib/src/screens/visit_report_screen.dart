@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:video_player/video_player.dart';
 
+import '../services/printer_service.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
+import '../widgets/status_alert.dart';
 
 class VisitReportScreen extends StatefulWidget {
   const VisitReportScreen({
@@ -26,6 +28,7 @@ class VisitReportScreen extends StatefulWidget {
 
 class _VisitReportScreenState extends State<VisitReportScreen> {
   final TrustRepository _repository = TrustRepository();
+  final PrinterService _printerService = const PrinterService();
 
   bool _isLoading = true;
   bool _isDownloadingPdf = false;
@@ -72,6 +75,22 @@ class _VisitReportScreenState extends State<VisitReportScreen> {
   }
 
   Future<void> _downloadPdf() async {
+    final availability = await _printerService.checkAvailability();
+    if (!mounted) return;
+    if (!availability.available) {
+      final retry = await StatusAlert.show(
+        context,
+        title: 'Impresora no disponible',
+        message: availability.message,
+        instructions: 'Verifica que la impresora esté encendida, con papel y conectada por Bluetooth o USB. Si el problema continúa, comparte el PDF desde otro dispositivo o vuelve a intentarlo.',
+        retryLabel: 'Reintentar',
+        secondaryLabel: 'Cerrar',
+      );
+      if (retry && mounted) {
+        await _downloadPdf();
+      }
+      return;
+    }
     try {
       setState(() {
         _isDownloadingPdf = true;

@@ -15,8 +15,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:signature/signature.dart';
 
 import '../models/audit.dart';
+import '../services/printer_service.dart';
 import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
+import '../widgets/status_alert.dart';
+import 'audit_report_screen.dart';
 
 class AuditExecutionScreen extends StatefulWidget {
   const AuditExecutionScreen({required this.audit, required this.email, super.key});
@@ -37,6 +40,7 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
   final TextEditingController _responsibleNameController = TextEditingController();
   final MapController _mapController = MapController();
   final TrustRepository _repository = TrustRepository();
+  final PrinterService _printerService = const PrinterService();
 
   static const int _maxEvidenceItems = 4;
   static const int _maxEvidenceBytes = 10 * 1024 * 1024;
@@ -445,6 +449,8 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Auditoría finalizada correctamente.')));
+      await _offerReport();
+      if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (error) {
       _hideUploadProgress();
@@ -453,6 +459,60 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Future<void> _offerReport() async {
+    final openReport = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Auditoría finalizada'),
+        content: const Text(
+          'El registro se guardó correctamente. ¿Deseas abrir el informe PDF para imprimirlo o compartirlo?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cerrar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Abrir informe'),
+          ),
+        ],
+      ),
+    );
+    if (openReport != true || !mounted) {
+      return;
+    }
+    await _openReportWithPrinterCheck();
+  }
+
+  Future<void> _openReportWithPrinterCheck() async {
+    final availability = await _printerService.checkAvailability();
+    if (!mounted) return;
+    if (!availability.available) {
+      final retry = await StatusAlert.show(
+        context,
+        title: 'Impresora no disponible',
+        message: availability.message,
+        instructions: 'La auditoría ya quedó registrada. Verifica que la impresora esté encendida, con papel y conectada por Bluetooth o USB. Si el problema continúa, puedes abrir el informe desde el resumen de la auditoría cuando el servicio esté disponible.',
+        retryLabel: 'Reintentar',
+        secondaryLabel: 'Cerrar',
+      );
+      if (retry && mounted) {
+        await _openReportWithPrinterCheck();
+      }
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AuditReportScreen(
+          auditId: widget.audit.id,
+          email: widget.email,
+          openWithDownload: true,
+        ),
+      ),
+    );
   }
 
   void _startUploadProgress() {

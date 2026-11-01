@@ -10,6 +10,7 @@ import '../services/trust_repository.dart';
 import '../theme/app_colors.dart';
 import '../models/user_role.dart';
 import '../services/push_notification_service.dart';
+import '../widgets/status_alert.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -32,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordFocusNode = FocusNode();
   final _formKey = GlobalKey<FormState>();
   final _repository = TrustRepository();
   final _secureStorage = const FlutterSecureStorage();
@@ -40,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isSubmitting = false;
   bool _isBiometricLoading = true;
   bool _isBiometricLoginEnabled = false;
+  String? _biometricUnavailableMessage;
 
   @override
   void initState() {
@@ -51,6 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -61,16 +65,109 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) {
       return;
     }
+    final biometricLoginEnabled =
+        enabled == 'true' &&
+        (storedEmail?.isNotEmpty ?? false) &&
+        (storedPassword?.isNotEmpty ?? false);
+    final biometricAvailable = biometricLoginEnabled ? await _canUseBiometrics() : true;
+    if (!mounted) {
+      return;
+    }
     setState(() {
-      _isBiometricLoginEnabled =
-          enabled == 'true' &&
-          (storedEmail?.isNotEmpty ?? false) &&
-          (storedPassword?.isNotEmpty ?? false);
+      _isBiometricLoginEnabled = biometricLoginEnabled;
+      _biometricUnavailableMessage = biometricLoginEnabled && !biometricAvailable
+          ? 'La biometría no está disponible en este dispositivo. Usa tu contraseña o vuelve a intentarlo.'
+          : null;
       _isBiometricLoading = false;
       if (_isBiometricLoginEnabled && storedEmail != null) {
         _emailController.text = storedEmail;
       }
     });
+  }
+
+  Future<bool> _canUseBiometrics() async {
+    try {
+      return await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
+    } on PlatformException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _focusPassword() {
+    _passwordFocusNode.requestFocus();
+  }
+
+  bool _isBiometricUnavailableError(String code) {
+    const unavailableCodes = <String>{
+      'notavailable',
+      'notenrolled',
+      'passcodenotset',
+      'nobiometrics',
+      'devicenotsupported',
+      'lockedout',
+      'permanentlylockedout',
+    };
+    return unavailableCodes.contains(code.toLowerCase());
+  }
+
+  String _biometricUnavailableDetail(String code) {
+    switch (code.toLowerCase()) {
+      case 'lockedout':
+        return 'La biometría está temporalmente bloqueada. Espera unos minutos y vuelve a intentarlo.';
+      case 'permanentlylockedout':
+        return 'La biometría está bloqueada. Desbloquea el dispositivo con tu PIN o contraseña y vuelve a intentarlo.';
+      case 'notenrolled':
+        return 'No hay una huella o Face ID registrado en este dispositivo.';
+      case 'passcodenotset':
+        return 'Configura un PIN o contraseña en el dispositivo para poder usar la biometría.';
+      default:
+        return 'No se pudo usar la biometría en este dispositivo. Revisa que el sensor esté disponible y que tengas una huella o Face ID registrado.';
+    }
+  }
+
+  Future<void> _retryBiometricAvailability() async {
+    final available = await _canUseBiometrics();
+    if (!mounted) return;
+    if (available) {
+      setState(() => _biometricUnavailableMessage = null);
+      StatusAlert.showSnackBar(
+        context,
+        message: 'Biometría disponible. Ya puedes iniciar sesión con huella o Face ID.',
+      );
+      return;
+    }
+    await _showBiometricUnavailable(
+      _biometricUnavailableMessage ??
+          'No se detectó biometría disponible o configurada en este dispositivo.',
+    );
+  }
+
+  Future<void> _showBiometricUnavailable(String detail) async {
+    if (!mounted) return;
+    setState(() => _biometricUnavailableMessage = detail);
+    final retry = await StatusAlert.show(
+      context,
+      title: 'Biometría no disponible',
+      message: detail,
+      instructions: 'Revisa que tengas una huella o Face ID registrado en los ajustes del dispositivo y vuelve a intentarlo. También puedes iniciar sesión con tu contraseña.',
+      retryLabel: 'Reintentar',
+      secondaryLabel: 'Usar contraseña',
+    );
+    if (!mounted) return;
+    if (!retry) {
+      _focusPassword();
+      return;
+    }
+    final available = await _canUseBiometrics();
+    if (!mounted) return;
+    if (!available) {
+      await _showBiometricUnavailable(detail);
+      return;
+    }
+    setState(() => _biometricUnavailableMessage = null);
+    await _loginWithBiometrics();
   }
 
 
@@ -129,14 +226,17 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_isSubmitting || !_isBiometricLoginEnabled) {
       return;
     }
+    final canAuthenticate = await _canUseBiometrics();
+    if (!mounted) return;
+    if (!canAuthenticate) {
+      await _showBiometricUnavailable(
+        'Este dispositivo no tiene biometría disponible o no está configurada.',
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
-      final canAuthenticate =
-          await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
-      if (!canAuthenticate) {
-        throw Exception('Este dispositivo no soporta autenticación biométrica.');
-      }
-
       final didAuthenticate = await _localAuth.authenticate(
         localizedReason: 'Usa tu Face ID o huella para iniciar sesión',
         options: const AuthenticationOptions(
@@ -176,18 +276,26 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'No se pudo validar tu biometría.')),
-      );
+      setState(() => _isSubmitting = false);
+      if (_isBiometricUnavailableError(error.code)) {
+        await _showBiometricUnavailable(_biometricUnavailableDetail(error.code));
+      } else {
+        StatusAlert.showSnackBar(
+          context,
+          message: error.message ?? 'No se pudo validar tu biometría.',
+        );
+      }
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      setState(() => _isSubmitting = false);
+      StatusAlert.showSnackBar(
+        context,
+        message: error.toString().replaceFirst('Exception: ', ''),
       );
     } finally {
-      if (mounted) {
+      if (mounted && _isSubmitting) {
         setState(() => _isSubmitting = false);
       }
     }
@@ -201,8 +309,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final canAuthenticate =
-        await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
+    final canAuthenticate = await _canUseBiometrics();
     if (!canAuthenticate || !mounted) {
       return;
     }
@@ -391,6 +498,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(height: 12),
                               TextFormField(
                                 controller: _passwordController,
+                                focusNode: _passwordFocusNode,
                                 obscureText: true,
                                 decoration: InputDecoration(
                                   labelText: 'Contraseña',
@@ -469,6 +577,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
+                              if (_isBiometricLoginEnabled &&
+                                  _biometricUnavailableMessage != null) ...[
+                                const SizedBox(height: 10),
+                                StatusBanner(
+                                  title: 'Biometría no disponible',
+                                  message: _biometricUnavailableMessage!,
+                                  actionLabel: 'Reintentar',
+                                  onAction: () {
+                                    _retryBiometricAvailability();
+                                  },
+                                  secondaryLabel: 'Usar contraseña',
+                                  onSecondary: _focusPassword,
+                                ),
+                              ],
                             ],
                           ),
                         ),

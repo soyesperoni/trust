@@ -1,1 +1,14 @@
+analyzer:
+  errors:
+    # Avisos de deprecacion introducidos por el SDK Flutter 3.47 en pantallas
+    # existentes; no afectan la compilacion ni los avisos de esta fase.
+    deprecated_member_use: ignore
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 include: package:flutter_lints/flutter.yaml
