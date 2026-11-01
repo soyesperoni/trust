@@ -1,6 +1,17 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+
+/// Error de transporte: la peticion no llego al servidor o no hubo respuesta.
+class ApiNetworkException implements Exception {
+  const ApiNetworkException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'ApiNetworkException: $message';
+}
 
 class ApiClient {
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
@@ -16,6 +27,31 @@ class ApiClient {
 
   String get _normalizedBaseUrl =>
       baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+
+  Future<T> _perform<T>(
+    Future<T> Function() request, {
+    Duration timeout = const Duration(seconds: 45),
+  }) async {
+    try {
+      return await request().timeout(timeout);
+    } on TimeoutException {
+      throw const ApiNetworkException('Tiempo de espera agotado. Revisa tu conexion.');
+    } on http.ClientException catch (error) {
+      throw ApiNetworkException('Sin conexion con el servidor: ${error.message}');
+    } on Exception catch (error) {
+      if (error is ApiNetworkException) rethrow;
+      final detail = error.toString().toLowerCase();
+      if (detail.contains('socketexception') ||
+          detail.contains('failed host lookup') ||
+          detail.contains('connection refused') ||
+          detail.contains('network is unreachable') ||
+          detail.contains('connection closed') ||
+          detail.contains('connection reset')) {
+        throw const ApiNetworkException('Sin conexion con el servidor.');
+      }
+      rethrow;
+    }
+  }
 
   Map<String, String> _csrfSafeHeaders() {
     final uri = Uri.parse(_normalizedBaseUrl);
@@ -49,7 +85,7 @@ class ApiClient {
     String? deviceType,
   }) async {
     final uri = Uri.parse('$_normalizedBaseUrl/login/');
-    final response = await _client.post(
+    final response = await _perform(() => _client.post(
       uri,
       headers: {
         'Content-Type': 'application/json',
@@ -60,7 +96,7 @@ class ApiClient {
         if (fcmToken != null && fcmToken.isNotEmpty) 'fcm_token': fcmToken,
         if (deviceType != null && deviceType.isNotEmpty) 'device_type': deviceType,
       }),
-    );
+    ));
 
     if (response.statusCode == 404) {
       return _loginWithUsersFallback(email: email);
@@ -79,12 +115,12 @@ class ApiClient {
 
   Future<Map<String, dynamic>> loadGmailStatus() async {
     final uri = Uri.parse('$_normalizedBaseUrl/gmail/status/');
-    final response = await _client.get(
+    final response = await _perform(() => _client.get(
       uri,
       headers: {
         'Content-Type': 'application/json',
       },
-    );
+    ));
 
     final decoded = _decodeJsonBody(
       response,
@@ -103,12 +139,12 @@ class ApiClient {
 
   Future<Map<String, dynamic>> _loginWithUsersFallback({required String email}) async {
     final uri = Uri.parse('$_normalizedBaseUrl/users/');
-    final response = await _client.get(
+    final response = await _perform(() => _client.get(
       uri,
       headers: {
         'Content-Type': 'application/json',
       },
-    );
+    ));
 
     final decoded = _decodeJsonBody(
       response,
@@ -147,12 +183,12 @@ class ApiClient {
 
     final uri = Uri.parse('$_normalizedBaseUrl/csrf/');
     try {
-      final response = await _client.get(
+      final response = await _perform(() => _client.get(
         uri,
         headers: {
           'Content-Type': 'application/json',
         },
-      );
+      ));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         _csrfToken = null;
@@ -187,10 +223,10 @@ class ApiClient {
     Map<String, String>? queryParameters,
   }) async {
     final uri = Uri.parse('$_normalizedBaseUrl$path').replace(queryParameters: queryParameters);
-    final response = await _client.get(
+    final response = await _perform(() => _client.get(
       uri,
       headers: _authHeaders(email),
-    );
+    ));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('Error ${response.statusCode} al consultar $path');
@@ -210,11 +246,11 @@ class ApiClient {
   }) async {
     await _ensureCsrfToken();
     final uri = Uri.parse('$_normalizedBaseUrl$path');
-    final response = await _client.post(
+    final response = await _perform(() => _client.post(
       uri,
       headers: _authHeaders(email, includeCsrf: true),
       body: jsonEncode(body),
-    );
+    ));
 
     final decoded = _decodeJsonBody(
       response,
@@ -243,7 +279,10 @@ class ApiClient {
       request.headers['X-CSRFToken'] = _csrfToken!;
     }
 
-    final streamed = await _client.send(request);
+    final streamed = await _perform(
+      () => _client.send(request),
+      timeout: const Duration(minutes: 3),
+    );
     final response = await http.Response.fromStream(streamed);
     final decoded = _decodeJsonBody(
       response,
@@ -262,11 +301,11 @@ class ApiClient {
   }) async {
     await _ensureCsrfToken();
     final uri = Uri.parse('$_normalizedBaseUrl$path');
-    final response = await _client.patch(
+    final response = await _perform(() => _client.patch(
       uri,
       headers: _authHeaders(email, includeCsrf: true),
       body: jsonEncode(body),
-    );
+    ));
 
     final decoded = _decodeJsonBody(
       response,
@@ -285,11 +324,11 @@ class ApiClient {
   }) async {
     await _ensureCsrfToken();
     final uri = Uri.parse('$_normalizedBaseUrl$path');
-    final response = await _client.put(
+    final response = await _perform(() => _client.put(
       uri,
       headers: _authHeaders(email, includeCsrf: true),
       body: jsonEncode(body),
-    );
+    ));
 
     final decoded = _decodeJsonBody(
       response,
@@ -318,7 +357,10 @@ class ApiClient {
       request.headers['X-CSRFToken'] = _csrfToken!;
     }
 
-    final streamed = await _client.send(request);
+    final streamed = await _perform(
+      () => _client.send(request),
+      timeout: const Duration(minutes: 3),
+    );
     final response = await http.Response.fromStream(streamed);
     final decoded = _decodeJsonBody(
       response,
@@ -336,10 +378,10 @@ class ApiClient {
   }) async {
     await _ensureCsrfToken();
     final uri = Uri.parse('$_normalizedBaseUrl$path');
-    final response = await _client.delete(
+    final response = await _perform(() => _client.delete(
       uri,
       headers: _authHeaders(email, includeCsrf: true),
-    );
+    ));
 
     if (response.statusCode == 204) {
       return {'status': 'success'};
@@ -361,9 +403,12 @@ class ApiClient {
     Map<String, String>? queryParameters,
   }) async {
     final uri = Uri.parse('$_normalizedBaseUrl$path').replace(queryParameters: queryParameters);
-    final response = await _client.get(
-      uri,
-      headers: _authHeaders(email),
+    final response = await _perform(
+      () => _client.get(
+        uri,
+        headers: _authHeaders(email),
+      ),
+      timeout: const Duration(minutes: 2),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -371,5 +416,39 @@ class ApiClient {
     }
 
     return response;
+  }
+
+  /// Envia un lote de operaciones offline. El endpoint es idempotente y usa
+  /// device_id + payload para evitar duplicados.
+  Future<Map<String, dynamic>> postSyncBatch({
+    required String deviceId,
+    required List<Map<String, dynamic>> operations,
+  }) async {
+    final uri = Uri.parse('$_normalizedBaseUrl/sync/batch/');
+    final response = await _perform(
+      () => _client.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          ..._csrfSafeHeaders(),
+        },
+        body: jsonEncode({
+          'device_id': deviceId,
+          'operations': operations,
+        }),
+      ),
+      timeout: const Duration(minutes: 3),
+    );
+
+    final decoded = _decodeJsonBody(
+      response,
+      fallbackError: 'Error ${response.statusCode} al sincronizar los cambios',
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        decoded['error'] ?? 'Error ${response.statusCode} al sincronizar los cambios',
+      );
+    }
+    return decoded;
   }
 }

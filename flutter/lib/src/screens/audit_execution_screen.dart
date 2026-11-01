@@ -447,9 +447,20 @@ class _AuditExecutionScreenState extends State<AuditExecutionScreen> {
 
       _completeUploadProgress();
 
+      final pendingSync = await _repository.hasPendingSync('audit', widget.audit.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Auditoría finalizada correctamente.')));
-      await _offerReport();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            pendingSync
+                ? 'Auditoria guardada localmente. Se sincronizara al recuperar conexion.'
+                : 'Auditoría finalizada correctamente.',
+          ),
+        ),
+      );
+      if (!pendingSync) {
+        await _offerReport();
+      }
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (error) {

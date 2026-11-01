@@ -884,9 +884,20 @@ class _VisitExecutionScreenState extends State<VisitExecutionScreen> {
         evidenceFiles: files,
       );
 
+      final pendingSync = await _repository.hasPendingSync('visit', widget.visit.id);
       if (!mounted) return;
-      messenger.showSnackBar(const SnackBar(content: Text('Visita finalizada correctamente.')));
-      await _offerReport();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            pendingSync
+                ? 'Visita guardada localmente. Se sincronizara al recuperar conexion.'
+                : 'Visita finalizada correctamente.',
+          ),
+        ),
+      );
+      if (!pendingSync) {
+        await _offerReport();
+      }
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (error) {

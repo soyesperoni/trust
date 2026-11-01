@@ -13,6 +13,7 @@ void main() {
   testWidgets('Trust app splash smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(const TrustApp());
 
-    expect(find.text('trust'), findsOneWidget);
+    expect(find.text('Trust'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1700));
   });
 }

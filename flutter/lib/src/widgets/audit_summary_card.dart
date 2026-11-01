@@ -5,6 +5,7 @@ import '../models/user_role.dart';
 import '../screens/audit_execution_screen.dart';
 import '../screens/audit_report_screen.dart';
 import '../theme/app_colors.dart';
+import 'sync_status_badge.dart';
 
 class AuditSummaryCard extends StatelessWidget {
   const AuditSummaryCard({required this.audit, required this.role, required this.email, super.key});
@@ -60,6 +61,7 @@ class AuditSummaryCard extends StatelessWidget {
               ),
             ),
           ),
+          SyncStatusBadge(entityType: 'audit', entityId: '${audit.id}'),
           const SizedBox(height: 10),
           Text(
             audit.client,

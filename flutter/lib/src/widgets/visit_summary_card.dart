@@ -5,6 +5,7 @@ import '../models/visit.dart';
 import '../screens/visit_execution_screen.dart';
 import '../screens/visit_report_screen.dart';
 import '../theme/app_colors.dart';
+import 'sync_status_badge.dart';
 
 class VisitSummaryCard extends StatelessWidget {
   const VisitSummaryCard({
@@ -71,6 +72,7 @@ class VisitSummaryCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    SyncStatusBadge(entityType: 'visit', entityId: '${visit.id}'),
                     const SizedBox(height: 10),
                     Text(
                       visit.client,
