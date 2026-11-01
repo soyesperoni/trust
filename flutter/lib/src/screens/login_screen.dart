@@ -61,21 +61,23 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _loadBiometricStatus() async {
     final enabled = await _secureStorage.read(key: _biometricEnabledKey);
     final storedEmail = await _secureStorage.read(key: _biometricEmailKey);
-    final storedPassword = await _secureStorage.read(key: _biometricPasswordKey);
+    final storedPassword =
+        await _secureStorage.read(key: _biometricPasswordKey);
     if (!mounted) {
       return;
     }
-    final biometricLoginEnabled =
-        enabled == 'true' &&
+    final biometricLoginEnabled = enabled == 'true' &&
         (storedEmail?.isNotEmpty ?? false) &&
         (storedPassword?.isNotEmpty ?? false);
-    final biometricAvailable = biometricLoginEnabled ? await _canUseBiometrics() : true;
+    final biometricAvailable =
+        biometricLoginEnabled ? await _canUseBiometrics() : true;
     if (!mounted) {
       return;
     }
     setState(() {
       _isBiometricLoginEnabled = biometricLoginEnabled;
-      _biometricUnavailableMessage = biometricLoginEnabled && !biometricAvailable
+      _biometricUnavailableMessage = biometricLoginEnabled &&
+              !biometricAvailable
           ? 'La biometría no está disponible en este dispositivo. Usa tu contraseña o vuelve a intentarlo.'
           : null;
       _isBiometricLoading = false;
@@ -87,7 +89,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<bool> _canUseBiometrics() async {
     try {
-      return await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
+      return await _localAuth.canCheckBiometrics ||
+          await _localAuth.isDeviceSupported();
     } on PlatformException {
       return false;
     } catch (_) {
@@ -134,7 +137,8 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _biometricUnavailableMessage = null);
       StatusAlert.showSnackBar(
         context,
-        message: 'Biometría disponible. Ya puedes iniciar sesión con huella o Face ID.',
+        message:
+            'Biometría disponible. Ya puedes iniciar sesión con huella o Face ID.',
       );
       return;
     }
@@ -151,7 +155,8 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
       title: 'Biometría no disponible',
       message: detail,
-      instructions: 'Revisa que tengas una huella o Face ID registrado en los ajustes del dispositivo y vuelve a intentarlo. También puedes iniciar sesión con tu contraseña.',
+      instructions:
+          'Revisa que tengas una huella o Face ID registrado en los ajustes del dispositivo y vuelve a intentarlo. También puedes iniciar sesión con tu contraseña.',
       retryLabel: 'Reintentar',
       secondaryLabel: 'Usar contraseña',
     );
@@ -169,7 +174,6 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _biometricUnavailableMessage = null);
     await _loginWithBiometrics();
   }
-
 
   Future<String?> _safeFcmToken() async {
     return PushNotificationService.instance.getToken();
@@ -193,13 +197,16 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       final user = response['user'] as Map<String, dynamic>?;
       final resolvedEmail = (user?['email'] as String?)?.trim();
-      final resolvedRole = UserRoleParsing.fromBackendRole(user?['role'] as String?);
+      final resolvedRole =
+          UserRoleParsing.fromBackendRole(user?['role'] as String?);
 
       if (!mounted) {
         return;
       }
 
-      final finalEmail = (resolvedEmail == null || resolvedEmail.isEmpty) ? email : resolvedEmail;
+      final finalEmail = (resolvedEmail == null || resolvedEmail.isEmpty)
+          ? email
+          : resolvedEmail;
       await _promptEnableBiometricLoginIfNeeded(
         email: finalEmail,
         password: _passwordController.text,
@@ -213,7 +220,8 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+            content: Text(error.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) {
@@ -250,7 +258,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       final storedEmail = await _secureStorage.read(key: _biometricEmailKey);
-      final storedPassword = await _secureStorage.read(key: _biometricPasswordKey);
+      final storedPassword =
+          await _secureStorage.read(key: _biometricPasswordKey);
       if (storedEmail == null || storedPassword == null) {
         throw Exception('No hay credenciales biométricas guardadas.');
       }
@@ -264,9 +273,11 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       final user = response['user'] as Map<String, dynamic>?;
       final resolvedEmail = (user?['email'] as String?)?.trim();
-      final resolvedRole = UserRoleParsing.fromBackendRole(user?['role'] as String?);
-      final finalEmail =
-          (resolvedEmail == null || resolvedEmail.isEmpty) ? storedEmail : resolvedEmail;
+      final resolvedRole =
+          UserRoleParsing.fromBackendRole(user?['role'] as String?);
+      final finalEmail = (resolvedEmail == null || resolvedEmail.isEmpty)
+          ? storedEmail
+          : resolvedEmail;
 
       if (!mounted) {
         return;
@@ -278,7 +289,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       setState(() => _isSubmitting = false);
       if (_isBiometricUnavailableError(error.code)) {
-        await _showBiometricUnavailable(_biometricUnavailableDetail(error.code));
+        await _showBiometricUnavailable(
+            _biometricUnavailableDetail(error.code));
       } else {
         StatusAlert.showSnackBar(
           context,
@@ -377,10 +389,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-
   Future<void> _openExternalUrl(String url, String errorMessage) async {
     final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errorMessage)),
       );
@@ -406,7 +418,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final background = Theme.of(context).scaffoldBackgroundColor;
     final onSurface = Theme.of(context).colorScheme.onSurface;
-    final mutedTextColor = isDark ? AppColors.darkMuted : const Color(0xFF64748B);
+    final mutedTextColor =
+        isDark ? AppColors.darkMuted : const Color(0xFF64748B);
 
     return Scaffold(
       backgroundColor: background,
@@ -415,7 +428,8 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (context, constraints) => SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 40),
+              constraints:
+                  BoxConstraints(minHeight: constraints.maxHeight - 40),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 460),
@@ -448,7 +462,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: isDark ? AppColors.darkCard : Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0),
+                              color: isDark
+                                  ? AppColors.darkCardBorder
+                                  : const Color(0xFFE2E8F0),
                             ),
                           ),
                           child: Column(
@@ -461,35 +477,47 @@ class _LoginScreenState extends State<LoginScreen> {
                                   labelText: 'Correo electrónico',
                                   hintText: 'Correo electrónico',
                                   labelStyle: TextStyle(
-                                    color: isDark ? AppColors.darkMuted : const Color(0xFF334155),
+                                    color: isDark
+                                        ? AppColors.darkMuted
+                                        : const Color(0xFF334155),
                                     fontWeight: FontWeight.w600,
                                   ),
                                   filled: true,
-                                  fillColor: isDark ? AppColors.darkSurface : Colors.white,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                  fillColor: isDark
+                                      ? AppColors.darkSurface
+                                      : Colors.white,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 14),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB),
+                                      color: isDark
+                                          ? AppColors.darkCardBorder
+                                          : const Color(0xFFD1D5DB),
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB),
+                                      color: isDark
+                                          ? AppColors.darkCardBorder
+                                          : const Color(0xFFD1D5DB),
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
+                                    borderSide: const BorderSide(
+                                        color: AppColors.primary, width: 1.8),
                                   ),
                                 ),
-                                style: TextStyle(color: onSurface, fontSize: 16),
+                                style:
+                                    TextStyle(color: onSurface, fontSize: 16),
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
                                     return 'Ingresa tu correo electrónico';
                                   }
-                                  if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim())) {
+                                  if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                                      .hasMatch(value.trim())) {
                                     return 'Ingresa un correo válido';
                                   }
                                   return null;
@@ -504,30 +532,41 @@ class _LoginScreenState extends State<LoginScreen> {
                                   labelText: 'Contraseña',
                                   hintText: 'Contraseña',
                                   labelStyle: TextStyle(
-                                    color: isDark ? AppColors.darkMuted : const Color(0xFF334155),
+                                    color: isDark
+                                        ? AppColors.darkMuted
+                                        : const Color(0xFF334155),
                                     fontWeight: FontWeight.w600,
                                   ),
                                   filled: true,
-                                  fillColor: isDark ? AppColors.darkSurface : Colors.white,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                  fillColor: isDark
+                                      ? AppColors.darkSurface
+                                      : Colors.white,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 14),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB),
+                                      color: isDark
+                                          ? AppColors.darkCardBorder
+                                          : const Color(0xFFD1D5DB),
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: isDark ? AppColors.darkCardBorder : const Color(0xFFD1D5DB),
+                                      color: isDark
+                                          ? AppColors.darkCardBorder
+                                          : const Color(0xFFD1D5DB),
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
+                                    borderSide: const BorderSide(
+                                        color: AppColors.primary, width: 1.8),
                                   ),
                                 ),
-                                style: TextStyle(color: onSurface, fontSize: 16),
+                                style:
+                                    TextStyle(color: onSurface, fontSize: 16),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return 'Ingresa tu contraseña';
@@ -540,7 +579,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onPressed: _isSubmitting ? null : _submit,
                                 style: FilledButton.styleFrom(
                                   backgroundColor: AppColors.secondary,
-                                  disabledBackgroundColor: AppColors.secondaryDark,
+                                  disabledBackgroundColor:
+                                      AppColors.secondaryDark,
                                   overlayColor: AppColors.secondaryDark,
                                   foregroundColor: AppColors.black,
                                   minimumSize: const Size.fromHeight(50),
@@ -555,7 +595,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                         height: 22,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2.4,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF111827)),
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  Color(0xFF111827)),
                                         ),
                                       )
                                     : const Text('Iniciar sesión'),
@@ -568,7 +610,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ? null
                                     : _loginWithBiometrics,
                                 icon: const Icon(Icons.fingerprint_rounded),
-                                label: const Text('Iniciar con datos biométricos'),
+                                label:
+                                    const Text('Iniciar con datos biométricos'),
                                 style: OutlinedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(50),
                                   textStyle: const TextStyle(
@@ -580,15 +623,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               if (_isBiometricLoginEnabled &&
                                   _biometricUnavailableMessage != null) ...[
                                 const SizedBox(height: 10),
-                                StatusBanner(
-                                  title: 'Biometría no disponible',
+                                StatusAlert.biometricsUnavailable(
                                   message: _biometricUnavailableMessage!,
-                                  actionLabel: 'Reintentar',
-                                  onAction: () {
+                                  onRetry: () {
                                     _retryBiometricAvailability();
                                   },
-                                  secondaryLabel: 'Usar contraseña',
-                                  onSecondary: _focusPassword,
+                                  onUsePassword: _focusPassword,
                                 ),
                               ],
                             ],
