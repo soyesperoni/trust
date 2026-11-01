@@ -1,5 +1,5 @@
 from django.contrib.auth.models import AbstractUser
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -376,6 +376,84 @@ class IncidentMedia(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_media_type_display()} - {self.incident}"
+
+
+class CorrectiveAction(models.Model):
+    class OriginType(models.TextChoices):
+        INCIDENT = "incident", _("Incidencia")
+        AUDIT_FINDING = "audit_finding", _("Hallazgo")
+
+    class Status(models.TextChoices):
+        OPEN = "open", _("Abierta")
+        IN_PROGRESS = "in_progress", _("En curso")
+        CLOSED = "closed", _("Cerrada")
+
+    origin_type = models.CharField(max_length=20, choices=OriginType.choices)
+    incident = models.ForeignKey(
+        Incident,
+        on_delete=models.PROTECT,
+        related_name="corrective_actions",
+        blank=True,
+        null=True,
+    )
+    audit = models.ForeignKey(
+        Audit,
+        on_delete=models.PROTECT,
+        related_name="corrective_actions",
+        blank=True,
+        null=True,
+    )
+    description = models.TextField()
+    responsible = models.ForeignKey(
+        "User",
+        on_delete=models.PROTECT,
+        related_name="corrective_actions",
+    )
+    due_date = models.DateField(db_index=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.OPEN,
+        db_index=True,
+    )
+    closure_evidence = models.ImageField(
+        upload_to="corrective_actions/",
+        blank=True,
+        null=True,
+    )
+    reminder_sent_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["due_date", "id"]
+        indexes = [
+            models.Index(fields=["status", "due_date"], name="corrective_status_due_idx"),
+            models.Index(fields=["responsible", "status"], name="corrective_resp_status_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(incident__isnull=False) | models.Q(audit__isnull=False),
+                name="corrective_action_requires_origin",
+            ),
+        ]
+        verbose_name = "Acción correctiva"
+        verbose_name_plural = "Acciones correctivas"
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if not self.incident_id and not self.audit_id:
+            errors["incident"] = "La acción correctiva debe estar vinculada a una incidencia o a un hallazgo."
+        elif self.origin_type == self.OriginType.INCIDENT and not self.incident_id:
+            errors["incident"] = "El origen es una incidencia, pero no se indicó la incidencia."
+        elif self.origin_type == self.OriginType.AUDIT_FINDING and not self.audit_id:
+            errors["audit"] = "El origen es un hallazgo, pero no se indicó la auditoría."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self) -> str:
+        return f"{self.get_origin_type_display()} - {self.description[:60]}"
 
 
 class User(AbstractUser):

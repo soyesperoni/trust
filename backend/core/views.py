@@ -17,12 +17,14 @@ from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.core import signing
+from django.core.exceptions import ValidationError
 from django.core.signing import BadSignature, SignatureExpired
 from django.core.files.storage import default_storage
 from django.middleware.csrf import get_token
 from django.http import HttpResponse, JsonResponse
 from django.http.multipartparser import MultiPartParser, MultiPartParserError
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
@@ -37,8 +39,11 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from .fcm_manager import send_push_notification_to_devices
-from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, IncidentMedia, Nozzle, Product, SupportTicket, User, Visit, VisitMedia
+from .fcm_manager import (
+    send_corrective_action_assignment_notification,
+    send_push_notification_to_devices,
+)
+from .models import Area, Audit, AuditForm, AuditMedia, Branch, Client, CorrectiveAction, DeepSeekAPISettings, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, IncidentMedia, Nozzle, Product, SupportTicket, User, Visit, VisitMedia
 from .report_templates import build_audit_report_html, build_visit_report_html
 
 
@@ -168,9 +173,14 @@ def _is_general_admin(request) -> bool:
 
 def _get_current_user(request):
     current_email = str(request.headers.get("X-Current-User-Email") or "").strip().lower()
-    if not current_email:
-        return None
-    return User.objects.filter(email__iexact=current_email, is_active=True).first()
+    if current_email:
+        user = User.objects.filter(email__iexact=current_email, is_active=True).first()
+        if user:
+            return user
+    session_user = getattr(request, "user", None)
+    if session_user is not None and session_user.is_authenticated and session_user.is_active:
+        return session_user
+    return None
 
 
 def _is_general_admin_user(user: User | None) -> bool:
@@ -2555,6 +2565,424 @@ def _serialize_incident(incident: Incident) -> dict:
             for medium in incident.media.all()
         ],
     }
+
+
+def _serialize_corrective_action(action: CorrectiveAction) -> dict:
+    incident = action.incident
+    audit = action.audit
+    area = incident.area if incident else audit.area
+    branch = area.branch
+    client = branch.client
+    evidence_url = action.closure_evidence.url if action.closure_evidence else None
+    return {
+        "id": action.id,
+        "origin_type": action.origin_type,
+        "origin_type_label": action.get_origin_type_display(),
+        "incident_id": action.incident_id,
+        "audit_id": action.audit_id,
+        "client_id": client.id,
+        "client": client.name,
+        "branch_id": branch.id,
+        "branch": branch.name,
+        "area_id": area.id,
+        "area": area.name,
+        "description": action.description,
+        "responsible_id": action.responsible_id,
+        "responsible": action.responsible.get_full_name() or action.responsible.username,
+        "responsible_email": action.responsible.email,
+        "due_date": action.due_date.isoformat(),
+        "status": action.status,
+        "status_label": action.get_status_display(),
+        "is_overdue": bool(
+            action.status != CorrectiveAction.Status.CLOSED
+            and action.due_date < timezone.localdate()
+        ),
+        "closure_evidence": evidence_url,
+        "closure_evidence_url": evidence_url,
+        "reminder_sent_at": action.reminder_sent_at.isoformat() if action.reminder_sent_at else None,
+        "created_at": action.created_at.isoformat(),
+        "updated_at": action.updated_at.isoformat(),
+    }
+
+
+def _normalize_corrective_origin(value: Any) -> str | None:
+    normalized = str(value or "").strip().lower()
+    if normalized in {"incident", "incidencia"}:
+        return CorrectiveAction.OriginType.INCIDENT
+    if normalized in {"audit_finding", "finding", "hallazgo", "audit", "auditoria"}:
+        return CorrectiveAction.OriginType.AUDIT_FINDING
+    return None
+
+
+def _corrective_action_queryset():
+    return CorrectiveAction.objects.select_related(
+        "responsible",
+        "incident__area__branch__client",
+        "audit__area__branch__client",
+    )
+
+
+def _filter_corrective_actions_by_scope(queryset, scope):
+    if scope is None:
+        return queryset
+    area_ids = scope["area_ids"]
+    return queryset.filter(
+        Q(incident__area_id__in=area_ids) | Q(audit__area_id__in=area_ids)
+    )
+
+
+def _get_corrective_action_for_user(request, action_id: int):
+    current_user = _get_current_user(request)
+    if not current_user:
+        return None, JsonResponse({"error": "Usuario no autenticado."}, status=401)
+
+    scope = _build_access_scope(current_user)
+    queryset = _filter_corrective_actions_by_scope(_corrective_action_queryset(), scope)
+    action = queryset.filter(pk=action_id).first()
+    if action is None:
+        return None, JsonResponse({"error": "Acción correctiva no encontrada."}, status=404)
+    return action, None
+
+
+def _parse_due_date(raw_value: Any):
+    parsed = parse_date(str(raw_value or "").strip())
+    return parsed
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def corrective_actions(request):
+    current_user = _get_current_user(request)
+    if not current_user:
+        return JsonResponse({"error": "Usuario no autenticado."}, status=401)
+
+    if request.method == "GET":
+        queryset = _filter_corrective_actions_by_scope(
+            _corrective_action_queryset(),
+            _build_access_scope(current_user),
+        )
+
+        status_raw = str(request.GET.get("status") or "").strip()
+        if status_raw:
+            statuses = [value.strip() for value in status_raw.split(",") if value.strip()]
+            valid_statuses = {choice[0] for choice in CorrectiveAction.Status.choices}
+            if any(value not in valid_statuses for value in statuses):
+                return JsonResponse({"error": "Estado de acción correctiva inválido."}, status=400)
+            queryset = queryset.filter(status__in=statuses)
+
+        origin_raw = request.GET.get("origin_type") or request.GET.get("origin")
+        if origin_raw:
+            origin_type = _normalize_corrective_origin(origin_raw)
+            if origin_type is None:
+                return JsonResponse({"error": "Tipo de origen inválido."}, status=400)
+            queryset = queryset.filter(origin_type=origin_type)
+
+        responsible_raw = str(
+            request.GET.get("responsible")
+            or request.GET.get("responsible_id")
+            or ""
+        ).strip()
+        if responsible_raw:
+            if responsible_raw.isdigit():
+                queryset = queryset.filter(responsible_id=int(responsible_raw))
+            else:
+                queryset = queryset.filter(
+                    Q(responsible__email__iexact=responsible_raw)
+                    | Q(responsible__username__iexact=responsible_raw)
+                )
+
+        incident_raw = str(request.GET.get("incident_id") or "").strip()
+        if incident_raw:
+            if not incident_raw.isdigit():
+                return JsonResponse({"error": "Incidencia inválida."}, status=400)
+            queryset = queryset.filter(incident_id=int(incident_raw))
+
+        audit_raw = str(request.GET.get("audit_id") or "").strip()
+        if audit_raw:
+            if not audit_raw.isdigit():
+                return JsonResponse({"error": "Auditoría inválida."}, status=400)
+            queryset = queryset.filter(audit_id=int(audit_raw))
+
+        due_date_raw = str(request.GET.get("due_date") or "").strip()
+        if due_date_raw:
+            due_date = _parse_due_date(due_date_raw)
+            if due_date is None:
+                return JsonResponse({"error": "Fecha límite inválida."}, status=400)
+            queryset = queryset.filter(due_date=due_date)
+
+        due_from_raw = (
+            request.GET.get("due_date_from")
+            or request.GET.get("due_from")
+            or request.GET.get("date_from")
+            or request.GET.get("due_date_start")
+            or request.GET.get("start_date")
+            or request.GET.get("due_date__gte")
+        )
+        due_to_raw = (
+            request.GET.get("due_date_to")
+            or request.GET.get("due_to")
+            or request.GET.get("date_to")
+            or request.GET.get("due_date_end")
+            or request.GET.get("end_date")
+            or request.GET.get("due_date__lte")
+        )
+        if due_from_raw:
+            due_from = _parse_due_date(due_from_raw)
+            if due_from is None:
+                return JsonResponse({"error": "Fecha límite inicial inválida."}, status=400)
+            queryset = queryset.filter(due_date__gte=due_from)
+        if due_to_raw:
+            due_to = _parse_due_date(due_to_raw)
+            if due_to is None:
+                return JsonResponse({"error": "Fecha límite final inválida."}, status=400)
+            queryset = queryset.filter(due_date__lte=due_to)
+
+        search = str(request.GET.get("search") or "").strip()
+        if search:
+            queryset = queryset.filter(
+                Q(description__icontains=search)
+                | Q(responsible__first_name__icontains=search)
+                | Q(responsible__last_name__icontains=search)
+                | Q(responsible__email__icontains=search)
+            )
+
+        results = [_serialize_corrective_action(action) for action in queryset]
+        return JsonResponse({"count": len(results), "results": results})
+
+    data, _ = _extract_user_data(request)
+    if not isinstance(data, dict):
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    description = str(data.get("description") or "").strip()
+    if not description:
+        return JsonResponse({"error": "La descripción es obligatoria."}, status=400)
+
+    incident_raw = data.get("incident_id")
+    audit_raw = data.get("audit_id") or data.get("audit_finding_id")
+    try:
+        incident_id = int(incident_raw) if str(incident_raw or "").strip() else None
+        audit_id = int(audit_raw) if str(audit_raw or "").strip() else None
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Los identificadores de origen son inválidos."}, status=400)
+
+    if bool(incident_id) == bool(audit_id):
+        return JsonResponse(
+            {"error": "Debes vincular la acción a una incidencia o a una auditoría, no a ambas."},
+            status=400,
+        )
+
+    origin_type = _normalize_corrective_origin(
+        data.get("origin_type") or data.get("origin")
+    )
+    if origin_type is None and (incident_id or audit_id):
+        origin_type = (
+            CorrectiveAction.OriginType.INCIDENT
+            if incident_id
+            else CorrectiveAction.OriginType.AUDIT_FINDING
+        )
+    if origin_type is None:
+        return JsonResponse({"error": "El tipo de origen es obligatorio."}, status=400)
+    if origin_type == CorrectiveAction.OriginType.INCIDENT and not incident_id:
+        return JsonResponse({"error": "Debes indicar la incidencia de origen."}, status=400)
+    if origin_type == CorrectiveAction.OriginType.AUDIT_FINDING and not audit_id:
+        return JsonResponse({"error": "Debes indicar la auditoría del hallazgo."}, status=400)
+
+    incident = None
+    audit = None
+    if incident_id:
+        incident = Incident.objects.select_related("area__branch__client").filter(pk=incident_id).first()
+        if incident is None:
+            return JsonResponse({"error": "Incidencia no encontrada."}, status=404)
+    if audit_id:
+        audit = Audit.objects.select_related("area__branch__client").filter(pk=audit_id).first()
+        if audit is None:
+            return JsonResponse({"error": "Auditoría no encontrada."}, status=404)
+
+    source_area_id = incident.area_id if incident else audit.area_id
+    scope = _build_access_scope(current_user)
+    if scope is not None and source_area_id not in scope["area_ids"]:
+        return JsonResponse({"error": "No tienes permiso sobre el origen seleccionado."}, status=403)
+
+    responsible_raw = data.get("responsible_id") or data.get("responsible")
+    responsible = None
+    if str(responsible_raw or "").strip():
+        responsible_value = str(responsible_raw).strip()
+        responsible_queryset = User.objects.filter(is_active=True)
+        if responsible_value.isdigit():
+            responsible = responsible_queryset.filter(pk=int(responsible_value)).first()
+        else:
+            responsible = responsible_queryset.filter(
+                Q(email__iexact=responsible_value) | Q(username__iexact=responsible_value)
+            ).first()
+    if responsible is None:
+        return JsonResponse({"error": "El responsable es obligatorio y debe estar activo."}, status=400)
+
+    due_date = _parse_due_date(data.get("due_date"))
+    if due_date is None:
+        return JsonResponse({"error": "La fecha límite es obligatoria (YYYY-MM-DD)."}, status=400)
+
+    status_value = str(data.get("status") or CorrectiveAction.Status.OPEN).strip()
+    valid_statuses = {choice[0] for choice in CorrectiveAction.Status.choices}
+    if status_value not in valid_statuses:
+        return JsonResponse({"error": "Estado de acción correctiva inválido."}, status=400)
+
+    action = CorrectiveAction(
+        origin_type=origin_type,
+        incident=incident,
+        audit=audit,
+        description=description,
+        responsible=responsible,
+        due_date=due_date,
+        status=status_value,
+    )
+    try:
+        action.full_clean()
+        action.save()
+    except ValidationError as exc:
+        return JsonResponse({"error": "Datos de acción correctiva inválidos.", "errors": exc.message_dict}, status=400)
+
+    try:
+        send_corrective_action_assignment_notification(action)
+    except Exception:
+        logger.exception("No se pudo enviar la notificación de asignación de la acción correctiva %s.", action.id)
+
+    return JsonResponse(_serialize_corrective_action(action), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PATCH"])
+def corrective_action_detail(request, action_id: int):
+    action, error_response = _get_corrective_action_for_user(request, action_id)
+    if error_response:
+        return error_response
+    if request.method == "GET":
+        return JsonResponse(_serialize_corrective_action(action))
+
+    data, _ = _extract_user_data(request)
+    if not isinstance(data, dict):
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    update_fields = []
+    if "status" in data:
+        status_value = str(data.get("status") or "").strip()
+        valid_statuses = {choice[0] for choice in CorrectiveAction.Status.choices}
+        if status_value not in valid_statuses:
+            return JsonResponse({"error": "Estado de acción correctiva inválido."}, status=400)
+        action.status = status_value
+        update_fields.append("status")
+
+    if "description" in data:
+        description = str(data.get("description") or "").strip()
+        if not description:
+            return JsonResponse({"error": "La descripción no puede estar vacía."}, status=400)
+        action.description = description
+        update_fields.append("description")
+
+    if "due_date" in data:
+        due_date = _parse_due_date(data.get("due_date"))
+        if due_date is None:
+            return JsonResponse({"error": "Fecha límite inválida (YYYY-MM-DD)."}, status=400)
+        action.due_date = due_date
+        update_fields.append("due_date")
+
+    responsible_changed = False
+    if "responsible_id" in data or "responsible" in data:
+        responsible_raw = str(data.get("responsible_id") or data.get("responsible") or "").strip()
+        responsible = None
+        if responsible_raw:
+            responsible_queryset = User.objects.filter(is_active=True)
+            if responsible_raw.isdigit():
+                responsible = responsible_queryset.filter(pk=int(responsible_raw)).first()
+            else:
+                responsible = responsible_queryset.filter(
+                    Q(email__iexact=responsible_raw) | Q(username__iexact=responsible_raw)
+                ).first()
+        if responsible is None:
+            return JsonResponse({"error": "El responsable debe existir y estar activo."}, status=400)
+        responsible_changed = action.responsible_id != responsible.id
+        action.responsible = responsible
+        update_fields.append("responsible")
+
+    if not update_fields:
+        return JsonResponse({"error": "No se recibieron campos para actualizar."}, status=400)
+
+    try:
+        action.full_clean()
+    except ValidationError as exc:
+        return JsonResponse({"error": "Datos de acción correctiva inválidos.", "errors": exc.message_dict}, status=400)
+    action.save(update_fields=update_fields + ["updated_at"])
+
+    if responsible_changed:
+        try:
+            send_corrective_action_assignment_notification(action)
+        except Exception:
+            logger.exception("No se pudo notificar la reasignación de la acción correctiva %s.", action.id)
+
+    return JsonResponse(_serialize_corrective_action(action))
+
+
+@csrf_exempt
+@require_http_methods(["PATCH", "POST"])
+def corrective_action_status(request, action_id: int):
+    action, error_response = _get_corrective_action_for_user(request, action_id)
+    if error_response:
+        return error_response
+
+    data, _ = _extract_user_data(request)
+    if not isinstance(data, dict):
+        return JsonResponse({"error": "Formato JSON inválido."}, status=400)
+
+    status_value = str(data.get("status") or "").strip()
+    valid_statuses = {choice[0] for choice in CorrectiveAction.Status.choices}
+    if status_value not in valid_statuses:
+        return JsonResponse({"error": "Estado de acción correctiva inválido."}, status=400)
+
+    action.status = status_value
+    action.save(update_fields=["status", "updated_at"])
+    return JsonResponse(_serialize_corrective_action(action))
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def corrective_action_closure_evidence(request, action_id: int):
+    action, error_response = _get_corrective_action_for_user(request, action_id)
+    if error_response:
+        return error_response
+
+    data, files = _extract_user_data(request)
+    if not isinstance(data, dict):
+        return JsonResponse({"error": "Formato de formulario inválido."}, status=400)
+
+    evidence_file = None
+    for field_name in ("closure_evidence", "closure_files", "evidence", "file"):
+        candidates = files.getlist(field_name) if files else []
+        if candidates:
+            evidence_file = candidates[0]
+            break
+    if evidence_file is None:
+        return JsonResponse({"error": "La evidencia fotográfica de cierre es obligatoria."}, status=400)
+    if evidence_file.size > 10 * 1024 * 1024:
+        return JsonResponse({"error": "La evidencia no puede superar los 10 MB."}, status=400)
+
+    content_type = str(getattr(evidence_file, "content_type", "") or "").lower()
+    suffix = Path(getattr(evidence_file, "name", "") or "").suffix.lower()
+    if content_type and not content_type.startswith("image/"):
+        return JsonResponse({"error": "La evidencia debe ser una imagen JPG, PNG o WEBP."}, status=400)
+    if suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
+        return JsonResponse({"error": "La evidencia debe ser una imagen JPG, PNG o WEBP."}, status=400)
+
+    status_value = str(data.get("status") or "").strip()
+    if status_value:
+        valid_statuses = {choice[0] for choice in CorrectiveAction.Status.choices}
+        if status_value not in valid_statuses:
+            return JsonResponse({"error": "Estado de acción correctiva inválido."}, status=400)
+        action.status = status_value
+    elif request.path.rstrip("/").endswith("/close"):
+        action.status = CorrectiveAction.Status.CLOSED
+
+    action.closure_evidence = evidence_file
+    action.save(update_fields=["closure_evidence", "status", "updated_at"])
+    return JsonResponse(_serialize_corrective_action(action), status=201)
 
 
 @require_GET

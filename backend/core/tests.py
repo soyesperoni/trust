@@ -1,16 +1,19 @@
 import json
+import shutil
+import tempfile
 from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.core import signing
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models.deletion import ProtectedError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.admin.sites import AdminSite
 from django.contrib.messages import get_messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.urls import reverse
 from django.utils import timezone
@@ -18,7 +21,7 @@ from django.utils import timezone
 from config import settings_prod
 from .admin import DispenserAdmin, ProductAdmin
 from .fcm_manager import send_push_notification_to_devices
-from .models import Area, Audit, AuditForm, Branch, Client, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, Product, User, Visit
+from .models import Area, Audit, AuditForm, Branch, Client, CorrectiveAction, Dispenser, DispenserModel, DispenserProductAssignment, FCMDevice, Incident, Product, User, Visit
 from .report_templates import build_visit_report_html
 from .views import _fallback_audit_ai_analysis
 
@@ -1526,3 +1529,177 @@ class FCMManagerTests(TestCase):
 
         self.assertEqual(sent, 0)
         multicast_mock.assert_not_called()
+
+
+class CorrectiveActionApiTests(TestCase):
+    def setUp(self):
+        self.client_entity = Client.objects.create(name="Cliente Acciones", code="CL-ACC")
+        self.branch = Branch.objects.create(client=self.client_entity, name="Sucursal Acciones")
+        self.area = Area.objects.create(branch=self.branch, name="Area Acciones")
+        self.general_admin = User.objects.create_user(
+            username="ga-actions",
+            email="ga-actions@test.com",
+            password="secret123",
+            role=User.Role.GENERAL_ADMIN,
+        )
+        self.responsible = User.objects.create_user(
+            username="resp-actions",
+            email="resp-actions@test.com",
+            password="secret123",
+            role=User.Role.INSPECTOR,
+        )
+        self.incident = Incident.objects.create(
+            client=self.client_entity,
+            branch=self.branch,
+            area=self.area,
+            description="Fuga en dosificador",
+        )
+        self.audit_form = AuditForm.objects.create(name="Checklist acciones", schema={"questions": []})
+        self.audit = Audit.objects.create(
+            area=self.area,
+            form=self.audit_form,
+            form_name=self.audit_form.name,
+            form_schema=self.audit_form.schema,
+            inspector=self.general_admin,
+            status=Audit.Status.COMPLETED,
+        )
+        self.media_dir = tempfile.mkdtemp()
+        self.media_override = override_settings(MEDIA_ROOT=self.media_dir)
+        self.media_override.enable()
+        self.addCleanup(self.media_override.disable)
+        self.addCleanup(shutil.rmtree, self.media_dir, True)
+
+    def _create_action(self, **overrides):
+        values = {
+            "origin_type": CorrectiveAction.OriginType.INCIDENT,
+            "incident": self.incident,
+            "description": "Reemplazar dosificador",
+            "responsible": self.responsible,
+            "due_date": timezone.localdate() + timedelta(days=2),
+            "status": CorrectiveAction.Status.OPEN,
+        }
+        values.update(overrides)
+        return CorrectiveAction.objects.create(**values)
+
+    @patch("core.views.send_corrective_action_assignment_notification")
+    def test_create_from_incident_notifies_responsible(self, notify_mock):
+        response = self.client.post(
+            "/api/corrective-actions/",
+            data=json.dumps(
+                {
+                    "origin_type": "incident",
+                    "incident_id": self.incident.id,
+                    "description": "Reemplazar dosificador",
+                    "responsible_id": self.responsible.id,
+                    "due_date": (timezone.localdate() + timedelta(days=3)).isoformat(),
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["origin_type"], "incident")
+        self.assertEqual(payload["status"], "open")
+        self.assertEqual(payload["responsible_id"], self.responsible.id)
+        self.assertEqual(CorrectiveAction.objects.count(), 1)
+        notify_mock.assert_called_once()
+
+    def test_create_from_audit_finding(self):
+        response = self.client.post(
+            "/api/corrective-actions/",
+            data=json.dumps(
+                {
+                    "origin_type": "audit_finding",
+                    "audit_id": self.audit.id,
+                    "description": "Corregir hallazgo de auditoria",
+                    "responsible_id": self.responsible.id,
+                    "due_date": (timezone.localdate() + timedelta(days=4)).isoformat(),
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["audit_id"], self.audit.id)
+        self.assertEqual(response.json()["area_id"], self.area.id)
+
+    def test_model_requires_origin(self):
+        action = CorrectiveAction(
+            origin_type=CorrectiveAction.OriginType.INCIDENT,
+            description="Sin origen",
+            responsible=self.responsible,
+            due_date=timezone.localdate(),
+        )
+
+        with self.assertRaises(ValidationError):
+            action.full_clean()
+
+    def test_list_filters_status_responsible_due_date_and_origin(self):
+        matching = self._create_action(
+            status=CorrectiveAction.Status.IN_PROGRESS,
+            due_date=timezone.localdate() + timedelta(days=2),
+        )
+        self._create_action(status=CorrectiveAction.Status.CLOSED)
+
+        response = self.client.get(
+            "/api/corrective-actions/",
+            data={
+                "status": "in_progress",
+                "responsible": str(self.responsible.id),
+                "origin_type": "incident",
+                "due_date_from": timezone.localdate().isoformat(),
+                "due_date_to": (timezone.localdate() + timedelta(days=5)).isoformat(),
+            },
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["id"], matching.id)
+
+    def test_update_status(self):
+        action = self._create_action()
+
+        response = self.client.patch(
+            f"/api/corrective-actions/{action.id}/status/",
+            data=json.dumps({"status": "in_progress"}),
+            content_type="application/json",
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        action.refresh_from_db()
+        self.assertEqual(action.status, CorrectiveAction.Status.IN_PROGRESS)
+
+    def test_session_user_can_list_actions(self):
+        action = self._create_action()
+        self.client.force_login(self.general_admin)
+
+        response = self.client.get("/api/corrective-actions/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["results"][0]["id"], action.id)
+
+    def test_upload_closure_evidence(self):
+        action = self._create_action()
+        evidence = SimpleUploadedFile(
+            "cierre.png",
+            b"\x89PNG\r\n\x1a\ncierre",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            f"/api/corrective-actions/{action.id}/closure-evidence/",
+            data={"closure_evidence": evidence, "status": "closed"},
+            HTTP_X_CURRENT_USER_EMAIL=self.general_admin.email,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        action.refresh_from_db()
+        self.assertEqual(action.status, CorrectiveAction.Status.CLOSED)
+        self.assertTrue(action.closure_evidence.name.startswith("corrective_actions/"))
+        self.assertTrue(response.json()["closure_evidence"])

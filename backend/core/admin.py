@@ -17,6 +17,7 @@ from .models import (
     FirebaseConfig,
     Branch,
     Client,
+    CorrectiveAction,
     Dispenser,
     DispenserProductAssignment,
     DispenserModel,
@@ -448,6 +449,22 @@ class IncidentAdmin(admin.ModelAdmin):
 class IncidentMediaAdmin(admin.ModelAdmin):
     list_display = ("incident", "media_type", "file")
     list_filter = ("media_type",)
+
+
+@admin.register(CorrectiveAction)
+class CorrectiveActionAdmin(admin.ModelAdmin):
+    list_display = (
+        "origin_type",
+        "description",
+        "responsible",
+        "due_date",
+        "status",
+        "reminder_sent_at",
+    )
+    list_filter = ("origin_type", "status", "responsible", "due_date")
+    search_fields = ("description", "incident__description", "audit__notes", "responsible__email")
+    autocomplete_fields = ("incident", "audit", "responsible")
+    date_hierarchy = "due_date"
 
 
 @admin.register(User)

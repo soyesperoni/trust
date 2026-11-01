@@ -47,3 +47,39 @@ def send_push_notification(user, title: str, body: str, data: dict[str, str] | N
 def send_push_notification_to_devices(devices, title: str, body: str, data: dict[str, str] | None = None) -> int:
     tokens = list(devices.values_list("registration_id", flat=True).distinct())
     return _send_to_tokens(tokens, title=title, body=body, data=data)
+
+
+def send_corrective_action_assignment_notification(action) -> int:
+    due_date = action.due_date.strftime("%d/%m/%Y") if action.due_date else "sin fecha"
+    summary = (action.description or "").strip()
+    if len(summary) > 120:
+        summary = f"{summary[:117]}..."
+    return send_push_notification(
+        action.responsible,
+        title="Nueva acción correctiva asignada",
+        body=f"{summary} - vence {due_date}",
+        data={
+            "event": "corrective_action_assigned",
+            "action_id": str(action.id),
+            "origin_type": action.origin_type,
+        },
+    )
+
+
+def send_corrective_action_due_reminder(action, *, overdue: bool = False) -> int:
+    due_date = action.due_date.strftime("%d/%m/%Y") if action.due_date else "sin fecha"
+    summary = (action.description or "").strip()
+    if len(summary) > 120:
+        summary = f"{summary[:117]}..."
+    event = "corrective_action_overdue" if overdue else "corrective_action_due"
+    title = "Acción correctiva vencida" if overdue else "Acción correctiva vence hoy"
+    return send_push_notification(
+        action.responsible,
+        title=title,
+        body=f"{summary} - fecha límite {due_date}",
+        data={
+            "event": event,
+            "action_id": str(action.id),
+            "origin_type": action.origin_type,
+        },
+    )
