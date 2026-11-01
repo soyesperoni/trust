@@ -235,6 +235,8 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
   if (isLoading) return <div className="flex h-full items-center justify-center p-6 text-sm text-slate-500">Cargando informe...</div>;
   if (error || !audit) return <div className="p-6 text-sm text-red-500">{error ?? "No se encontró la auditoría."}</div>;
 
+  const isAuditRegistered = audit.status === "completed" || Boolean(audit.completed_at);
+
   return (
     <>
       <DashboardHeader title="Informe de auditoría" description="Detalle visual y técnico de la auditoría registrada." />
@@ -251,7 +253,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
           </Link>
           <button
             className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400 dark:disabled:bg-slate-700"
-            disabled={audit.status !== "completed"}
+            disabled={!isAuditRegistered}
             onClick={downloadAuditReport}
             type="button"
           >
@@ -263,7 +265,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
         <PdfUnavailableNotice
           className="mb-6"
           entity="auditoria"
-          isRegistered={audit.status === "completed"}
+          isRegistered={isAuditRegistered}
         />
 
         <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(14,165,233,0.06)_48%,rgba(16,185,129,0.08)_100%)] p-6 shadow-[0_22px_55px_-26px_rgba(15,23,42,0.35)] backdrop-blur-sm dark:border-slate-700/80 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.94)_0%,rgba(37,99,235,0.14)_50%,rgba(16,185,129,0.14)_100%)] md:p-7">
@@ -279,7 +281,7 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
             <p className="mt-1 text-sm text-slate-500">Generado el {formattedDate}</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]"><span className="text-xs font-semibold uppercase text-slate-500">Auditoría ID</span><p className="mt-1 text-base font-bold text-slate-900 dark:text-white">#{audit.id}</p></div>
-              <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]"><span className="text-xs font-semibold uppercase text-slate-500">Estado</span><p className="mt-1 text-base font-bold text-green-700 dark:text-green-300">{audit.completed_at ? "Finalizada" : "Programada"}</p></div>
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]"><span className="text-xs font-semibold uppercase text-slate-500">Estado</span><p className="mt-1 text-base font-bold text-green-700 dark:text-green-300">{isAuditRegistered ? "Finalizada" : "Programada"}</p></div>
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]"><span className="text-xs font-semibold uppercase text-slate-500">Sucursal</span><p className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{audit.branch}</p></div>
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]"><span className="text-xs font-semibold uppercase text-slate-500">Área</span><p className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{audit.area}</p></div>
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]"><span className="text-xs font-semibold uppercase text-slate-500">Inspector</span><p className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{audit.inspector || "Sin inspector"}</p></div>

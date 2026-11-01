@@ -1,15 +1,73 @@
 "use client";
 
 import type { FormEvent, MouseEvent } from "react";
+import { useState } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import AlertBanner from "./components/AlertBanner";
 import BrandLogo from "./components/BrandLogo";
 import { setSessionUser } from "./lib/session";
 
+const EMAIL_AUTHORIZATION_CODES = new Set([
+  "email_not_authorized",
+  "email_unauthorized",
+  "gmail_not_authorized",
+  "gmail_unauthorized",
+  "mailbox_not_authorized",
+]);
+
+class LoginRequestError extends Error {
+  status: number;
+  code?: string;
+  authorizeUrl?: string;
+
+  constructor(message: string, status: number, code?: string, authorizeUrl?: string) {
+    super(message);
+    this.name = "LoginRequestError";
+    this.status = status;
+    this.code = code;
+    this.authorizeUrl = authorizeUrl;
+  }
+}
+
+const parseLoginError = (payload: unknown) => {
+  if (!payload || typeof payload !== "object") {
+    return { code: undefined, authorizeUrl: undefined, requiresEmailAuthorization: false };
+  }
+
+  const record = payload as Record<string, unknown>;
+  const rawCode = record.code ?? record.error_code;
+  const code = typeof rawCode === "string" ? rawCode.toLowerCase() : undefined;
+  const authorizeUrl =
+    typeof record.authorize_url === "string"
+      ? record.authorize_url
+      : typeof record.authorizeUrl === "string"
+        ? record.authorizeUrl
+        : undefined;
+  const requiresEmailAuthorization =
+    record.requires_email_authorization === true ||
+    (code ? EMAIL_AUTHORIZATION_CODES.has(code) : false);
+
+  return { code, authorizeUrl, requiresEmailAuthorization };
+};
+
+const isEmailAuthorizationError = (error: unknown) => {
+  if (!(error instanceof LoginRequestError)) return false;
+  if (error.code && EMAIL_AUTHORIZATION_CODES.has(error.code)) return true;
+  return /(correo|email|gmail|cuenta).*(no (está|esta) autoriz|sin autoriz|autorizaci[oó]n pendiente)/i.test(
+    error.message,
+  );
+};
+
 export default function Home() {
   const router = useRouter();
+  const [loginError, setLoginError] = useState<{
+    message: string;
+    needsEmailAuthorization: boolean;
+    authorizeUrl?: string;
+  } | null>(null);
 
   const handleLoginButtonMouseMove = (event: MouseEvent<HTMLButtonElement>) => {
     const button = event.currentTarget;
@@ -29,6 +87,10 @@ export default function Home() {
 
   const performLogin = async (email: string, password: string) => {
     let lastError = "No se pudo iniciar sesión.";
+    let lastStatus = 0;
+    let lastCode: string | undefined;
+    let lastAuthorizeUrl: string | undefined;
+    let lastRequiresEmailAuthorization = false;
 
     for (const endpoint of loginEndpoints) {
       const response = await fetch(endpoint, {
@@ -55,11 +117,21 @@ export default function Home() {
           }
         }
 
+        const parsedError = parseLoginError(payload);
+        lastStatus = response.status;
+        lastCode = parsedError.code;
+        lastAuthorizeUrl = parsedError.authorizeUrl;
+        lastRequiresEmailAuthorization = parsedError.requiresEmailAuthorization;
         break;
       }
     }
 
-    throw new Error(lastError);
+    throw new LoginRequestError(
+      lastError,
+      lastStatus,
+      lastRequiresEmailAuthorization ? "email_not_authorized" : lastCode,
+      lastAuthorizeUrl,
+    );
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -68,6 +140,8 @@ export default function Home() {
     const email = String(formData.get("email") ?? "").trim();
 
     const password = String(formData.get("password") ?? "");
+
+    setLoginError(null);
 
     try {
       const payload = await performLogin(email, password);
@@ -80,7 +154,16 @@ export default function Home() {
 
       router.push("/dashboard");
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "No se pudo iniciar sesión.");
+      const needsEmailAuthorization = isEmailAuthorizationError(error);
+      setLoginError({
+        message:
+          error instanceof Error
+            ? error.message
+            : "No se pudo iniciar sesión.",
+        needsEmailAuthorization,
+        authorizeUrl:
+          error instanceof LoginRequestError ? error.authorizeUrl : undefined,
+      });
     }
   };
 
@@ -97,6 +180,29 @@ export default function Home() {
                 Inicia sesión para continuar.
               </p>
             </div>
+            {loginError ? (
+              <AlertBanner
+                actionLabel={loginError.needsEmailAuthorization ? "Autorizar cuenta" : undefined}
+                className="mb-5"
+                dismissible
+                key={`${loginError.message}-${loginError.needsEmailAuthorization}`}
+                message={
+                  loginError.needsEmailAuthorization
+                    ? "La cuenta de correo no está autorizada para enviar notificaciones. Autoriza Gmail para reanudar el envío de correos."
+                    : loginError.message
+                }
+                onAction={
+                  loginError.needsEmailAuthorization
+                    ? () => {
+                        window.location.assign(
+                          loginError.authorizeUrl ?? "/api/gmail/authorize/",
+                        );
+                      }
+                    : undefined
+                }
+                type={loginError.needsEmailAuthorization ? "warning" : "error"}
+              />
+            ) : null}
             <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <input

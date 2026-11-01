@@ -324,6 +324,8 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
     return <div className="p-6 text-sm text-red-500">{error ?? "No se encontró la visita."}</div>;
   }
 
+  const isVisitRegistered = visit.status === "completed" || Boolean(visit.completed_at);
+
   return (
     <>
       <DashboardHeader title="Informe de visita" description="Detalle visual y técnico de la visita registrada." />
@@ -340,7 +342,7 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
           </Link>
           <button
             className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:hover:bg-slate-400 dark:disabled:bg-slate-700"
-            disabled={visit.status !== "completed"}
+            disabled={!isVisitRegistered}
             onClick={downloadVisitReport}
             type="button"
           >
@@ -352,7 +354,7 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
         <PdfUnavailableNotice
           className="mb-6"
           entity="visita"
-          isRegistered={visit.status === "completed"}
+          isRegistered={isVisitRegistered}
         />
 
         <article className="apple-card-enter mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(14,165,233,0.06)_48%,rgba(16,185,129,0.08)_100%)] p-6 shadow-[0_22px_55px_-26px_rgba(15,23,42,0.35)] backdrop-blur-sm dark:border-slate-700/80 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.94)_0%,rgba(37,99,235,0.14)_50%,rgba(16,185,129,0.14)_100%)] md:p-7">
@@ -373,7 +375,7 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
               </div>
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]">
                 <span className="text-xs font-semibold uppercase text-slate-500">Estado</span>
-                <p className="mt-1 text-base font-bold text-green-700 dark:text-green-300">{visit.status === "completed" ? "Finalizada" : "Programada"}</p>
+                <p className="mt-1 text-base font-bold text-green-700 dark:text-green-300">{isVisitRegistered ? "Finalizada" : "Programada"}</p>
               </div>
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-[#0f172a]">
                 <span className="text-xs font-semibold uppercase text-slate-500">Sucursal</span>
