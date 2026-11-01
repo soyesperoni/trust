@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import CorrectiveActionPanel from "../../../../components/CorrectiveActionPanel";
 import DashboardHeader from "../../../../components/DashboardHeader";
 import { getSessionUserEmail } from "../../../../lib/session";
 
@@ -232,6 +233,12 @@ export default function IncidentDetailPage() {
                   </div>
                 )}
               </article>
+              <CorrectiveActionPanel
+                className="xl:col-span-3"
+                description="Crea y da seguimiento a las acciones correctivas derivadas de esta incidencia."
+                fixedOrigin={{ type: "incident", id: incident.id, label: `Incidencia #${incident.id}` }}
+                title="Acciones correctivas de la incidencia"
+              />
             </div>
           </>
         ) : null}

@@ -17,12 +17,13 @@ const mobileItems: MobileNavItem[] = [
   { label: "Calendario", href: "/clientes/calendario", icon: "calendar_today" },
   { label: "Visitas", href: "/clientes/visitas", icon: "history" },
   { label: "Incidencias", href: "/clientes/incidencias", icon: "report_problem" },
+  { label: "Acciones", href: "/clientes/acciones-correctivas", icon: "task_alt" },
 ];
 
 export default function MobileBottomNav({ activePath }: MobileBottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/95 backdrop-blur-md px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1.5 md:hidden dark:border-slate-800 dark:bg-[#161e27]/95">
-      <div className="grid grid-cols-4 gap-1">
+      <div className="grid grid-cols-5 gap-1">
         {mobileItems.map((item) => {
           const isActive = activePath === item.href;
           return (

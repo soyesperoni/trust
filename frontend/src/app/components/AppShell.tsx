@@ -29,6 +29,7 @@ const navigationPriority = [
   "/ajustes",
   "/clientes/auditorias/plantillas",
   "/clientes/auditorias",
+  "/clientes/acciones-correctivas",
   "/clientes/incidencias",
   "/clientes/calendario",
   "/clientes/visitas",

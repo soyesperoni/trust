@@ -40,6 +40,7 @@ export const ACCOUNT_ADMIN_ALLOWED_PATH_PREFIXES = [
   "/clientes/calendario",
   "/clientes/visitas",
   "/clientes/incidencias",
+  "/clientes/acciones-correctivas",
 ];
 
 export const BRANCH_ADMIN_ALLOWED_PATH_PREFIXES = [
@@ -53,6 +54,7 @@ export const BRANCH_ADMIN_ALLOWED_PATH_PREFIXES = [
   "/clientes/calendario",
   "/clientes/visitas",
   "/clientes/incidencias",
+  "/clientes/acciones-correctivas",
 ];
 
 export const INSPECTOR_ALLOWED_PATH_PREFIXES = [
@@ -68,6 +70,7 @@ export const INSPECTOR_ALLOWED_PATH_PREFIXES = [
   "/clientes/calendario",
   "/clientes/visitas",
   "/clientes/incidencias",
+  "/clientes/acciones-correctivas",
 ];
 
 const matchesPathPrefix = (pathname: string, prefix: string) =>

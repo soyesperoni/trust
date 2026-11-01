@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import CorrectiveActionPanel from "../../../../components/CorrectiveActionPanel";
 import DashboardHeader from "../../../../components/DashboardHeader";
 import PdfUnavailableNotice from "../../../../components/PdfUnavailableNotice";
 import { getSessionUserEmail } from "../../../../lib/session";
@@ -628,6 +629,13 @@ export default function VisitaInformePage({ params }: { params: Promise<{ id: st
               </div>
             )}
           </article>
+          <CorrectiveActionPanel
+            areaId={visit.area_id}
+            areaLabel={visit.area}
+            className="xl:col-span-3"
+            description="Vincula acciones correctivas a una incidencia o hallazgo del área inspeccionada."
+            title="Acciones correctivas del área"
+          />
         </div>
         </div>
       </section>

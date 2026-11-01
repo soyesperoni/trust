@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import CorrectiveActionPanel from "../../../../components/CorrectiveActionPanel";
 import DashboardHeader from "../../../../components/DashboardHeader";
 import PdfUnavailableNotice from "../../../../components/PdfUnavailableNotice";
 import { getSessionUserEmail } from "../../../../lib/session";
@@ -470,6 +471,12 @@ export default function AuditoriaInformePage({ params }: { params: Promise<{ id:
               </div>
             )}
           </article>
+          <CorrectiveActionPanel
+            className="xl:col-span-3"
+            description="Registra acciones correctivas para los hallazgos de esta auditoría y sigue su cierre."
+            fixedOrigin={{ type: "audit_finding", id: audit.id, label: `Hallazgo de auditoría #${audit.id}` }}
+            title="Acciones correctivas de la auditoría"
+          />
         </div>
         </div>
       </section>
