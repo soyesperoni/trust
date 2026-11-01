@@ -85,7 +85,7 @@ export default function DashboardPage() {
 
     const loadGmailStatus = async () => {
       try {
-        const response = await fetch("/api/gmail/status", { cache: "no-store" });
+        const response = await fetch("/api/gmail/status/", { cache: "no-store" });
         if (!response.ok) return;
         const data = (await response.json()) as {
           authorized?: boolean;

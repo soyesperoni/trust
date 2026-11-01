@@ -2562,6 +2562,32 @@ def health(request):
     return JsonResponse({"ok": True, "app": "trust"})
 
 
+@require_GET
+def gmail_status(request):
+    from core.models import GmailAPISettings
+
+    settings_obj = GmailAPISettings.objects.first()
+    configured = bool(
+        settings_obj
+        and settings_obj.client_id
+        and settings_obj.client_secret
+    )
+    authorized = bool(
+        configured
+        and settings_obj.is_enabled
+        and settings_obj.refresh_token
+    )
+
+    return JsonResponse(
+        {
+            "configured": configured,
+            "authorized": authorized,
+            "email": settings_obj.email if settings_obj else "",
+            "authorize_url": reverse("gmail_authorize"),
+        }
+    )
+
+
 @ensure_csrf_cookie
 @require_GET
 def csrf_token(request):

@@ -17,6 +17,7 @@ from .views import (
     dispensers,
     dispenser_detail,
     dispenser_models,
+    gmail_status,
     health,
     incidents,
     incident_detail,
@@ -46,6 +47,7 @@ from .views import (
 urlpatterns = [
     path("gmail/authorize/", gmail_authorize, name="gmail_authorize"),
     path("gmail/oauth2callback/", gmail_oauth2callback, name="gmail_oauth2callback"),
+    path("gmail/status/", gmail_status, name="gmail_status"),
     path("health/", health, name="health"),
     path("csrf/", csrf_token, name="csrf_token"),
     path("login/", login, name="login"),
