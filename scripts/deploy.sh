@@ -37,6 +37,10 @@ fi
 echo "Commit antes del pull: $(sudo -u deploy git rev-parse --short HEAD)"
 sudo -u deploy git pull origin main
 sudo -u deploy npm --prefix frontend run build
+
+# 3. Aplicar migraciones pendientes antes de reiniciar el backend.
+(cd backend && sudo -u deploy env DJANGO_SETTINGS_MODULE=config.settings_prod .venv/bin/python manage.py migrate --noinput)
+
 systemctl restart trust-backend.service trust-frontend.service
 echo "Commit desplegado: $(sudo -u deploy git rev-parse --short HEAD)"
 REMOTE
